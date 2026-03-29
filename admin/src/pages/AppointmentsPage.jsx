@@ -6,27 +6,39 @@ import {
     Users,
     Video,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Badge from "../components/Badge";
 import DataTable from "../components/DataTable";
 import PageHeader from "../components/PageHeader";
-import { APPOINTMENTS } from "../data/mockData";
+import { getAdminAppointments } from "../services/api";
 
 const QUICK_FILTERS = ["All", "Today", "Upcoming", "Completed"];
 
 export default function AppointmentsPage() {
-  const [appointments] = useState(APPOINTMENTS);
+  const [appointments, setAppointments] = useState([]);
   const [activeFilter, setActiveFilter] = useState("All");
+
+  useEffect(() => {
+    const load = async () => {
+      const response = await getAdminAppointments();
+      if (response.data) setAppointments(response.data);
+    };
+    load();
+  }, []);
 
   const getStatusBadge = (status) => {
     switch (status) {
       case "Upcoming":
+      case "upcoming":
         return "primary";
       case "Completed":
+      case "completed":
         return "success";
       case "Cancelled":
+      case "cancelled":
         return "danger";
       case "Pending":
+      case "pending":
         return "warning";
       default:
         return "default";
@@ -36,10 +48,13 @@ export default function AppointmentsPage() {
   const getTypeIcon = (type) => {
     switch (type) {
       case "Video":
+      case "video":
         return <Video size={16} className="text-blue-500" />;
       case "Chat":
+      case "chat":
         return <MessageSquare size={16} className="text-teal-500" />;
       case "In-person":
+      case "in-person":
         return <Users size={16} className="text-purple-500" />;
       default:
         return null;
@@ -48,8 +63,13 @@ export default function AppointmentsPage() {
 
   const filteredAppointments = appointments.filter((appointment) => {
     if (activeFilter === "All") return true;
-    if (activeFilter === "Today") return appointment.date === "Oct 27, 2026";
-    return appointment.status === activeFilter;
+    if (activeFilter === "Today") {
+      const today = new Date().toISOString().slice(0, 10);
+      return String(appointment.date).slice(0, 10) === today;
+    }
+    return (
+      String(appointment.status).toLowerCase() === activeFilter.toLowerCase()
+    );
   });
 
   const columns = [
@@ -57,7 +77,9 @@ export default function AppointmentsPage() {
       header: "Appt ID",
       accessor: "id",
       render: (row) => (
-        <span className="text-sm font-mono text-slate-500">#{row.id}</span>
+        <span className="text-sm font-mono text-slate-500">
+          #{row._id?.slice(-6)}
+        </span>
       ),
     },
     {
@@ -65,8 +87,10 @@ export default function AppointmentsPage() {
       accessor: "patient",
       render: (row) => (
         <div className="space-y-0.5">
-          <div className="font-semibold text-slate-800">{row.patient}</div>
-          <div className="text-xs text-slate-500">with {row.doctor}</div>
+          <div className="font-semibold text-slate-800">
+            {row.patient?.name}
+          </div>
+          <div className="text-xs text-slate-500">with {row.doctor?.name}</div>
         </div>
       ),
     },
@@ -75,7 +99,9 @@ export default function AppointmentsPage() {
       accessor: "date",
       render: (row) => (
         <div>
-          <div className="font-medium text-slate-700">{row.date}</div>
+          <div className="font-medium text-slate-700">
+            {new Date(row.date).toLocaleDateString()}
+          </div>
           <div className="text-xs text-slate-500">{row.time}</div>
         </div>
       ),
@@ -86,20 +112,25 @@ export default function AppointmentsPage() {
       render: (row) => (
         <div className="flex items-center gap-2">
           {getTypeIcon(row.type)}
-          <span className="text-sm text-slate-700">{row.type}</span>
+          <span className="text-sm text-slate-700">
+            {String(row.type).replace("in-person", "In-person")}
+          </span>
         </div>
       ),
     },
     {
       header: "Fee",
-      accessor: "amount",
-      render: (row) => <span className="font-medium">₹{row.amount}</span>,
+      accessor: "fee",
+      render: (row) => <span className="font-medium">₹{row.fee || 0}</span>,
     },
     {
       header: "Status",
       accessor: "status",
       render: (row) => (
-        <Badge variant={getStatusBadge(row.status)}>{row.status}</Badge>
+        <Badge variant={getStatusBadge(row.status)}>
+          {String(row.status).charAt(0).toUpperCase() +
+            String(row.status).slice(1)}
+        </Badge>
       ),
     },
     {

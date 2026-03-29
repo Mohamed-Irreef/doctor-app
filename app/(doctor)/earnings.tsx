@@ -1,9 +1,14 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 import { TrendingUp, Users, DollarSign, Clock } from 'lucide-react-native';
+import ActionModal from '../../components/ActionModal';
+import ButtonPrimary from '../../components/ButtonPrimary';
+import { getDoctorSubscription, getPlans } from '../../services/api';
+import { processSubscriptionPayment } from '../../services/payment';
 
 const TRANSACTIONS = [
   { id: 't1', name: 'Ravi Kumar',    type: 'Video Consult', date: 'Oct 27, 2026', amount: '₹1,500', status: 'Paid' },
@@ -33,8 +38,76 @@ const METRICS = [
 ];
 
 export default function DoctorEarningsScreen() {
+  const [plans, setPlans] = useState<any[]>([]);
+  const [activePlanCode, setActivePlanCode] = useState<string | null>(null);
+  const [processingPlan, setProcessingPlan] = useState<string | null>(null);
+  const [successModal, setSuccessModal] = useState(false);
+  const [errorModal, setErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('Unable to complete subscription payment');
+
+  useEffect(() => {
+    const load = async () => {
+      const plansResponse = await getPlans();
+      if (plansResponse.status === 'success' && plansResponse.data) {
+        setPlans(plansResponse.data as any[]);
+      }
+
+      try {
+        const userRaw = await AsyncStorage.getItem('nividoc_user');
+        if (!userRaw) return;
+        const user = JSON.parse(userRaw);
+        const doctorId = String(user?._id || user?.id || '');
+        if (!doctorId) return;
+        const subscriptionResponse = await getDoctorSubscription(doctorId);
+        if (subscriptionResponse.status === 'success' && subscriptionResponse.data) {
+          const subscription = subscriptionResponse.data as any;
+          if (subscription?.status === 'active') {
+            setActivePlanCode(subscription?.plan?.code || null);
+          }
+        }
+      } catch {
+        // Ignore cached user parse errors and continue.
+      }
+    };
+
+    load();
+  }, []);
+
+  const handlePlanPurchase = async (planCode: string) => {
+    setProcessingPlan(planCode);
+    const payment = await processSubscriptionPayment(planCode);
+    setProcessingPlan(null);
+
+    if (payment.status === 'success') {
+      setActivePlanCode(planCode);
+      setSuccessModal(true);
+      return;
+    }
+
+    setErrorMessage(payment.error || 'Subscription verification failed');
+    setErrorModal(true);
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <ActionModal
+        visible={successModal}
+        type="success"
+        title="Subscription Activated"
+        message="Your doctor subscription is now active and verified."
+        confirmLabel="OK"
+        onConfirm={() => setSuccessModal(false)}
+      />
+
+      <ActionModal
+        visible={errorModal}
+        type="error"
+        title="Subscription Failed"
+        message={errorMessage}
+        confirmLabel="OK"
+        onConfirm={() => setErrorModal(false)}
+      />
+
       <View style={styles.header}>
         <Text style={Typography.h2}>Earnings</Text>
       </View>
@@ -110,6 +183,35 @@ export default function DoctorEarningsScreen() {
           ))}
         </View>
 
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Subscription Plans</Text>
+          {plans.length === 0 ? (
+            <Text style={styles.emptyText}>No plans available right now.</Text>
+          ) : (
+            plans.map((plan) => {
+              const planCode = String(plan.code || '');
+              const isActive = activePlanCode === planCode;
+              const isProcessing = processingPlan === planCode;
+              return (
+                <View key={planCode} style={styles.planCard}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.planName}>{plan.name}</Text>
+                    <Text style={styles.planMeta}>{plan.interval} plan</Text>
+                    <Text style={styles.planPrice}>₹{plan.price}</Text>
+                  </View>
+                  <ButtonPrimary
+                    title={isActive ? 'Active' : isProcessing ? 'Processing...' : 'Buy Plan'}
+                    onPress={() => handlePlanPurchase(planCode)}
+                    loading={isProcessing}
+                    disabled={isActive || isProcessing}
+                    style={styles.planButton}
+                  />
+                </View>
+              );
+            })
+          )}
+        </View>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -158,4 +260,19 @@ const styles = StyleSheet.create({
   txBadgeText: { fontSize: 11, fontWeight: '700' },
   paidText: { color: '#16A34A' },
   pendingText: { color: '#D97706' },
+  emptyText: { fontSize: 13, color: Colors.textSecondary },
+  planCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+    gap: 12,
+  },
+  planName: { fontSize: 14, fontWeight: '700', color: Colors.text },
+  planMeta: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  planPrice: { fontSize: 18, fontWeight: '800', color: Colors.primary, marginTop: 8 },
+  planButton: { paddingVertical: 10, paddingHorizontal: 14, minWidth: 110 },
 });

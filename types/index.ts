@@ -10,6 +10,7 @@ export interface Doctor {
   fee: number;
   about: string;
   image: string;
+  bannerImage?: string;
   availableSlots: string[];
   qualifications?: string[];
   hospital?: string;
@@ -48,8 +49,8 @@ export interface Appointment {
   doctor: Doctor;
   date: string;
   time: string;
-  status: 'Upcoming' | 'Pending' | 'Completed' | 'Cancelled';
-  type?: 'In-person' | 'Video' | 'Chat';
+  status: "Upcoming" | "Pending" | "Completed" | "Cancelled";
+  type?: "In-person" | "Video" | "Chat";
 }
 
 export interface CartItem {
@@ -64,7 +65,7 @@ export interface MedicalRecord {
   id: string;
   title: string;
   date: string;
-  type: 'PDF' | 'JPG' | 'PNG';
+  type: "PDF" | "JPG" | "PNG";
   size: string;
 }
 
@@ -74,7 +75,7 @@ export interface Notification {
   message: string;
   time: string;
   read: boolean;
-  type: 'appointment' | 'reminder' | 'promo' | 'general';
+  type: "appointment" | "reminder" | "promo" | "general";
 }
 
 export interface Review {
@@ -86,7 +87,7 @@ export interface Review {
   date: string;
 }
 
-export type Role = 'patient' | 'doctor' | null;
+export type Role = "patient" | "doctor" | null;
 
 export interface User {
   id: string;
@@ -97,7 +98,7 @@ export interface User {
   role: Role;
 }
 
-export type LoadingState = 'idle' | 'loading' | 'success' | 'error';
+export type LoadingState = "idle" | "loading" | "success" | "error";
 
 export interface ApiResponse<T> {
   data: T | null;

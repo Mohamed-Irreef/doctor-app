@@ -2,9 +2,13 @@ const User = require("../models/User");
 const DoctorProfile = require("../models/DoctorProfile");
 const Appointment = require("../models/Appointment");
 const Subscription = require("../models/Subscription");
+const Notification = require("../models/Notification");
 const ApiError = require("../utils/ApiError");
 const ApiResponse = require("../utils/ApiResponse");
 const catchAsync = require("../utils/catchAsync");
+
+const DEFAULT_DOCTOR_BANNER_URL =
+  "https://res.cloudinary.com/dvbpddm9g/image/upload/v1774791127/nividoc/doctors/banners/kbacvcvtl4a1rgjzy6cs.png";
 
 const mapDoctorCard = (row) => ({
   id: row.user._id,
@@ -16,6 +20,7 @@ const mapDoctorCard = (row) => ({
   fee: row.consultationFee,
   hospital: row.hospital,
   about: row.bio,
+  bannerImage: row.bannerImage || DEFAULT_DOCTOR_BANNER_URL,
   image: row.user.image,
   availableSlots: [],
   qualifications: row.qualifications,
@@ -31,6 +36,7 @@ const doctorSignupRequest = catchAsync(async (req, res) => {
     name: req.body.name,
     email: req.body.email,
     phone: req.body.phone,
+    image: req.body.image,
     role: "doctor",
     authProvider: "local",
     doctorApprovalStatus: "pending",
@@ -39,8 +45,19 @@ const doctorSignupRequest = catchAsync(async (req, res) => {
   await user.setPassword(req.body.password);
   await user.save();
 
+  const certificateUrls = Array.isArray(req.body.certificateUrls)
+    ? req.body.certificateUrls
+    : [];
+  const certificateFiles = Array.isArray(req.body.certificateFiles)
+    ? req.body.certificateFiles
+    : [];
+  const normalizedCertificateUrls = certificateUrls.length
+    ? certificateUrls
+    : certificateFiles.map((file) => file?.url).filter(Boolean);
+
   const profile = await DoctorProfile.create({
     user: user._id,
+    gender: req.body.gender,
     specialization: req.body.specialization,
     qualifications: req.body.qualifications,
     licenseNumber: req.body.licenseNumber,
@@ -52,19 +69,29 @@ const doctorSignupRequest = catchAsync(async (req, res) => {
     availabilityType: req.body.availabilityType,
     clinicName: req.body.clinicName,
     clinicAddress: req.body.clinicAddress,
+    clinicLocation: req.body.clinicLocation,
     hospital: req.body.hospital,
     bio: req.body.bio,
     languages: req.body.languages,
+    certificateUrls: normalizedCertificateUrls,
+    certificateFiles,
   });
 
-  return res
-    .status(201)
-    .json(
-      new ApiResponse(201, "Doctor signup request submitted", {
-        userId: user._id,
-        profileId: profile._id,
-      }),
-    );
+  await Notification.create({
+    title: "New doctor signup request",
+    message: `${user.name} submitted profile for approval`,
+    type: "doctor-approval",
+    audienceType: "all",
+    targetEntityType: "User",
+    targetEntityId: user._id,
+  });
+
+  return res.status(201).json(
+    new ApiResponse(201, "Doctor signup request submitted", {
+      userId: user._id,
+      profileId: profile._id,
+    }),
+  );
 });
 
 const getDoctors = catchAsync(async (req, res) => {
@@ -113,9 +140,36 @@ const getDoctorById = catchAsync(async (req, res) => {
 });
 
 const updateDoctorProfile = catchAsync(async (req, res) => {
+  const userUpdates = {};
+  if (req.body.name !== undefined) userUpdates.name = req.body.name;
+  if (req.body.phone !== undefined) userUpdates.phone = req.body.phone;
+  if (req.body.image !== undefined) userUpdates.image = req.body.image;
+
+  if (Object.keys(userUpdates).length) {
+    await User.findByIdAndUpdate(req.user._id, userUpdates, {
+      new: true,
+      runValidators: true,
+    });
+  }
+
+  const profileUpdates = { ...req.body };
+  delete profileUpdates.name;
+  delete profileUpdates.phone;
+  delete profileUpdates.image;
+
+  if (
+    profileUpdates.certificateFiles &&
+    Array.isArray(profileUpdates.certificateFiles) &&
+    !profileUpdates.certificateUrls
+  ) {
+    profileUpdates.certificateUrls = profileUpdates.certificateFiles
+      .map((file) => file?.url)
+      .filter(Boolean);
+  }
+
   const profile = await DoctorProfile.findOneAndUpdate(
     { user: req.user._id },
-    req.body,
+    profileUpdates,
     {
       new: true,
       runValidators: true,
@@ -124,9 +178,11 @@ const updateDoctorProfile = catchAsync(async (req, res) => {
 
   if (!profile) throw new ApiError(404, "Doctor profile not found");
 
+  const user = await User.findById(req.user._id).select("-passwordHash").lean();
+
   return res
     .status(200)
-    .json(new ApiResponse(200, "Doctor profile updated", profile));
+    .json(new ApiResponse(200, "Doctor profile updated", { user, profile }));
 });
 
 const getDoctorAppointments = catchAsync(async (req, res) => {

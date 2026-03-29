@@ -10,13 +10,19 @@ const doctorProfileSchema = new mongoose.Schema(
       index: true,
     },
     specialization: { type: String, required: true, index: true },
+    gender: { type: String },
     qualifications: [{ type: String }],
     licenseNumber: { type: String, required: true, unique: true, index: true },
     experienceYears: { type: Number, default: 0 },
     bio: { type: String },
+    bannerImage: { type: String },
     hospital: { type: String },
     clinicName: { type: String },
     clinicAddress: { type: String },
+    clinicLocation: {
+      latitude: { type: Number },
+      longitude: { type: Number },
+    },
     languages: [{ type: String }],
     availabilityType: {
       type: String,
@@ -33,6 +39,12 @@ const doctorProfileSchema = new mongoose.Schema(
     reviewsCount: { type: Number, default: 0 },
     featuredUntil: { type: Date },
     certificateUrls: [{ type: String }],
+    certificateFiles: [
+      {
+        url: { type: String },
+        name: { type: String },
+      },
+    ],
   },
   { timestamps: true },
 );

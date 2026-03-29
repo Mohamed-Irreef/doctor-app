@@ -8,6 +8,7 @@ const { createReview } = require("../controllers/reviewController");
 const router = express.Router();
 
 router.post("/upload", protectRoute, upload.single("file"), uploadFile);
+router.post("/upload-public", upload.single("file"), uploadFile);
 router.get("/notifications", protectRoute, getMyNotifications);
 router.post("/reviews", protectRoute, createReview);
 

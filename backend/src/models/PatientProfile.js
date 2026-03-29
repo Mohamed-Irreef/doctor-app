@@ -15,6 +15,11 @@ const patientProfileSchema = new mongoose.Schema(
     allergies: [{ type: String }],
     medicalConditions: [{ type: String }],
     address: { type: String },
+    emergencyContact: { type: String },
+    location: {
+      latitude: { type: Number },
+      longitude: { type: Number },
+    },
   },
   { timestamps: true },
 );

@@ -1,78 +1,245 @@
-import { useRouter } from 'expo-router';
-import { Bell, ChevronRight, CreditCard, Heart, LogOut, Settings, Shield, User } from 'lucide-react-native';
-import React from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors } from '../../constants/Colors';
-import { Typography } from '../../constants/Typography';
-import { useAuthStore } from '../../store/authStore';
-import { useFavoritesStore } from '../../store/favoritesStore';
+import { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
+import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
+import { useRouter } from "expo-router";
+import { Calendar, Camera, MapPin, Save } from "lucide-react-native";
+import React, { useEffect, useState } from "react";
+import {
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import ActionModal from "../../components/ActionModal";
+import { Colors } from "../../constants/Colors";
+import { useAuthStore } from "../../store/authStore";
+import * as api from "../../services/api";
 
-const MENU_ITEMS = [
-  { id: '1', title: 'Personal Information', icon: User, route: null },
-  { id: '2', title: 'My Favorites', icon: Heart, route: '/(patient)/favorites' },
-  { id: '3', title: 'Notifications', icon: Bell, route: '/(patient)/notifications' },
-  { id: '4', title: 'Payment Methods', icon: CreditCard, route: null },
-  { id: '5', title: 'Security & Privacy', icon: Shield, route: null },
-  { id: '6', title: 'App Settings', icon: Settings, route: null },
-];
+const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+const GENDERS = ["Male", "Female", "Other"];
+
+function formatDate(date?: string | Date | null) {
+  if (!date) return "";
+  const d = typeof date === "string" ? new Date(date) : date;
+  const day = `${d.getDate()}`.padStart(2, "0");
+  const month = `${d.getMonth() + 1}`.padStart(2, "0");
+  return `${day}/${month}/${d.getFullYear()}`;
+}
 
 export default function PatientProfileScreen() {
-  const { user, logout } = useAuthStore();
-  const { favorites } = useFavoritesStore();
   const router = useRouter();
+  const { login } = useAuthStore();
+
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [gender, setGender] = useState("");
+  const [dob, setDob] = useState<Date | null>(null);
+  const [bloodGroup, setBloodGroup] = useState("");
+  const [address, setAddress] = useState("");
+  const [emergencyContact, setEmergencyContact] = useState("");
+  const [imageUri, setImageUri] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+
+  const [loading, setLoading] = useState(false);
+  const [errorModal, setErrorModal] = useState(false);
+  const [errorText, setErrorText] = useState("Please complete required fields.");
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      const response = await api.getMyProfile();
+      if (response.status !== "success" || !response.data) return;
+
+      const userData = (response.data as any).user;
+      const profile = (response.data as any).profile || {};
+
+      setName(userData?.name || "");
+      setPhone(userData?.phone || "");
+      setImageUrl(userData?.image || "");
+      setGender(profile.gender || "");
+      setDob(profile.dateOfBirth ? new Date(profile.dateOfBirth) : null);
+      setBloodGroup(profile.bloodGroup || "");
+      setAddress(profile.address || "");
+      setEmergencyContact(profile.emergencyContact || "");
+      setLatitude(profile.location?.latitude ?? null);
+      setLongitude(profile.location?.longitude ?? null);
+    };
+
+    loadProfile();
+  }, []);
+
+  const pickImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setErrorText("Please allow gallery permission to upload profile photo.");
+      setErrorModal(true);
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
+
+  const captureLocation = async () => {
+    const permission = await Location.requestForegroundPermissionsAsync();
+    if (!permission.granted) {
+      setErrorText("Location permission denied.");
+      setErrorModal(true);
+      return;
+    }
+
+    const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+    setLatitude(current.coords.latitude);
+    setLongitude(current.coords.longitude);
+  };
+
+  const openDobPicker = () => {
+    DateTimePickerAndroid.open({
+      value: dob || new Date(2000, 0, 1),
+      mode: "date",
+      maximumDate: new Date(),
+      onChange: (event, selectedDate) => {
+        if (event.type === "set" && selectedDate) setDob(selectedDate);
+      },
+    });
+  };
+
+  const saveProfile = async () => {
+    if (!name.trim() || !phone.trim() || !gender || !dob || !bloodGroup || !address.trim() || !emergencyContact.trim()) {
+      setErrorText("Please complete all required profile fields.");
+      setErrorModal(true);
+      return;
+    }
+
+    setLoading(true);
+
+    let finalImage = imageUrl;
+    if (imageUri) {
+      const upload = await api.uploadFile(
+        { uri: imageUri, name: "patient-profile.jpg", type: "image/jpeg" },
+        "nividoc/patients",
+        false,
+      );
+      if (upload.status !== "success" || !upload.data) {
+        setLoading(false);
+        setErrorText(upload.error || "Image upload failed");
+        setErrorModal(true);
+        return;
+      }
+      finalImage = (upload.data as any).url;
+      setImageUrl(finalImage);
+      setImageUri("");
+    }
+
+    const update = await api.updatePatientProfile({
+      name: name.trim(),
+      phone: phone.trim(),
+      image: finalImage,
+      gender,
+      dateOfBirth: dob.toISOString(),
+      bloodGroup,
+      address: address.trim(),
+      emergencyContact: emergencyContact.trim(),
+      location: latitude !== null && longitude !== null ? { latitude, longitude } : undefined,
+    });
+
+    setLoading(false);
+
+    if (update.status !== "success" || !update.data) {
+      setErrorText(update.error || "Unable to update profile");
+      setErrorModal(true);
+      return;
+    }
+
+    login("patient", (update.data as any).user);
+    router.replace("/(patient)");
+  };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <ActionModal
+        visible={errorModal}
+        type="error"
+        title="Profile Error"
+        message={errorText}
+        confirmLabel="OK"
+        onConfirm={() => setErrorModal(false)}
+      />
 
-        {/* Profile Header */}
-        <View style={styles.headerCard}>
-          <Image source={{ uri: user?.image }} style={styles.avatar} />
-          <Text style={[Typography.h2, { marginBottom: 4 }]}>{user?.name ?? 'Alex Johnson'}</Text>
-          <Text style={[Typography.body2, { color: Colors.textSecondary }]}>{user?.email}</Text>
-          <Text style={[Typography.body2, { color: Colors.primary, marginTop: 4 }]}>{user?.phone}</Text>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        <Text style={styles.title}>Complete Your Profile</Text>
+        <Text style={styles.subtitle}>Fill all details before booking appointments or placing orders.</Text>
 
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>12</Text>
-              <Text style={styles.statLabel}>Visits</Text>
+        <TouchableOpacity style={styles.avatarWrap} onPress={pickImage}>
+          {imageUri || imageUrl ? (
+            <Image source={{ uri: imageUri || imageUrl }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatar, styles.avatarPlaceholder]}>
+              <Camera color={Colors.primary} size={24} />
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{favorites.length}</Text>
-              <Text style={styles.statLabel}>Favorites</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>3</Text>
-              <Text style={styles.statLabel}>Records</Text>
-            </View>
-          </View>
-        </View>
+          )}
+          <Text style={styles.avatarText}>Upload Profile Photo *</Text>
+        </TouchableOpacity>
 
-        {/* Menu Items */}
-        <View style={styles.menuContainer}>
-          {MENU_ITEMS.map(item => (
+        <TextInput style={styles.input} placeholder="Full Name *" value={name} onChangeText={setName} />
+        <TextInput style={styles.input} placeholder="Phone *" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+
+        <View style={styles.optionRow}>
+          {GENDERS.map((item) => (
             <TouchableOpacity
-              key={item.id}
-              style={styles.menuItem}
-              onPress={() => item.route && router.push(item.route as any)}
-              activeOpacity={0.7}
+              key={item}
+              onPress={() => setGender(item)}
+              style={[styles.optionChip, gender === item && styles.optionChipActive]}
             >
-              <View style={styles.menuIconBox}>
-                <item.icon color={Colors.textSecondary} size={22} />
-              </View>
-              <Text style={[Typography.body1, styles.menuTitle]}>{item.title}</Text>
-              <ChevronRight color={Colors.border} size={22} />
+              <Text style={[styles.optionChipText, gender === item && styles.optionChipTextActive]}>{item}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={logout} activeOpacity={0.8}>
-          <LogOut color={Colors.error} size={22} />
-          <Text style={[Typography.body1, styles.logoutText]}>Log Out</Text>
+        <TouchableOpacity style={styles.inputButton} onPress={openDobPicker}>
+          <Calendar color="#6B7280" size={18} />
+          <Text style={{ marginLeft: 10, color: dob ? "#111827" : "#9CA3AF" }}>{dob ? formatDate(dob) : "Date of Birth *"}</Text>
+        </TouchableOpacity>
+
+        <View style={styles.optionRow}>
+          {BLOOD_GROUPS.map((item) => (
+            <TouchableOpacity
+              key={item}
+              onPress={() => setBloodGroup(item)}
+              style={[styles.optionChip, bloodGroup === item && styles.optionChipActive]}
+            >
+              <Text style={[styles.optionChipText, bloodGroup === item && styles.optionChipTextActive]}>{item}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <TextInput style={styles.input} placeholder="City, State, Pincode *" value={address} onChangeText={setAddress} />
+        <TextInput style={styles.input} placeholder="Emergency Contact *" value={emergencyContact} onChangeText={setEmergencyContact} />
+
+        <TouchableOpacity style={styles.locationBtn} onPress={captureLocation}>
+          <MapPin color={Colors.primary} size={18} />
+          <Text style={styles.locationText}>
+            {latitude !== null && longitude !== null
+              ? `Location captured: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+              : "Capture Current Location (Lat/Long)"}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.saveBtn} onPress={saveProfile} disabled={loading}>
+          <Save color="#FFFFFF" size={18} />
+          <Text style={styles.saveText}>{loading ? "Saving..." : "Save Profile"}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -81,34 +248,73 @@ export default function PatientProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  scrollContent: { paddingBottom: 60 },
-  headerCard: {
-    alignItems: 'center', backgroundColor: Colors.surface, paddingTop: 32, paddingBottom: 24,
-    paddingHorizontal: 24, borderBottomWidth: 1, borderBottomColor: Colors.border, marginBottom: 24,
+  scroll: { padding: 20, paddingBottom: 80 },
+  title: { fontSize: 24, fontWeight: "800", color: "#111827", marginBottom: 8 },
+  subtitle: { color: Colors.textSecondary, marginBottom: 20 },
+  avatarWrap: { alignItems: "center", marginBottom: 20 },
+  avatar: { width: 92, height: 92, borderRadius: 46 },
+  avatarPlaceholder: {
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#EFF6FF",
   },
-  avatar: {
-    width: 96, height: 96, borderRadius: 48, marginBottom: 16,
-    borderWidth: 3, borderColor: Colors.primary,
+  avatarText: { marginTop: 8, color: Colors.primary, fontWeight: "600" },
+  input: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 12,
   },
-  statsRow: { flexDirection: 'row', alignItems: 'center', marginTop: 20, backgroundColor: Colors.background, borderRadius: 16, padding: 16, width: '100%' },
-  statItem: { flex: 1, alignItems: 'center' },
-  statValue: { fontSize: 20, fontWeight: '700', color: Colors.text, marginBottom: 4 },
-  statLabel: { fontSize: 12, color: Colors.textSecondary },
-  statDivider: { width: 1, height: 40, backgroundColor: Colors.border },
-  menuContainer: {
-    backgroundColor: Colors.surface, marginHorizontal: 20, borderRadius: 20,
-    paddingVertical: 8, borderWidth: 1, borderColor: Colors.border, marginBottom: 20,
+  inputButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    marginBottom: 12,
   },
-  menuItem: {
-    flexDirection: 'row', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 20,
-    borderBottomWidth: 1, borderBottomColor: Colors.lightGray,
+  optionRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
+  optionChip: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
-  menuIconBox: { width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center', marginRight: 16 },
-  menuTitle: { flex: 1, fontWeight: '500' },
-  logoutBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#FEF2F2', paddingVertical: 18, borderRadius: 16,
-    borderWidth: 1, borderColor: '#FECACA', marginHorizontal: 20,
+  optionChipActive: { borderColor: Colors.primary, backgroundColor: "#EFF6FF" },
+  optionChipText: { color: Colors.textSecondary, fontSize: 13, fontWeight: "600" },
+  optionChipTextActive: { color: Colors.primary },
+  locationBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: Colors.primary,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: "#EFF6FF",
+    marginBottom: 16,
   },
-  logoutText: { color: Colors.error, fontWeight: '700', marginLeft: 12 },
+  locationText: { marginLeft: 10, color: Colors.primary, fontWeight: "600", flex: 1 },
+  saveBtn: {
+    backgroundColor: Colors.primary,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  saveText: { color: "#FFFFFF", fontWeight: "700", fontSize: 15 },
 });

@@ -1,12 +1,20 @@
 import { Eye, Star, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Button from "../components/Button";
 import DataTable from "../components/DataTable";
 import PageHeader from "../components/PageHeader";
-import { REVIEWS } from "../data/mockData";
+import { deleteAdminReview, getAdminReviews } from "../services/api";
 
 export default function ReviewsPage() {
-  const [reviews, setReviews] = useState(REVIEWS);
+  const [reviews, setReviews] = useState([]);
+
+  useEffect(() => {
+    const load = async () => {
+      const response = await getAdminReviews();
+      if (response.data) setReviews(response.data);
+    };
+    load();
+  }, []);
 
   const columns = [
     {
@@ -28,13 +36,15 @@ export default function ReviewsPage() {
       header: "Patient",
       accessor: "patient",
       render: (row) => (
-        <span className="font-medium text-slate-800">{row.patient}</span>
+        <span className="font-medium text-slate-800">{row.patient?.name}</span>
       ),
     },
     {
       header: "Doctor",
       accessor: "doctor",
-      render: (row) => <span className="text-slate-600">{row.doctor}</span>,
+      render: (row) => (
+        <span className="text-slate-600">{row.doctor?.name}</span>
+      ),
     },
     {
       header: "Comment",
@@ -48,7 +58,12 @@ export default function ReviewsPage() {
         </span>
       ),
     },
-    { header: "Date", accessor: "date", className: "whitespace-nowrap" },
+    {
+      header: "Date",
+      accessor: "date",
+      className: "whitespace-nowrap",
+      render: (row) => new Date(row.createdAt).toLocaleDateString(),
+    },
     {
       header: "Actions",
       accessor: "id",
@@ -65,7 +80,12 @@ export default function ReviewsPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setReviews(reviews.filter((r) => r.id !== row.id))}
+            onClick={async () => {
+              await deleteAdminReview(row._id || row.id);
+              setReviews(
+                reviews.filter((r) => (r._id || r.id) !== (row._id || row.id)),
+              );
+            }}
             className="p-1.5 text-red-500 hover:bg-red-50 hover:text-red-600"
             title="Delete Review"
           >
@@ -90,7 +110,17 @@ export default function ReviewsPage() {
           </div>
           <div>
             <p className="text-sm text-slate-500 font-medium">Average Rating</p>
-            <p className="text-2xl font-bold text-slate-900">4.8 / 5.0</p>
+            <p className="text-2xl font-bold text-slate-900">
+              {reviews.length
+                ? (
+                    reviews.reduce(
+                      (sum, review) => sum + (review.rating || 0),
+                      0,
+                    ) / reviews.length
+                  ).toFixed(1)
+                : "0.0"}{" "}
+              / 5.0
+            </p>
           </div>
         </div>
       </div>

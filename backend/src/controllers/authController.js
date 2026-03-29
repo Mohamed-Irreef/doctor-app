@@ -28,6 +28,19 @@ function buildAuthPayload(user) {
   };
 }
 
+function isPatientProfileComplete(user, profile) {
+  return Boolean(
+    user?.name &&
+      user?.phone &&
+      user?.image &&
+      profile?.gender &&
+      profile?.dateOfBirth &&
+      profile?.bloodGroup &&
+      profile?.address &&
+      profile?.emergencyContact,
+  );
+}
+
 const registerPatient = catchAsync(async (req, res) => {
   const existing = await User.findOne({ email: req.body.email.toLowerCase() });
   if (existing) throw new ApiError(409, "Email already registered");
@@ -36,6 +49,7 @@ const registerPatient = catchAsync(async (req, res) => {
     name: req.body.name,
     email: req.body.email,
     phone: req.body.phone,
+    image: req.body.image,
     role: "patient",
     authProvider: "local",
   });
@@ -49,6 +63,9 @@ const registerPatient = catchAsync(async (req, res) => {
       ? new Date(req.body.dateOfBirth)
       : undefined,
     bloodGroup: req.body.bloodGroup,
+    address: req.body.address,
+    emergencyContact: req.body.emergencyContact,
+    location: req.body.location,
     allergies: req.body.allergies || [],
     medicalConditions: req.body.medicalConditions || [],
   });
@@ -145,9 +162,66 @@ const me = catchAsync(async (req, res) => {
       ? await DoctorProfile.findOne({ user: user._id }).lean()
       : await PatientProfile.findOne({ user: user._id }).lean();
 
+  const profileComplete =
+    user.role === "patient" ? isPatientProfileComplete(user, profile) : true;
+
   return res
     .status(200)
-    .json(new ApiResponse(200, "Profile fetched", { user, profile }));
+    .json(new ApiResponse(200, "Profile fetched", { user, profile, profileComplete }));
+});
+
+const updatePatientProfile = catchAsync(async (req, res) => {
+  if (req.user.role !== "patient") {
+    throw new ApiError(403, "Only patient can update this profile");
+  }
+
+  const userUpdates = {};
+  if (req.body.name) userUpdates.name = req.body.name;
+  if (req.body.phone) userUpdates.phone = req.body.phone;
+  if (req.body.image) userUpdates.image = req.body.image;
+
+  if (Object.keys(userUpdates).length) {
+    await User.findByIdAndUpdate(req.user._id, userUpdates, {
+      new: true,
+      runValidators: true,
+    });
+  }
+
+  const profileUpdates = {
+    gender: req.body.gender,
+    dateOfBirth: req.body.dateOfBirth
+      ? new Date(req.body.dateOfBirth)
+      : undefined,
+    bloodGroup: req.body.bloodGroup,
+    address: req.body.address,
+    emergencyContact: req.body.emergencyContact,
+    location: req.body.location,
+    allergies: req.body.allergies,
+    medicalConditions: req.body.medicalConditions,
+  };
+
+  Object.keys(profileUpdates).forEach((key) => {
+    if (profileUpdates[key] === undefined) {
+      delete profileUpdates[key];
+    }
+  });
+
+  const profile = await PatientProfile.findOneAndUpdate(
+    { user: req.user._id },
+    profileUpdates,
+    { new: true, runValidators: true },
+  ).lean();
+
+  const user = await User.findById(req.user._id).select("-passwordHash").lean();
+  const profileComplete = isPatientProfileComplete(user, profile);
+
+  return res.status(200).json(
+    new ApiResponse(200, "Patient profile updated", {
+      user,
+      profile,
+      profileComplete,
+    }),
+  );
 });
 
 module.exports = {
@@ -155,4 +229,5 @@ module.exports = {
   login,
   googleAuth,
   me,
+  updatePatientProfile,
 };

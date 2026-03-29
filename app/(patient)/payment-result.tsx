@@ -12,8 +12,13 @@ import ButtonPrimary from '../../components/ButtonPrimary';
 
 export default function PaymentResultScreen() {
   const router = useRouter();
-  const { success, amount, doctorName } = useLocalSearchParams<{
-    success: string; amount: string; doctorName: string;
+  const { success, amount, doctorName, context, retryPath, reason } = useLocalSearchParams<{
+    success: string;
+    amount: string;
+    doctorName: string;
+    context: string;
+    retryPath: string;
+    reason: string;
   }>();
 
   const isSuccess = success !== 'false';
@@ -44,15 +49,15 @@ export default function PaymentResultScreen() {
         </Text>
         <Text style={[Typography.body1, styles.sub]}>
           {isSuccess
-            ? `Your appointment with ${doctorName ?? 'the doctor'} has been confirmed.`
-            : 'Something went wrong. Your payment could not be processed. Please try again.'}
+            ? `${context ?? 'Payment'} for ${doctorName ?? 'your order'} has been confirmed.`
+            : reason || 'Something went wrong. Your payment could not be processed. Please try again.'}
         </Text>
 
         {isSuccess && (
           <View style={styles.receiptCard}>
             <Text style={[Typography.h3, { marginBottom: 16 }]}>Receipt</Text>
             <View style={styles.receiptRow}>
-              <Text style={Typography.body2}>Doctor</Text>
+              <Text style={Typography.body2}>{context ?? 'Order Type'}</Text>
               <Text style={[Typography.body1, { fontWeight: '600' }]}>{doctorName ?? 'Dr. Sarah Jenkins'}</Text>
             </View>
             <View style={styles.receiptRow}>
@@ -90,7 +95,13 @@ export default function PaymentResultScreen() {
           <>
             <ButtonPrimary
               title="Try Again"
-              onPress={() => router.back()}
+              onPress={() => {
+                if (retryPath) {
+                  router.replace(retryPath as any);
+                  return;
+                }
+                router.back();
+              }}
               style={{ marginBottom: 12 }}
             />
             <ButtonPrimary

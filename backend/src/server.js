@@ -7,6 +7,7 @@ async function start() {
   app.listen(env.port, () => {
     // eslint-disable-next-line no-console
     console.log(`NiviDoc backend running on port ${env.port}`);
+    console.log("Mongodb Connected");
   });
 }
 

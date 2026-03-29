@@ -7,6 +7,7 @@ import {
     Stethoscope,
     Users,
 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import {
     Area,
     AreaChart,
@@ -21,24 +22,97 @@ import {
 import PageHeader from "../components/PageHeader";
 import StatCard from "../components/StatCard";
 import {
-    APPOINTMENTS,
-    DOCTORS,
-    PATIENTS,
-    REVENUE_TREND,
-    WEEKLY_BOOKINGS,
-} from "../data/mockData";
+    getAdminAppointments,
+    getAdminDashboard,
+    getAdminDoctors,
+    getAdminPatients,
+    getAdminPayments,
+} from "../services/api";
 
 export default function DashboardPage() {
-  const totalRevenue =
-    APPOINTMENTS.reduce((sum, appt) => sum + (appt.amount || 0), 0) + 120000;
-  const activityItems = APPOINTMENTS.slice(0, 4).map((appt, index) => ({
-    id: appt.id,
-    title: index % 2 === 0 ? "Appointment confirmed" : "Consultation completed",
-    description: `${appt.patient} with ${appt.doctor}`,
-    time: appt.time,
-    icon: index % 3 === 0 ? Calendar : index % 3 === 1 ? CheckCircle2 : Clock3,
-    tone: index % 3 === 0 ? "blue" : index % 3 === 1 ? "emerald" : "teal",
-  }));
+  const [dashboard, setDashboard] = useState(null);
+  const [appointments, setAppointments] = useState([]);
+  const [payments, setPayments] = useState([]);
+  const [doctors, setDoctors] = useState([]);
+  const [patients, setPatients] = useState([]);
+
+  useEffect(() => {
+    const load = async () => {
+      const [
+        dashboardRes,
+        appointmentsRes,
+        paymentsRes,
+        doctorsRes,
+        patientsRes,
+      ] = await Promise.all([
+        getAdminDashboard(),
+        getAdminAppointments(),
+        getAdminPayments(),
+        getAdminDoctors(),
+        getAdminPatients(),
+      ]);
+
+      if (dashboardRes.data) setDashboard(dashboardRes.data);
+      if (appointmentsRes.data) setAppointments(appointmentsRes.data);
+      if (paymentsRes.data) setPayments(paymentsRes.data);
+      if (doctorsRes.data) setDoctors(doctorsRes.data);
+      if (patientsRes.data) setPatients(patientsRes.data);
+    };
+    load();
+  }, []);
+
+  const totalRevenue = useMemo(
+    () =>
+      payments
+        .filter((payment) => payment.status === "paid")
+        .reduce((sum, payment) => sum + (payment.amount || 0), 0),
+    [payments],
+  );
+
+  const weeklyBookings = useMemo(() => {
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const counters = days.map((day) => ({ day, bookings: 0 }));
+    appointments.forEach((appointment) => {
+      const day = new Date(appointment.date).getDay();
+      counters[day].bookings += 1;
+    });
+    return counters;
+  }, [appointments]);
+
+  const revenueTrend = useMemo(() => {
+    const monthMap = new Map();
+    payments
+      .filter((payment) => payment.status === "paid")
+      .forEach((payment) => {
+        const month = new Date(
+          payment.paidAt || payment.createdAt,
+        ).toLocaleDateString("en-US", {
+          month: "short",
+        });
+        monthMap.set(month, (monthMap.get(month) || 0) + (payment.amount || 0));
+      });
+    return Array.from(monthMap.entries()).map(([month, revenue]) => ({
+      month,
+      revenue,
+    }));
+  }, [payments]);
+
+  const activityItems = useMemo(
+    () =>
+      appointments.slice(0, 4).map((appointment, index) => ({
+        id: appointment._id,
+        title:
+          appointment.status === "completed"
+            ? "Consultation completed"
+            : "Appointment confirmed",
+        description: `${appointment.patient?.name || "Patient"} with ${appointment.doctor?.name || "Doctor"}`,
+        time: appointment.time,
+        icon:
+          index % 3 === 0 ? Calendar : index % 3 === 1 ? CheckCircle2 : Clock3,
+        tone: index % 3 === 0 ? "blue" : index % 3 === 1 ? "emerald" : "teal",
+      })),
+    [appointments],
+  );
 
   const toneStyles = {
     blue: "bg-blue-50 text-blue-700 ring-blue-200",
@@ -56,21 +130,21 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="Total Patients"
-          value={PATIENTS.length + 1200}
+          value={dashboard?.totals?.patientsCount || patients.length}
           icon={Users}
           trend={12}
           trendUp={true}
         />
         <StatCard
           title="Total Doctors"
-          value={DOCTORS.length + 45}
+          value={dashboard?.totals?.doctorsCount || doctors.length}
           icon={Stethoscope}
           trend={4}
           trendUp={true}
         />
         <StatCard
           title="Appointments Today"
-          value={APPOINTMENTS.length * 3}
+          value={dashboard?.totals?.appointmentsToday || 0}
           icon={Calendar}
           trend={2}
           trendUp={false}
@@ -101,7 +175,7 @@ export default function DashboardPage() {
           </div>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={WEEKLY_BOOKINGS}>
+              <BarChart data={weeklyBookings}>
                 <CartesianGrid
                   strokeDasharray="4 4"
                   vertical={false}
@@ -163,7 +237,7 @@ export default function DashboardPage() {
           </div>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={REVENUE_TREND}>
+              <AreaChart data={revenueTrend}>
                 <CartesianGrid
                   strokeDasharray="4 4"
                   vertical={false}

@@ -1,21 +1,32 @@
 import { CreditCard, Download, ShieldCheck } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Badge from "../components/Badge";
 import Button from "../components/Button";
 import DataTable from "../components/DataTable";
 import PageHeader from "../components/PageHeader";
-import { PAYMENTS } from "../data/mockData";
+import { getAdminPayments } from "../services/api";
 
 export default function PaymentsPage() {
-  const [payments] = useState(PAYMENTS);
+  const [payments, setPayments] = useState([]);
+
+  useEffect(() => {
+    const load = async () => {
+      const response = await getAdminPayments();
+      if (response.data) setPayments(response.data);
+    };
+    load();
+  }, []);
 
   const getStatusBadge = (status) => {
     switch (status) {
       case "Paid":
+      case "paid":
         return "success";
       case "Pending":
+      case "pending":
         return "warning";
       case "Failed":
+      case "failed":
         return "danger";
       default:
         return "default";
@@ -28,7 +39,7 @@ export default function PaymentsPage() {
       accessor: "id",
       render: (row) => (
         <span className="font-mono text-xs font-semibold text-slate-500">
-          {row.id}
+          {row.razorpayPaymentId || row._id}
         </span>
       ),
     },
@@ -36,7 +47,7 @@ export default function PaymentsPage() {
       header: "User",
       accessor: "user",
       render: (row) => (
-        <span className="font-semibold text-slate-800">{row.user}</span>
+        <span className="font-semibold text-slate-800">{row.user?.name}</span>
       ),
     },
     {
@@ -44,7 +55,12 @@ export default function PaymentsPage() {
       accessor: "type",
       render: (row) => <span className="text-slate-600">{row.type}</span>,
     },
-    { header: "Date", accessor: "date" },
+    {
+      header: "Date",
+      accessor: "date",
+      render: (row) =>
+        new Date(row.paidAt || row.createdAt).toLocaleDateString(),
+    },
     {
       header: "Method",
       accessor: "method",
@@ -65,7 +81,10 @@ export default function PaymentsPage() {
       header: "Status",
       accessor: "status",
       render: (row) => (
-        <Badge variant={getStatusBadge(row.status)}>{row.status}</Badge>
+        <Badge variant={getStatusBadge(row.status)}>
+          {String(row.status).charAt(0).toUpperCase() +
+            String(row.status).slice(1)}
+        </Badge>
       ),
     },
     {
@@ -75,7 +94,7 @@ export default function PaymentsPage() {
         <Button
           variant="ghost"
           size="sm"
-          disabled={row.status !== "Paid"}
+          disabled={row.status !== "paid"}
           className="p-1.5"
           title="Download Receipt"
         >

@@ -6,9 +6,12 @@ const DoctorProfile = require("../models/DoctorProfile");
 const ApiError = require("../utils/ApiError");
 const ApiResponse = require("../utils/ApiResponse");
 const catchAsync = require("../utils/catchAsync");
+const { requirePatientProfileComplete } = require("../utils/profileCompletion");
 const { sendAppointmentEmail } = require("../services/emailService");
 
 const createAppointment = catchAsync(async (req, res) => {
+  await requirePatientProfileComplete(req.user._id);
+
   const session = await mongoose.startSession();
   session.startTransaction();
 

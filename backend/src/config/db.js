@@ -7,9 +7,10 @@ async function connectDB() {
   }
 
   mongoose.set("strictQuery", true);
-  await mongoose.connect(env.mongodbUri, {
+  const mongoDb = await mongoose.connect(env.mongodbUri, {
     autoIndex: env.nodeEnv !== "production",
   });
+  console.log("Mongodb Database Name: "+mongoDb.connection.db.databaseName);
 }
 
 module.exports = { connectDB };

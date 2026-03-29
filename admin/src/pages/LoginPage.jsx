@@ -3,18 +3,27 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "../components/Button";
 import Input from "../components/Input";
+import { loginAdmin } from "../services/api";
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (email && password) {
-      localStorage.setItem("nividoc_admin_auth", "true");
+    if (!email || !password) return;
+    setLoading(true);
+    setError("");
+    const result = await loginAdmin(email, password);
+    setLoading(false);
+    if (result.status === "success") {
       navigate("/");
+      return;
     }
+    setError(result.error || "Invalid credentials");
   };
 
   return (
@@ -52,13 +61,23 @@ export default function LoginPage() {
               placeholder="••••••••"
             />
 
-            <Button type="submit" className="w-full py-3 text-base">
+            <Button
+              type="submit"
+              className="w-full py-3 text-base"
+              disabled={loading}
+            >
               Sign in to Dashboard
             </Button>
 
+            {error ? (
+              <p className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">
+                {error}
+              </p>
+            ) : null}
+
             <div className="text-center">
               <span className="text-xs text-slate-500 bg-slate-50 px-3 py-1 rounded-full">
-                Any email/password will work
+                Use a valid admin account
               </span>
             </div>
           </form>

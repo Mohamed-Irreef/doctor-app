@@ -7,16 +7,24 @@ import Input from "../components/Input";
 import Modal from "../components/Modal";
 import PageHeader from "../components/PageHeader";
 import Toast from "../components/Toast";
-import { LAB_TESTS } from "../data/mockData";
+import { createAdminLab, deleteAdminLab, getAdminLabs } from "../services/api";
 
 export default function LabTestsPage() {
-  const [tests, setTests] = useState(LAB_TESTS);
+  const [tests, setTests] = useState([]);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [toast, setToast] = useState({ message: "", tone: "info" });
 
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("");
+
+  useEffect(() => {
+    const load = async () => {
+      const response = await getAdminLabs();
+      if (response.data) setTests(response.data);
+    };
+    load();
+  }, []);
 
   useEffect(() => {
     if (!toast.message) return undefined;
@@ -27,23 +35,25 @@ export default function LabTestsPage() {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  const handleAdd = (event) => {
+  const handleAdd = async (event) => {
     event.preventDefault();
 
     const numericPrice = parseInt(price, 10);
 
-    const newTest = {
-      id: `l${Date.now()}`,
+    const response = await createAdminLab({
       name,
       category,
       price: numericPrice,
       originalPrice: numericPrice + 200,
-      discount: numericPrice > 0 ? "15%" : "0%",
+      discountPercent: 15,
       turnaround: "24 hrs",
       popular: false,
-    };
+      active: true,
+    });
 
-    setTests((prev) => [newTest, ...prev]);
+    if (response.data) {
+      setTests((prev) => [response.data, ...prev]);
+    }
     setIsAddOpen(false);
     setName("");
     setPrice("");
@@ -51,8 +61,9 @@ export default function LabTestsPage() {
     setToast({ message: "Lab test added successfully.", tone: "success" });
   };
 
-  const handleDelete = (id) => {
-    setTests((prev) => prev.filter((test) => test.id !== id));
+  const handleDelete = async (id) => {
+    await deleteAdminLab(id);
+    setTests((prev) => prev.filter((test) => test._id !== id));
     setToast({ message: "Lab test removed from catalog.", tone: "danger" });
   };
 
@@ -124,7 +135,7 @@ export default function LabTestsPage() {
           <button
             type="button"
             title="Delete test"
-            onClick={() => handleDelete(row.id)}
+            onClick={() => handleDelete(row._id)}
             className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
           >
             <Trash2 size={16} />

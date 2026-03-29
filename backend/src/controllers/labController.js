@@ -4,6 +4,7 @@ const LabBooking = require("../models/LabBooking");
 const ApiError = require("../utils/ApiError");
 const ApiResponse = require("../utils/ApiResponse");
 const catchAsync = require("../utils/catchAsync");
+const { requirePatientProfileComplete } = require("../utils/profileCompletion");
 
 const getLabs = catchAsync(async (req, res) => {
   const filter = { active: true };
@@ -25,6 +26,8 @@ const getLabById = catchAsync(async (req, res) => {
 });
 
 const bookLab = catchAsync(async (req, res) => {
+  await requirePatientProfileComplete(req.user._id);
+
   const lab = await LabTest.findById(req.body.labTestId);
   if (!lab || !lab.active) throw new ApiError(404, "Lab test not found");
 

@@ -1,21 +1,29 @@
 import { Edit, Eye, UserCheck, UserX } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Badge from "../components/Badge";
 import Button from "../components/Button";
 import DataTable from "../components/DataTable";
 import PageHeader from "../components/PageHeader";
-import { PATIENTS } from "../data/mockData";
+import { getAdminPatients } from "../services/api";
 
 export default function PatientsPage() {
-  const [patients, setPatients] = useState(PATIENTS);
+  const [patients, setPatients] = useState([]);
+
+  useEffect(() => {
+    const load = async () => {
+      const response = await getAdminPatients();
+      if (response.data) setPatients(response.data);
+    };
+    load();
+  }, []);
 
   const toggleStatus = (id) => {
     setPatients(
       patients.map((p) => {
-        if (p.id === id) {
+        if ((p.id || p._id) === id) {
           return {
             ...p,
-            status: p.status === "Active" ? "Inactive" : "Active",
+            status: p.status === "active" ? "inactive" : "active",
           };
         }
         return p;
@@ -33,13 +41,32 @@ export default function PatientsPage() {
     },
     { header: "Email ID", accessor: "email" },
     { header: "Phone", accessor: "phone" },
-    { header: "Join Date", accessor: "joinDate" },
+    {
+      header: "Gender",
+      accessor: "gender",
+      render: (row) => row.profile?.gender || "-",
+    },
+    {
+      header: "Blood Group",
+      accessor: "bloodGroup",
+      render: (row) => row.profile?.bloodGroup || "-",
+    },
+    {
+      header: "Address",
+      accessor: "address",
+      render: (row) => row.profile?.address || "-",
+    },
+    {
+      header: "Join Date",
+      accessor: "joinDate",
+      render: (row) => new Date(row.createdAt).toLocaleDateString(),
+    },
     {
       header: "Status",
       accessor: "status",
       render: (row) => (
-        <Badge variant={row.status === "Active" ? "success" : "danger"}>
-          {row.status}
+        <Badge variant={row.status === "active" ? "success" : "danger"}>
+          {row.status === "active" ? "Active" : "Inactive"}
         </Badge>
       ),
     },
@@ -67,13 +94,13 @@ export default function PatientsPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => toggleStatus(row.id)}
-            className={`p-1.5 ${row.status === "Active" ? "text-red-500 hover:bg-red-50 hover:text-red-600" : "text-green-600 hover:bg-green-50"}`}
+            onClick={() => toggleStatus(row.id || row._id)}
+            className={`p-1.5 ${row.status === "active" ? "text-red-500 hover:bg-red-50 hover:text-red-600" : "text-green-600 hover:bg-green-50"}`}
             title={
-              row.status === "Active" ? "Disable Patient" : "Enable Patient"
+              row.status === "active" ? "Disable Patient" : "Enable Patient"
             }
           >
-            {row.status === "Active" ? (
+            {row.status === "active" ? (
               <UserX size={18} />
             ) : (
               <UserCheck size={18} />

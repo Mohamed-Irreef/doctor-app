@@ -7,7 +7,11 @@ import Input from "../components/Input";
 import Modal from "../components/Modal";
 import PageHeader from "../components/PageHeader";
 import Toast from "../components/Toast";
-import { MEDICINES } from "../data/mockData";
+import {
+    createAdminMedicine,
+    deleteAdminMedicine,
+    getAdminMedicines,
+} from "../services/api";
 
 const PREVIEW_IMAGES = [
   "https://images.unsplash.com/photo-1607619056574-7b8d3ee536b2?auto=format&fit=crop&w=250&q=80",
@@ -16,7 +20,7 @@ const PREVIEW_IMAGES = [
 ];
 
 export default function PharmacyPage() {
-  const [medicines, setMedicines] = useState(MEDICINES);
+  const [medicines, setMedicines] = useState([]);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [toast, setToast] = useState({ message: "", tone: "info" });
 
@@ -24,6 +28,14 @@ export default function PharmacyPage() {
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
   const [category, setCategory] = useState("");
+
+  useEffect(() => {
+    const load = async () => {
+      const response = await getAdminMedicines();
+      if (response.data) setMedicines(response.data);
+    };
+    load();
+  }, []);
 
   useEffect(() => {
     if (!toast.message) return undefined;
@@ -34,22 +46,24 @@ export default function PharmacyPage() {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  const handleAdd = (event) => {
+  const handleAdd = async (event) => {
     event.preventDefault();
 
     const stockValue = parseInt(stock, 10);
 
-    const newMedicine = {
-      id: `m${Date.now()}`,
+    const response = await createAdminMedicine({
       name,
       category,
       price: parseInt(price, 10),
       stock: stockValue,
+      description: "",
       prescriptionRequired: false,
-      inStock: stockValue > 0,
-    };
+      active: true,
+    });
 
-    setMedicines((prev) => [newMedicine, ...prev]);
+    if (response.data) {
+      setMedicines((prev) => [response.data, ...prev]);
+    }
     setIsAddOpen(false);
     setName("");
     setPrice("");
@@ -58,8 +72,9 @@ export default function PharmacyPage() {
     setToast({ message: "Medicine added to inventory.", tone: "success" });
   };
 
-  const handleDelete = (id) => {
-    setMedicines((prev) => prev.filter((medicine) => medicine.id !== id));
+  const handleDelete = async (id) => {
+    await deleteAdminMedicine(id);
+    setMedicines((prev) => prev.filter((medicine) => medicine._id !== id));
     setToast({ message: "Medicine removed from inventory.", tone: "danger" });
   };
 
@@ -130,7 +145,7 @@ export default function PharmacyPage() {
           <button
             type="button"
             title="Delete medicine"
-            onClick={() => handleDelete(row.id)}
+            onClick={() => handleDelete(row._id)}
             className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
           >
             <Trash2 size={16} />

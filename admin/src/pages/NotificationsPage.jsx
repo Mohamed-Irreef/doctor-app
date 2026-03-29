@@ -8,27 +8,41 @@ import {
     Trash2,
     User,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Badge from "../components/Badge";
 import Button from "../components/Button";
 import Input from "../components/Input";
 import Modal from "../components/Modal";
 import PageHeader from "../components/PageHeader";
-import { NOTIFICATIONS } from "../data/mockData";
+import {
+    createAdminNotification,
+    getAdminNotifications,
+} from "../services/api";
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState(NOTIFICATIONS);
+  const [notifications, setNotifications] = useState([]);
   const [isComposeOpen, setIsComposeOpen] = useState(false);
+  const [target, setTarget] = useState("all");
+  const [title, setTitle] = useState("");
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    const load = async () => {
+      const response = await getAdminNotifications();
+      if (response.data) setNotifications(response.data);
+    };
+    load();
+  }, []);
 
   const getIcon = (type) => {
     switch (type) {
-      case "Doctor":
+      case "doctor":
         return <User size={20} className="text-blue-600" />;
-      case "Payment":
+      case "payment":
         return <CreditCard size={20} className="text-red-500" />;
-      case "Appointment":
+      case "appointment":
         return <Calendar size={20} className="text-amber-500" />;
-      case "Review":
+      case "review":
         return <Star size={20} className="text-purple-500" />;
       default:
         return <Bell size={20} className="text-slate-500" />;
@@ -37,13 +51,13 @@ export default function NotificationsPage() {
 
   const getBg = (type) => {
     switch (type) {
-      case "Doctor":
+      case "doctor":
         return "bg-blue-100";
-      case "Payment":
+      case "payment":
         return "bg-red-100";
-      case "Appointment":
+      case "appointment":
         return "bg-amber-100";
-      case "Review":
+      case "review":
         return "bg-purple-100";
       default:
         return "bg-slate-100";
@@ -54,10 +68,21 @@ export default function NotificationsPage() {
     setNotifications(notifications.map((n) => ({ ...n, read: true })));
   };
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
+    const response = await createAdminNotification({
+      title,
+      message,
+      type: "appointment",
+      audienceType: target,
+    });
+    if (response.data) {
+      setNotifications((prev) => [response.data, ...prev]);
+    }
+    setTitle("");
+    setMessage("");
+    setTarget("all");
     setIsComposeOpen(false);
-    alert("Push notification sent to all targeted users.");
   };
 
   return (
@@ -89,7 +114,7 @@ export default function NotificationsPage() {
         <div className="divide-y divide-slate-100">
           {notifications.map((n) => (
             <div
-              key={n.id}
+              key={n._id || n.id}
               className={`p-6 flex gap-4 transition-colors hover:bg-slate-50 ${!n.read ? "bg-blue-50/30" : ""}`}
             >
               <div
@@ -130,7 +155,9 @@ export default function NotificationsPage() {
                     onClick={() =>
                       setNotifications(
                         notifications.map((x) =>
-                          x.id === n.id ? { ...x, read: true } : x,
+                          (x._id || x.id) === (n._id || n.id)
+                            ? { ...x, read: true }
+                            : x,
                         ),
                       )
                     }
@@ -142,7 +169,11 @@ export default function NotificationsPage() {
                 )}
                 <button
                   onClick={() =>
-                    setNotifications(notifications.filter((x) => x.id !== n.id))
+                    setNotifications(
+                      notifications.filter(
+                        (x) => (x._id || x.id) !== (n._id || n.id),
+                      ),
+                    )
                   }
                   className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                   title="Delete"
@@ -166,17 +197,22 @@ export default function NotificationsPage() {
             <label className="block text-sm font-bold text-slate-700 mb-1.5">
               Target Audience
             </label>
-            <select className="w-full border border-slate-200 bg-white rounded-[10px] px-3 py-2.5 text-sm font-medium focus:ring-4 focus:ring-blue-500/5 focus:border-blue-600 transition-all outline-none">
-              <option>All Users (Patients & Doctors)</option>
-              <option>Patients Only</option>
-              <option>Doctors Only</option>
-              <option>Users with upcoming appointments</option>
+            <select
+              className="w-full border border-slate-200 bg-white rounded-[10px] px-3 py-2.5 text-sm font-medium focus:ring-4 focus:ring-blue-500/5 focus:border-blue-600 transition-all outline-none"
+              value={target}
+              onChange={(event) => setTarget(event.target.value)}
+            >
+              <option value="all">All Users (Patients & Doctors)</option>
+              <option value="patient">Patients Only</option>
+              <option value="doctor">Doctors Only</option>
             </select>
           </div>
           <Input
             label="Push Title"
             required
             placeholder="e.g. 50% Off Lab Tests!"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
           />
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-1.5">
@@ -187,6 +223,8 @@ export default function NotificationsPage() {
               rows={4}
               className="w-full border border-slate-200 bg-white rounded-[10px] px-4 py-3 text-sm font-medium focus:ring-4 focus:ring-blue-500/5 focus:border-blue-600 transition-all outline-none resize-none"
               placeholder="Enter the notification content here..."
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
             />
           </div>
           <div className="pt-4 flex gap-3">

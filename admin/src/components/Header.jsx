@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { logoutAdmin } from "../services/api";
 
 export default function Header({
   onOpenSidebar,
@@ -17,7 +18,7 @@ export default function Header({
 }) {
   const navigate = useNavigate();
   const handleLogout = () => {
-    localStorage.clear();
+    logoutAdmin();
     navigate("/login");
   };
   const [profileOpen, setProfileOpen] = useState(false);

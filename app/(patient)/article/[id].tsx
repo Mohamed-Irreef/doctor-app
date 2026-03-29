@@ -1,16 +1,26 @@
-import React from 'react';
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  View, Text, StyleSheet, ScrollView, Image,
-  TouchableOpacity, Share, Dimensions,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors } from '../../../constants/Colors';
-import { Typography } from '../../../constants/Typography';
-import { ARTICLES } from '../../../constants/MockData';
-import { ArrowLeft, Clock, Share2, Heart, BookmarkPlus } from 'lucide-react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+    ArrowLeft,
+    BookmarkPlus,
+    Clock,
+    Share2
+} from "lucide-react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+    Dimensions,
+    Image,
+    ScrollView,
+    Share,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Colors } from "../../../constants/Colors";
+import { getArticles } from "../../../services/api";
 
-const { width: W } = Dimensions.get('window');
+const { width: W } = Dimensions.get("window");
 
 const FULL_CONTENT: Record<string, string> = {
   a1: `Heart disease is the leading cause of death worldwide, but the good news is that most risk factors are within your control. Here are five science-backed habits that can dramatically improve your heart health:\n\n**1. Follow a Heart-Healthy Diet**\nFocus on whole grains, fresh fruits, vegetables, lean proteins and healthy fats like avocado and olive oil. Limit saturated fats, trans fats, sodium, and added sugar. The Mediterranean diet has proven repeatedly to reduce cardiac risk.\n\n**2. Exercise Regularly**\nAim for at least 150 minutes of moderate-intensity aerobic activity per week. Even brisk walking counts. Regular movement lowers blood pressure, reduces bad cholesterol, and keeps your weight in check.\n\n**3. Quit Smoking**\nSmoking is one of the biggest risk factors for heart disease. Within just one year of quitting, your risk of coronary heart disease drops by 50%. There are now many FDA-approved aids and support programs to help.\n\n**4. Manage Stress**\nChronic stress raises cortisol levels which contributes to inflammation and high blood pressure. Practice mindfulness, deep breathing, journaling, or talk to a therapist.\n\n**5. Get Regular Checkups**\nKnow your numbers — blood pressure, cholesterol, blood sugar, and BMI. Early detection through regular health checkups can prevent serious cardiac events.`,
@@ -22,21 +32,76 @@ const FULL_CONTENT: Record<string, string> = {
 export default function ArticleDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const article = ARTICLES.find(a => a.id === id) ?? ARTICLES[0];
-  const related = ARTICLES.filter(a => a.id !== article.id).slice(0, 2);
+  const [articles, setArticles] = useState<any[]>([]);
+
+  useEffect(() => {
+    const load = async () => {
+      const response = await getArticles();
+      if (response.data) setArticles(response.data);
+    };
+    load();
+  }, []);
+
+  const article = useMemo(() => {
+    if (!articles.length) return null;
+    return (
+      articles.find((a) => String(a.id || a._id) === String(id)) || articles[0]
+    );
+  }, [articles, id]);
+
+  const related = useMemo(() => {
+    if (!article) return [];
+    const articleId = String(article.id || article._id);
+    return articles
+      .filter((a) => String(a.id || a._id) !== articleId)
+      .slice(0, 2);
+  }, [articles, article]);
+
+  if (!article) {
+    return (
+      <SafeAreaView
+        style={[
+          styles.container,
+          { alignItems: "center", justifyContent: "center" },
+        ]}
+      >
+        <Text style={{ color: Colors.textSecondary }}>
+          Article not available.
+        </Text>
+      </SafeAreaView>
+    );
+  }
+
+  const articleId = String(article.id || article._id || "a1");
+  const bodyContent =
+    article.content || FULL_CONTENT[articleId] || FULL_CONTENT.a1;
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scroll}
+      >
         {/* Hero Image */}
-        <View style={{ height: 280, position: 'relative' }}>
-          <Image source={{ uri: article.image }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-          <SafeAreaView edges={['top']} style={styles.headerBtns}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+        <View style={{ height: 280, position: "relative" }}>
+          <Image
+            source={{ uri: article.image }}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+          />
+          <SafeAreaView edges={["top"]} style={styles.headerBtns}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.iconBtn}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
               <ArrowLeft color={Colors.text} size={22} />
             </TouchableOpacity>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <TouchableOpacity style={styles.iconBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <TouchableOpacity
+                style={styles.iconBtn}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
                 <BookmarkPlus color={Colors.text} size={22} />
               </TouchableOpacity>
               <TouchableOpacity
@@ -58,33 +123,44 @@ export default function ArticleDetailsScreen() {
             </View>
             <View style={styles.timeRow}>
               <Clock size={12} color={Colors.textSecondary} />
-              <Text style={styles.readTime}>{article.readTime}</Text>
+              <Text style={styles.readTime}>
+                {article.readTime || "5 min read"}
+              </Text>
             </View>
           </View>
 
           <Text style={styles.title}>{article.title}</Text>
-          <Text style={styles.description}>{article.description}</Text>
+          <Text style={styles.description}>
+            {article.description ||
+              "Read this health update and practical guidance from verified medical experts."}
+          </Text>
 
           {/* Author */}
           <View style={styles.authorRow}>
             <Image
-              source={{ uri: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=100' }}
+              source={{
+                uri: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=100",
+              }}
               style={styles.authorAvatar}
             />
             <View>
               <Text style={styles.authorName}>Dr. Sarah Jenkins</Text>
-              <Text style={styles.authorTitle}>Cardiologist · Verified Author</Text>
+              <Text style={styles.authorTitle}>
+                Cardiologist · Verified Author
+              </Text>
             </View>
           </View>
 
           <View style={styles.divider} />
 
           {/* Body Content */}
-          {(FULL_CONTENT[article.id] ?? FULL_CONTENT.a1).split('\n\n').map((para, i) => {
-            const isBold = para.startsWith('**');
-            const clean = para.replace(/\*\*/g, '');
+          {bodyContent.split("\n\n").map((para: string, i: number) => {
+            const isBold = para.startsWith("**");
+            const clean = para.replace(/\*\*/g, "");
             return (
-              <Text key={i} style={isBold ? styles.bodyBold : styles.bodyText}>{clean}</Text>
+              <Text key={i} style={isBold ? styles.bodyBold : styles.bodyText}>
+                {clean}
+              </Text>
             );
           })}
 
@@ -92,17 +168,26 @@ export default function ArticleDetailsScreen() {
 
           {/* Related */}
           <Text style={styles.relatedTitle}>Related Articles</Text>
-          {related.map(rel => (
+          {related.map((rel) => (
             <TouchableOpacity
-              key={rel.id}
+              key={String(rel.id || rel._id)}
               style={styles.relatedCard}
-              onPress={() => router.replace({ pathname: '/(patient)/article/[id]', params: { id: rel.id } })}
+              onPress={() =>
+                router.replace({
+                  pathname: "/(patient)/article/[id]",
+                  params: { id: rel.id || rel._id },
+                })
+              }
               activeOpacity={0.85}
             >
               <Image source={{ uri: rel.image }} style={styles.relatedImage} />
               <View style={{ flex: 1, padding: 12 }}>
-                <Text style={styles.relatedText} numberOfLines={2}>{rel.title}</Text>
-                <Text style={styles.relatedTime}>{rel.readTime}</Text>
+                <Text style={styles.relatedText} numberOfLines={2}>
+                  {rel.title}
+                </Text>
+                <Text style={styles.relatedTime}>
+                  {rel.readTime || "5 min read"}
+                </Text>
               </View>
             </TouchableOpacity>
           ))}
@@ -116,38 +201,113 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   scroll: { paddingBottom: 40 },
   headerBtns: {
-    position: 'absolute', top: 0, left: 0, right: 0,
-    flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 8,
   },
   iconBtn: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.surface,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: Colors.black, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: Colors.black,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   content: {
-    backgroundColor: Colors.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    marginTop: -28, padding: 24,
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    marginTop: -28,
+    padding: 24,
   },
-  metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
-  categoryBadge: { backgroundColor: '#DBEAFE', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20 },
-  categoryText: { fontSize: 11, fontWeight: '700', color: Colors.primary },
-  timeRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+  categoryBadge: {
+    backgroundColor: "#DBEAFE",
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  categoryText: { fontSize: 11, fontWeight: "700", color: Colors.primary },
+  timeRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   readTime: { fontSize: 12, color: Colors.textSecondary },
-  title: { fontSize: 22, fontWeight: '800', color: Colors.text, lineHeight: 30, marginBottom: 10 },
-  description: { fontSize: 15, color: Colors.textSecondary, lineHeight: 24, marginBottom: 20 },
-  authorRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.background, padding: 14, borderRadius: 14 },
-  authorAvatar: { width: 44, height: 44, borderRadius: 22, marginRight: 12, backgroundColor: Colors.border },
-  authorName: { fontSize: 14, fontWeight: '700', color: Colors.text },
+  title: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: Colors.text,
+    lineHeight: 30,
+    marginBottom: 10,
+  },
+  description: {
+    fontSize: 15,
+    color: Colors.textSecondary,
+    lineHeight: 24,
+    marginBottom: 20,
+  },
+  authorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.background,
+    padding: 14,
+    borderRadius: 14,
+  },
+  authorAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 12,
+    backgroundColor: Colors.border,
+  },
+  authorName: { fontSize: 14, fontWeight: "700", color: Colors.text },
   authorTitle: { fontSize: 11, color: Colors.primary },
   divider: { height: 1, backgroundColor: Colors.border, marginVertical: 24 },
-  bodyText: { fontSize: 15, color: Colors.text, lineHeight: 26, marginBottom: 16 },
-  bodyBold: { fontSize: 16, fontWeight: '700', color: Colors.text, lineHeight: 24, marginBottom: 8 },
-  relatedTitle: { fontSize: 18, fontWeight: '700', color: Colors.text, marginBottom: 16 },
+  bodyText: {
+    fontSize: 15,
+    color: Colors.text,
+    lineHeight: 26,
+    marginBottom: 16,
+  },
+  bodyBold: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: Colors.text,
+    lineHeight: 24,
+    marginBottom: 8,
+  },
+  relatedTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: Colors.text,
+    marginBottom: 16,
+  },
   relatedCard: {
-    flexDirection: 'row', borderRadius: 16, overflow: 'hidden', borderWidth: 1,
-    borderColor: Colors.border, marginBottom: 12, backgroundColor: Colors.surface,
+    flexDirection: "row",
+    borderRadius: 16,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 12,
+    backgroundColor: Colors.surface,
   },
   relatedImage: { width: 100, height: 90 },
-  relatedText: { fontSize: 13, fontWeight: '600', color: Colors.text, lineHeight: 18 },
+  relatedText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.text,
+    lineHeight: 18,
+  },
   relatedTime: { fontSize: 11, color: Colors.primary, marginTop: 6 },
 });

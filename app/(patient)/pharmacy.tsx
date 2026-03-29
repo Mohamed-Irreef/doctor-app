@@ -1,40 +1,77 @@
-import React, { useState } from 'react';
+import { useRouter } from "expo-router";
+import { ArrowLeft, Plus, Search, ShoppingCart } from "lucide-react-native";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, Image, TextInput,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors } from '../../constants/Colors';
-import { MEDICINES } from '../../constants/MockData';
-import { ArrowLeft, Search, ShoppingCart, Plus } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import { useCartStore } from '../../store/cartStore';
+    FlatList,
+    Image,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Colors } from "../../constants/Colors";
+import { getMedicines } from "../../services/api";
+import { useCartStore } from "../../store/cartStore";
 
-const CATS = ['All', 'Pain Relief', 'Vitamins', 'Supplements', 'Allergy', 'Diabetes'];
+const CATS = [
+  "All",
+  "Pain Relief",
+  "Vitamins",
+  "Supplements",
+  "Allergy",
+  "Diabetes",
+];
 
 export default function PharmacyScreen() {
   const router = useRouter();
   const { items, addItem } = useCartStore();
   const cartCount = items.reduce((sum, i) => sum + i.quantity, 0);
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [query, setQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState("All");
+  const [query, setQuery] = useState("");
+  const [medicines, setMedicines] = useState<any[]>([]);
 
-  const filtered = MEDICINES.filter(m => {
-    const matchesQ = m.name.toLowerCase().includes(query.toLowerCase());
-    const matchesCat = activeCategory === 'All' || m.category === activeCategory;
-    return matchesQ && matchesCat;
-  });
+  useEffect(() => {
+    const load = async () => {
+      const response = await getMedicines();
+      if (response.data) setMedicines(response.data);
+    };
+    load();
+  }, []);
+
+  const filtered = useMemo(
+    () =>
+      medicines.filter((m) => {
+        const matchesQ = m.name.toLowerCase().includes(query.toLowerCase());
+        const matchesCat =
+          activeCategory === "All" || m.category === activeCategory;
+        return matchesQ && matchesCat;
+      }),
+    [medicines, query, activeCategory],
+  );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
           <ArrowLeft color={Colors.text} size={22} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Medicines</Text>
-        <TouchableOpacity style={styles.cartBtn} onPress={() => router.push('/(patient)/cart')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+        <TouchableOpacity
+          style={styles.cartBtn}
+          onPress={() => router.push("/(patient)/cart")}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
           <ShoppingCart color={Colors.primary} size={22} />
           {cartCount > 0 && (
-            <View style={styles.cartBadge}><Text style={styles.cartBadgeText}>{cartCount}</Text></View>
+            <View style={styles.cartBadge}>
+              <Text style={styles.cartBadgeText}>{cartCount}</Text>
+            </View>
           )}
         </TouchableOpacity>
       </View>
@@ -44,14 +81,16 @@ export default function PharmacyScreen() {
         numColumns={2}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        columnWrapperStyle={{ justifyContent: 'space-between' }}
-        keyExtractor={m => m.id}
+        columnWrapperStyle={{ justifyContent: "space-between" }}
+        keyExtractor={(m) => String(m.id || m._id)}
         ListHeaderComponent={() => (
           <>
             {/* Promo Banner */}
             <View style={styles.promoBanner}>
               <Text style={styles.promoTitle}>💊 Up to 30% Off Medicines</Text>
-              <Text style={styles.promoSub}>Free delivery on orders above $30 · Use code MEDI30</Text>
+              <Text style={styles.promoSub}>
+                Free delivery on orders above $30 · Use code MEDI30
+              </Text>
             </View>
 
             {/* Search */}
@@ -72,14 +111,24 @@ export default function PharmacyScreen() {
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.catScroll}
-              keyExtractor={c => c}
+              keyExtractor={(c) => c}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={[styles.catChip, activeCategory === item && styles.catChipActive]}
+                  style={[
+                    styles.catChip,
+                    activeCategory === item && styles.catChipActive,
+                  ]}
                   onPress={() => setActiveCategory(item)}
                   activeOpacity={0.75}
                 >
-                  <Text style={[styles.catText, activeCategory === item && styles.catTextActive]}>{item}</Text>
+                  <Text
+                    style={[
+                      styles.catText,
+                      activeCategory === item && styles.catTextActive,
+                    ]}
+                  >
+                    {item}
+                  </Text>
                 </TouchableOpacity>
               )}
             />
@@ -87,29 +136,54 @@ export default function PharmacyScreen() {
         )}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Text style={{ fontSize: 16, fontWeight: '600', color: Colors.textSecondary }}>No medicines found</Text>
+            <Text
+              style={{
+                fontSize: 16,
+                fontWeight: "600",
+                color: Colors.textSecondary,
+              }}
+            >
+              No medicines found
+            </Text>
           </View>
         }
         renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.medCard}
-            onPress={() => router.push({ pathname: '/(patient)/medicine/[id]', params: { id: item.id } })}
+            onPress={() =>
+              router.push({
+                pathname: "/(patient)/medicine/[id]",
+                params: { id: item.id || item._id },
+              })
+            }
             activeOpacity={0.85}
           >
             <Image source={{ uri: item.image }} style={styles.medImage} />
             {item.inStock === false && (
-              <View style={styles.outBadge}><Text style={styles.outText}>Out of Stock</Text></View>
+              <View style={styles.outBadge}>
+                <Text style={styles.outText}>Out of Stock</Text>
+              </View>
             )}
-            <Text style={styles.medName} numberOfLines={2}>{item.name}</Text>
+            <Text style={styles.medName} numberOfLines={2}>
+              {item.name}
+            </Text>
             <Text style={styles.medCat}>{item.category}</Text>
             <View style={styles.medBottom}>
               <Text style={styles.medPrice}>${item.price.toFixed(2)}</Text>
               <TouchableOpacity
-                style={[styles.addBtn, item.inStock === false && { backgroundColor: Colors.border }]}
-                onPress={e => {
+                style={[
+                  styles.addBtn,
+                  item.inStock === false && { backgroundColor: Colors.border },
+                ]}
+                onPress={(e) => {
                   e.stopPropagation?.();
                   if (item.inStock !== false) {
-                    addItem({ id: item.id, name: item.name, price: item.price, image: item.image });
+                    addItem({
+                      id: item.id || item._id,
+                      name: item.name,
+                      price: item.price,
+                      image: item.image || "",
+                    });
                   }
                 }}
                 disabled={item.inStock === false}
@@ -128,40 +202,140 @@ export default function PharmacyScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: Colors.surface, borderBottomWidth: 1, borderBottomColor: Colors.border,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
-  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.border },
-  headerTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '700', color: Colors.text },
-  cartBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', position: 'relative' },
-  cartBadge: { position: 'absolute', top: 4, right: 4, width: 16, height: 16, borderRadius: 8, backgroundColor: Colors.error, alignItems: 'center', justifyContent: 'center' },
-  cartBadgeText: { fontSize: 9, fontWeight: '800', color: '#fff' },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  headerTitle: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 17,
+    fontWeight: "700",
+    color: Colors.text,
+  },
+  cartBtn: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+  cartBadge: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: Colors.error,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cartBadgeText: { fontSize: 9, fontWeight: "800", color: "#fff" },
   listContent: { padding: 16, paddingBottom: 40 },
-  promoBanner: { backgroundColor: '#F3E8FF', borderRadius: 16, padding: 16, marginBottom: 16 },
-  promoTitle: { fontSize: 15, fontWeight: '800', color: '#7C3AED' },
-  promoSub: { fontSize: 12, color: '#6D28D9', marginTop: 4 },
+  promoBanner: {
+    backgroundColor: "#F3E8FF",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
+  promoTitle: { fontSize: 15, fontWeight: "800", color: "#7C3AED" },
+  promoSub: { fontSize: 12, color: "#6D28D9", marginTop: 4 },
   searchRow: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface,
-    borderRadius: 12, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 12,
   },
   searchInput: { flex: 1, fontSize: 14, color: Colors.text, marginLeft: 8 },
   catScroll: { paddingBottom: 12 },
-  catChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, marginRight: 8, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.surface },
-  catChipActive: { backgroundColor: '#7C3AED', borderColor: '#7C3AED' },
-  catText: { fontSize: 12, fontWeight: '500', color: Colors.textSecondary },
+  catChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  catChipActive: { backgroundColor: "#7C3AED", borderColor: "#7C3AED" },
+  catText: { fontSize: 12, fontWeight: "500", color: Colors.textSecondary },
   catTextActive: { color: Colors.surface },
   medCard: {
-    width: '48%', backgroundColor: Colors.surface, borderRadius: 16, padding: 12,
-    marginBottom: 14, borderWidth: 1, borderColor: Colors.border,
-    shadowColor: Colors.black, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 2,
+    width: "48%",
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  medImage: { width: '100%', height: 100, borderRadius: 12, backgroundColor: Colors.lightGray, marginBottom: 8 },
-  outBadge: { position: 'absolute', top: 12, left: 12, backgroundColor: 'rgba(239,68,68,0.9)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  outText: { fontSize: 9, fontWeight: '700', color: '#fff' },
-  medName: { fontSize: 13, fontWeight: '700', color: Colors.text, marginBottom: 2, lineHeight: 17 },
-  medCat: { fontSize: 10, fontWeight: '500', color: Colors.primary, marginBottom: 8 },
-  medBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  medPrice: { fontSize: 15, fontWeight: '800', color: Colors.text },
-  addBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#7C3AED', alignItems: 'center', justifyContent: 'center' },
-  emptyState: { flex: 1, alignItems: 'center', paddingTop: 60 },
+  medImage: {
+    width: "100%",
+    height: 100,
+    borderRadius: 12,
+    backgroundColor: Colors.lightGray,
+    marginBottom: 8,
+  },
+  outBadge: {
+    position: "absolute",
+    top: 12,
+    left: 12,
+    backgroundColor: "rgba(239,68,68,0.9)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  outText: { fontSize: 9, fontWeight: "700", color: "#fff" },
+  medName: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: Colors.text,
+    marginBottom: 2,
+    lineHeight: 17,
+  },
+  medCat: {
+    fontSize: 10,
+    fontWeight: "500",
+    color: Colors.primary,
+    marginBottom: 8,
+  },
+  medBottom: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  medPrice: { fontSize: 15, fontWeight: "800", color: Colors.text },
+  addBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#7C3AED",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyState: { flex: 1, alignItems: "center", paddingTop: 60 },
 });

@@ -1,39 +1,79 @@
-import React, { useState } from 'react';
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { ArrowLeft, Star } from "lucide-react-native";
+import React, { useState } from "react";
 import {
-  View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, TextInput, Image,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors } from '../../constants/Colors';
-import { Typography } from '../../constants/Typography';
-import { ArrowLeft, Star } from 'lucide-react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import ButtonPrimary from '../../components/ButtonPrimary';
-import ActionModal from '../../components/ActionModal';
-import { DOCTORS } from '../../constants/MockData';
+    Alert,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import ActionModal from "../../components/ActionModal";
+import ButtonPrimary from "../../components/ButtonPrimary";
+import { Colors } from "../../constants/Colors";
+import { Typography } from "../../constants/Typography";
+import { createReview, getDoctorById } from "../../services/api";
 
 export default function ReviewScreen() {
   const router = useRouter();
-  const { doctorId } = useLocalSearchParams<{ doctorId: string }>();
-  const doctor = DOCTORS.find(d => d.id === doctorId) ?? DOCTORS[0];
+  const { doctorId, appointmentId } = useLocalSearchParams<{
+    doctorId: string;
+    appointmentId: string;
+  }>();
+  const [doctor, setDoctor] = useState<any | null>(null);
 
   const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState('');
+  const [comment, setComment] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  React.useEffect(() => {
+    const load = async () => {
+      if (!doctorId) return;
+      const response = await getDoctorById(doctorId);
+      if (response.data) setDoctor(response.data);
+    };
+    load();
+  }, [doctorId]);
+
   const handleSubmit = async () => {
-    if (rating === 0) return alert('Please select a star rating.');
+    if (rating === 0)
+      return Alert.alert("Rating Required", "Please select a star rating.");
+    if (!appointmentId || !doctorId)
+      return Alert.alert(
+        "Missing Context",
+        "Open this screen from a completed appointment to submit a review.",
+      );
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1000));
+    const response = await createReview({
+      doctorId,
+      appointmentId,
+      rating,
+      comment,
+    });
     setLoading(false);
-    setSubmitted(true);
+    if (response.status === "success") {
+      setSubmitted(true);
+      return;
+    }
+    Alert.alert("Review Failed", response.error || "Unable to submit review");
   };
 
-  const PROMPTS = ['Excellent!', 'Very Bad', 'Okay', 'Good', 'Great!', 'Excellent!'];
+  const PROMPTS = [
+    "Excellent!",
+    "Very Bad",
+    "Okay",
+    "Good",
+    "Great!",
+    "Excellent!",
+  ];
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <ActionModal
         visible={submitted}
         type="success"
@@ -47,30 +87,46 @@ export default function ReviewScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ArrowLeft color={Colors.text} size={24} />
         </TouchableOpacity>
-        <Text style={[Typography.h3, { flex: 1, textAlign: 'center' }]}>Write a Review</Text>
+        <Text style={[Typography.h3, { flex: 1, textAlign: "center" }]}>
+          Write a Review
+        </Text>
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Doctor Info */}
         <View style={styles.doctorCard}>
-          <Image source={{ uri: doctor.image }} style={styles.docAvatar} />
+          <Image source={{ uri: doctor?.image }} style={styles.docAvatar} />
           <View>
-            <Text style={[Typography.h3, { marginBottom: 4 }]}>{doctor.name}</Text>
-            <Text style={[Typography.body2, { color: Colors.primary }]}>{doctor.specialization}</Text>
+            <Text style={[Typography.h3, { marginBottom: 4 }]}>
+              {doctor?.name || "Doctor"}
+            </Text>
+            <Text style={[Typography.body2, { color: Colors.primary }]}>
+              {doctor?.specialization || "Specialist"}
+            </Text>
           </View>
         </View>
 
         {/* Star Rating */}
         <View style={styles.ratingSection}>
-          <Text style={[Typography.h3, { marginBottom: 8 }]}>Overall Rating</Text>
+          <Text style={[Typography.h3, { marginBottom: 8 }]}>
+            Overall Rating
+          </Text>
           {rating > 0 && (
-            <Text style={[Typography.body2, { color: Colors.primary, marginBottom: 16, fontWeight: '600' }]}>
+            <Text
+              style={[
+                Typography.body2,
+                { color: Colors.primary, marginBottom: 16, fontWeight: "600" },
+              ]}
+            >
               {PROMPTS[rating]}
             </Text>
           )}
           <View style={styles.starsRow}>
-            {[1, 2, 3, 4, 5].map(star => (
+            {[1, 2, 3, 4, 5].map((star) => (
               <TouchableOpacity
                 key={star}
                 onPress={() => setRating(star)}
@@ -80,7 +136,7 @@ export default function ReviewScreen() {
                 <Star
                   size={40}
                   color="#F59E0B"
-                  fill={star <= rating ? '#F59E0B' : 'none'}
+                  fill={star <= rating ? "#F59E0B" : "none"}
                 />
               </TouchableOpacity>
             ))}
@@ -118,25 +174,60 @@ export default function ReviewScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20,
-    paddingVertical: 16, backgroundColor: Colors.surface,
-    borderBottomWidth: 1, borderBottomColor: Colors.border,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
-  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.border },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
   scrollContent: { padding: 24, paddingBottom: 60 },
   doctorCard: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface,
-    padding: 20, borderRadius: 16, borderWidth: 1, borderColor: Colors.border, marginBottom: 32,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.surface,
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 32,
   },
-  docAvatar: { width: 60, height: 60, borderRadius: 30, marginRight: 16, backgroundColor: Colors.border },
-  ratingSection: { alignItems: 'center', marginBottom: 32 },
-  starsRow: { flexDirection: 'row', justifyContent: 'center' },
+  docAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginRight: 16,
+    backgroundColor: Colors.border,
+  },
+  ratingSection: { alignItems: "center", marginBottom: 32 },
+  starsRow: { flexDirection: "row", justifyContent: "center" },
   starBtn: { padding: 6 },
   commentSection: { marginBottom: 24 },
   textArea: {
-    backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border,
-    borderRadius: 16, padding: 16, fontSize: 15, color: Colors.text, minHeight: 130,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 16,
+    padding: 16,
+    fontSize: 15,
+    color: Colors.text,
+    minHeight: 130,
   },
-  charCount: { textAlign: 'right', fontSize: 11, color: Colors.textSecondary, marginTop: 6 },
+  charCount: {
+    textAlign: "right",
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 6,
+  },
   submitBtn: { marginTop: 8 },
 });

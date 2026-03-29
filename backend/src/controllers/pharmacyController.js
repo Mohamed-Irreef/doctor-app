@@ -3,6 +3,7 @@ const Order = require("../models/Order");
 const ApiError = require("../utils/ApiError");
 const ApiResponse = require("../utils/ApiResponse");
 const catchAsync = require("../utils/catchAsync");
+const { requirePatientProfileComplete } = require("../utils/profileCompletion");
 
 const getMedicines = catchAsync(async (req, res) => {
   const filter = { active: true };
@@ -24,6 +25,8 @@ const getMedicineById = catchAsync(async (req, res) => {
 });
 
 const createOrder = catchAsync(async (req, res) => {
+  await requirePatientProfileComplete(req.user._id);
+
   const ids = req.body.items.map((item) => item.medicineId);
   const medicines = await Medicine.find({ _id: { $in: ids }, active: true });
 
