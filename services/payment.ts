@@ -1,10 +1,11 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import RazorpayCheckout from "react-native-razorpay";
 import {
-  createPaymentOrder,
-  createSubscriptionOrder,
-  verifyPayment,
-  verifySubscriptionPayment,
+    createPaymentOrder,
+    createSubscriptionOrder,
+    releasePendingAppointment,
+    verifyPayment,
+    verifySubscriptionPayment,
 } from "./api";
 
 type PaymentType = "appointment" | "lab" | "pharmacy";
@@ -14,6 +15,25 @@ type PaymentResult = {
   amount?: number;
   error?: string;
 };
+
+async function verifyPaymentWithRetry(payload: {
+  paymentId: string;
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  razorpaySignature: string;
+}) {
+  let lastError = "Payment verification failed";
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const response = await verifyPayment(payload);
+    if (response.status === "success") return response;
+    lastError = response.error || lastError;
+    if (attempt < 3) {
+      await new Promise((resolve) => setTimeout(resolve, attempt * 600));
+    }
+  }
+
+  return { status: "error" as const, data: null, error: lastError };
+}
 
 async function getPrefill() {
   try {
@@ -64,7 +84,7 @@ export async function processEntityPayment(
       theme: { color: "#2563EB" },
     });
 
-    const verifyResponse = await verifyPayment({
+    const verifyResponse = await verifyPaymentWithRetry({
       paymentId: order.paymentId,
       razorpayOrderId: razorpayResult.razorpay_order_id,
       razorpayPaymentId: razorpayResult.razorpay_payment_id,
@@ -80,6 +100,9 @@ export async function processEntityPayment(
 
     return { status: "success", amount: order.amount };
   } catch (error: any) {
+    if (type === "appointment") {
+      await releasePendingAppointment(relatedId, "payment_failed");
+    }
     return {
       status: "error",
       error: error?.description || error?.message || "Payment cancelled",

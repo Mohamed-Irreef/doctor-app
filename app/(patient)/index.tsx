@@ -282,12 +282,27 @@ const DoctorHCard = memo(({ item, onPress, onFav, faved }: any) => (
 const LabCard = memo(
   ({ item, onPress }: { item: any; onPress: (id: string) => void }) => {
     const id = item.id || item._id;
-    const disc = Math.round(
-      ((item.originalPrice - item.price) / item.originalPrice) * 100,
-    );
+    const originalPrice = Number(item.originalPrice || item.price || 0);
+    const offerPrice = Number(item.price || 0);
+    const disc =
+      originalPrice > 0
+        ? Math.round(((originalPrice - offerPrice) / originalPrice) * 100)
+        : 0;
+    const imageUrl =
+      item.testImage || item.imageUrl || item.testImageUrl || item.image || "";
     return (
       <AnimatedCard style={styles.labCard} onPress={() => onPress(id)}>
-        <Image source={{ uri: item.image }} style={styles.labImage} />
+        {imageUrl ? (
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.labImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={styles.labImageFallback}>
+            <FlaskConical color={Colors.primary} size={26} />
+          </View>
+        )}
         {item.popular && (
           <View style={styles.popularBadge}>
             <Text style={styles.popularText}>Popular</Text>
@@ -297,10 +312,12 @@ const LabCard = memo(
           <Text style={styles.labName} numberOfLines={2}>
             {item.name}
           </Text>
-          <Text style={styles.labTime}>⏱ {item.turnaround}</Text>
+          <Text style={styles.labTime}>
+            ⏱ {item.reportTime || item.turnaround || "24 hrs"}
+          </Text>
           <View style={styles.labPriceRow}>
-            <Text style={styles.labPrice}>₹{item.price}</Text>
-            <Text style={styles.labOriginal}>₹{item.originalPrice}</Text>
+            <Text style={styles.labPrice}>₹{offerPrice}</Text>
+            <Text style={styles.labOriginal}>₹{originalPrice}</Text>
             <View style={styles.discBadge}>
               <Text style={styles.discText}>{disc}% off</Text>
             </View>
@@ -1113,8 +1130,20 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     position: "relative",
     overflow: "hidden",
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  labImage: { width: "100%", height: 100, backgroundColor: Colors.border },
+  labImage: { width: "100%", height: 110, backgroundColor: Colors.border },
+  labImageFallback: {
+    width: "100%",
+    height: 110,
+    backgroundColor: "#EEF2FF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   labContent: { padding: 14 },
   popularBadge: {
     position: "absolute",

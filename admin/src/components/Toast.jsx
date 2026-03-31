@@ -1,39 +1,38 @@
-import { CheckCircle2, Info, TriangleAlert, X } from "lucide-react";
+import { CheckCircle2, Info, TriangleAlert } from "lucide-react";
 
-const toneStyles = {
+const STYLE_MAP = {
   success: {
-    icon: CheckCircle2,
-    box: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    wrap: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    Icon: CheckCircle2,
   },
-  danger: {
-    icon: TriangleAlert,
-    box: "bg-rose-50 text-rose-700 border-rose-200",
+  error: {
+    wrap: "border-rose-200 bg-rose-50 text-rose-800",
+    Icon: TriangleAlert,
   },
   info: {
-    icon: Info,
-    box: "bg-blue-50 text-blue-700 border-blue-200",
+    wrap: "border-blue-200 bg-blue-50 text-blue-800",
+    Icon: Info,
   },
 };
 
-export default function Toast({ message, tone = "info", onClose }) {
+export default function Toast({ message, type = "info", onClose }) {
   if (!message) return null;
-
-  const config = toneStyles[tone] || toneStyles.info;
-  const Icon = config.icon;
+  const style = STYLE_MAP[type] || STYLE_MAP.info;
+  const Icon = style.Icon;
 
   return (
-    <div className="fixed bottom-6 right-6 z-[70]">
-      <div
-        className={`flex items-start gap-3 rounded-xl border px-4 py-3 shadow-xl shadow-slate-900/10 ${config.box}`}
-      >
+    <div
+      className={`fixed bottom-4 right-4 z-50 max-w-sm rounded-xl border px-4 py-3 shadow-soft ${style.wrap}`}
+    >
+      <div className="flex items-start gap-3">
         <Icon size={18} className="mt-0.5 shrink-0" />
-        <p className="max-w-xs text-sm font-semibold">{message}</p>
+        <p className="text-sm font-semibold leading-6">{message}</p>
         <button
           type="button"
+          className="ml-auto text-xs font-bold uppercase tracking-wide opacity-70 hover:opacity-100"
           onClick={onClose}
-          className="rounded p-1 opacity-70 transition hover:bg-white/60 hover:opacity-100"
         >
-          <X size={16} />
+          Close
         </button>
       </div>
     </div>

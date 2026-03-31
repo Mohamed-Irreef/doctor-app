@@ -1,137 +1,330 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
+import PublicLayout from "./components/public/PublicLayout";
 
 import AppointmentsPage from "./pages/AppointmentsPage";
+import ApprovalHubPage from "./pages/ApprovalHubPage";
+import AuditLogsPage from "./pages/AuditLogsPage";
 import DashboardPage from "./pages/DashboardPage";
 import DoctorRequestsPage from "./pages/DoctorRequestsPage";
 import DoctorsPage from "./pages/DoctorsPage";
+import EcosystemMetricsPage from "./pages/EcosystemMetricsPage";
+import ErrorLogsPage from "./pages/ErrorLogsPage";
 import LabTestsPage from "./pages/LabTestsPage";
 import LoginPage from "./pages/LoginPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import OrdersPage from "./pages/OrdersPage";
+import PartnersManagementPage from "./pages/PartnersManagementPage";
 import PatientsPage from "./pages/PatientsPage";
 import PaymentsPage from "./pages/PaymentsPage";
 import PharmacyPage from "./pages/PharmacyPage";
 import ReviewsPage from "./pages/ReviewsPage";
 import SettingsPage from "./pages/SettingsPage";
 import SlotsPage from "./pages/SlotsPage";
-import { isAdminAuthenticated } from "./services/api";
+import LabPortalPage from "./pages/portal/LabPortalPage";
+import AboutPage from "./pages/public/AboutPage";
+import BusinessRegistrationPage from "./pages/public/BusinessRegistrationPage";
+import ContactPage from "./pages/public/ContactPage";
+import HomePage from "./pages/public/HomePage";
+import HowItWorksPage from "./pages/public/HowItWorksPage";
+import LabTestDetailsPage from "./pages/public/LabTestDetailsPage";
+import LabTestsCatalogPage from "./pages/public/LabTestsCatalogPage";
+import PortalAuthPage from "./pages/public/PortalAuthPage";
+import PrivacyPage from "./pages/public/PrivacyPage";
+import RegistrationSuccessPage from "./pages/public/RegistrationSuccessPage";
+import ServicesPage from "./pages/public/ServicesPage";
+import TermsPage from "./pages/public/TermsPage";
+import { getPortalUser, isRoleAuthenticated } from "./services/api";
 
-// Simple Auth Guard
-const ProtectedRoute = ({ children }) => {
-  const isAuthenticated = isAdminAuthenticated();
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+const PharmacyPortalLayout = lazy(
+  () => import("./pages/portal/pharmacy/PharmacyPortalLayout"),
+);
+const PharmacyDashboardRoutePage = lazy(
+  () => import("./pages/portal/pharmacy/DashboardPage"),
+);
+const PharmacyProductsRoutePage = lazy(
+  () => import("./pages/portal/pharmacy/ProductsPage"),
+);
+const PharmacyOrdersRoutePage = lazy(
+  () => import("./pages/portal/pharmacy/OrdersPage"),
+);
+const PharmacyInventoryRoutePage = lazy(
+  () => import("./pages/portal/pharmacy/InventoryPage"),
+);
+const PharmacyEarningsRoutePage = lazy(
+  () => import("./pages/portal/pharmacy/EarningsPage"),
+);
+const PharmacySettingsRoutePage = lazy(
+  () => import("./pages/portal/pharmacy/SettingsPage"),
+);
+
+function LazyRoute({ children }) {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-8 text-center text-sm font-semibold text-slate-500">
+          Loading portal module...
+        </div>
+      }
+    >
+      {children}
+    </Suspense>
+  );
+}
+
+const AdminRoute = ({ children }) => {
+  const isAuthenticated = isRoleAuthenticated("admin");
+  if (!isAuthenticated) return <Navigate to="/admin/login" replace />;
   return <Layout>{children}</Layout>;
+};
+
+const RoleRoute = ({ role, children }) => {
+  const user = getPortalUser();
+  if (!isRoleAuthenticated(role)) return <Navigate to="/login" replace />;
+  if (!user || user.role !== role) return <Navigate to="/login" replace />;
+  return children;
 };
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/login" element={<PortalAuthPage />} />
+        <Route path="/admin/login" element={<LoginPage />} />
+
+        <Route path="/" element={<PublicLayout />}>
+          <Route index element={<HomePage />} />
+          <Route path="about" element={<AboutPage />} />
+          <Route path="services" element={<ServicesPage />} />
+          <Route path="lab-tests" element={<LabTestsCatalogPage />} />
+          <Route path="lab-tests/:id" element={<LabTestDetailsPage />} />
+          <Route path="how-it-works" element={<HowItWorksPage />} />
+          <Route path="contact" element={<ContactPage />} />
+          <Route path="register" element={<BusinessRegistrationPage />} />
+          <Route
+            path="register/success"
+            element={<RegistrationSuccessPage />}
+          />
+          <Route
+            path="register-business"
+            element={<Navigate to="/register" replace />}
+          />
+          <Route path="privacy-policy" element={<PrivacyPage />} />
+          <Route path="terms" element={<TermsPage />} />
+        </Route>
 
         <Route
-          path="/"
+          path="/portal/lab"
           element={
-            <ProtectedRoute>
+            <RoleRoute role="lab_admin">
+              <LabPortalPage />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="/portal/pharmacy"
+          element={
+            <RoleRoute role="pharmacy_admin">
+              <LazyRoute>
+                <PharmacyPortalLayout />
+              </LazyRoute>
+            </RoleRoute>
+          }
+        >
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route
+            path="dashboard"
+            element={
+              <LazyRoute>
+                <PharmacyDashboardRoutePage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path="products"
+            element={
+              <LazyRoute>
+                <PharmacyProductsRoutePage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path="orders"
+            element={
+              <LazyRoute>
+                <PharmacyOrdersRoutePage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path="inventory"
+            element={
+              <LazyRoute>
+                <PharmacyInventoryRoutePage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path="earnings"
+            element={
+              <LazyRoute>
+                <PharmacyEarningsRoutePage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path="settings"
+            element={
+              <LazyRoute>
+                <PharmacySettingsRoutePage />
+              </LazyRoute>
+            }
+          />
+        </Route>
+
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
               <DashboardPage />
-            </ProtectedRoute>
+            </AdminRoute>
           }
         />
         <Route
-          path="/patients"
+          path="/admin/patients"
           element={
-            <ProtectedRoute>
+            <AdminRoute>
               <PatientsPage />
-            </ProtectedRoute>
+            </AdminRoute>
           }
         />
         <Route
-          path="/doctors/requests"
+          path="/admin/doctors/requests"
           element={
-            <ProtectedRoute>
+            <AdminRoute>
               <DoctorRequestsPage />
-            </ProtectedRoute>
+            </AdminRoute>
           }
         />
         <Route
-          path="/doctors"
+          path="/admin/doctors"
           element={
-            <ProtectedRoute>
+            <AdminRoute>
               <DoctorsPage />
-            </ProtectedRoute>
+            </AdminRoute>
           }
         />
         <Route
-          path="/appointments"
+          path="/admin/appointments"
           element={
-            <ProtectedRoute>
+            <AdminRoute>
               <AppointmentsPage />
-            </ProtectedRoute>
+            </AdminRoute>
           }
         />
         <Route
-          path="/slots"
+          path="/admin/slots"
           element={
-            <ProtectedRoute>
+            <AdminRoute>
               <SlotsPage />
-            </ProtectedRoute>
+            </AdminRoute>
           }
         />
         <Route
-          path="/lab-tests"
+          path="/admin/lab-tests"
           element={
-            <ProtectedRoute>
+            <AdminRoute>
               <LabTestsPage />
-            </ProtectedRoute>
+            </AdminRoute>
           }
         />
         <Route
-          path="/pharmacy"
+          path="/admin/partners"
           element={
-            <ProtectedRoute>
+            <AdminRoute>
+              <PartnersManagementPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/pharmacy"
+          element={
+            <AdminRoute>
               <PharmacyPage />
-            </ProtectedRoute>
+            </AdminRoute>
           }
         />
         <Route
-          path="/orders"
+          path="/admin/orders"
           element={
-            <ProtectedRoute>
+            <AdminRoute>
               <OrdersPage />
-            </ProtectedRoute>
+            </AdminRoute>
           }
         />
         <Route
-          path="/payments"
+          path="/admin/payments"
           element={
-            <ProtectedRoute>
+            <AdminRoute>
               <PaymentsPage />
-            </ProtectedRoute>
+            </AdminRoute>
           }
         />
         <Route
-          path="/reviews"
+          path="/admin/reviews"
           element={
-            <ProtectedRoute>
+            <AdminRoute>
               <ReviewsPage />
-            </ProtectedRoute>
+            </AdminRoute>
           }
         />
         <Route
-          path="/notifications"
+          path="/admin/notifications"
           element={
-            <ProtectedRoute>
+            <AdminRoute>
               <NotificationsPage />
-            </ProtectedRoute>
+            </AdminRoute>
           }
         />
         <Route
-          path="/settings"
+          path="/admin/settings"
           element={
-            <ProtectedRoute>
+            <AdminRoute>
               <SettingsPage />
-            </ProtectedRoute>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/ecosystem"
+          element={
+            <AdminRoute>
+              <EcosystemMetricsPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/approvals"
+          element={
+            <AdminRoute>
+              <ApprovalHubPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/errors"
+          element={
+            <AdminRoute>
+              <ErrorLogsPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/audit-logs"
+          element={
+            <AdminRoute>
+              <AuditLogsPage />
+            </AdminRoute>
           }
         />
       </Routes>

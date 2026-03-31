@@ -29,7 +29,7 @@ const registerPatientSchema = z.object({
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
-  role: z.enum(["patient", "doctor", "admin"]),
+  role: z.enum(["patient", "doctor", "admin", "lab_admin", "pharmacy_admin"]),
 });
 
 const googleAuthSchema = z.object({
@@ -56,9 +56,30 @@ const updatePatientProfileSchema = z.object({
   medicalConditions: z.array(z.string()).optional(),
 });
 
+const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+  role: z.enum(["patient", "doctor"]),
+});
+
+const verifyPasswordOtpSchema = z.object({
+  email: z.string().email(),
+  role: z.enum(["patient", "doctor"]),
+  otp: z.string().min(4).max(10),
+});
+
+const resetPasswordSchema = z.object({
+  email: z.string().email(),
+  role: z.enum(["patient", "doctor"]),
+  resetToken: z.string().min(10),
+  password: z.string().min(6),
+});
+
 module.exports = {
   registerPatientSchema,
   loginSchema,
   googleAuthSchema,
   updatePatientProfileSchema,
+  forgotPasswordSchema,
+  verifyPasswordOtpSchema,
+  resetPasswordSchema,
 };

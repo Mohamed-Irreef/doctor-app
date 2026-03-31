@@ -1,22 +1,29 @@
 import {
     CalendarCheck2,
+    CheckCircle2,
     Eye,
     FileText,
+    Loader2,
     MessageSquare,
     Users,
     Video,
+    XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import Badge from "../components/Badge";
 import DataTable from "../components/DataTable";
 import PageHeader from "../components/PageHeader";
-import { getAdminAppointments } from "../services/api";
+import {
+    getAdminAppointments,
+    verifyAdminAppointmentRevenue,
+} from "../services/api";
 
 const QUICK_FILTERS = ["All", "Today", "Upcoming", "Completed"];
 
 export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState([]);
   const [activeFilter, setActiveFilter] = useState("All");
+  const [processingId, setProcessingId] = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -24,7 +31,52 @@ export default function AppointmentsPage() {
       if (response.data) setAppointments(response.data);
     };
     load();
+
+    const intervalId = window.setInterval(load, 60000);
+    return () => window.clearInterval(intervalId);
   }, []);
+
+  const syncAppointment = (id, patch) => {
+    setAppointments((prev) =>
+      prev.map((item) =>
+        String(item?._id) === String(id)
+          ? {
+              ...item,
+              ...patch,
+            }
+          : item,
+      ),
+    );
+  };
+
+  const handleRevenueAction = async (row, approved) => {
+    if (!row?._id || processingId) return;
+
+    let payoutReference;
+    if (approved) {
+      payoutReference = window.prompt(
+        "Optional payout reference (leave blank to keep as processing):",
+      );
+      if (payoutReference === null) return;
+    }
+
+    setProcessingId(String(row._id));
+    const response = await verifyAdminAppointmentRevenue(String(row._id), {
+      approved,
+      payoutReference: payoutReference?.trim() || undefined,
+    });
+    setProcessingId("");
+
+    if (response.status !== "success") {
+      window.alert(response.error || "Unable to update revenue status.");
+      return;
+    }
+
+    syncAppointment(String(row._id), {
+      adminReviewStatus: approved ? "verified" : "rejected",
+      revenueSplit: response.data?.revenueSplit || row.revenueSplit,
+    });
+  };
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -132,6 +184,70 @@ export default function AppointmentsPage() {
             String(row.status).slice(1)}
         </Badge>
       ),
+    },
+    {
+      header: "Revenue Review",
+      accessor: "adminReviewStatus",
+      render: (row) => {
+        const reviewStatus = String(
+          row.adminReviewStatus || "pending",
+        ).toLowerCase();
+        const isBusy = processingId === String(row._id);
+        const isPaid = String(row.paymentStatus || "").toLowerCase() === "paid";
+
+        if (!isPaid) {
+          return (
+            <span className="text-xs font-medium text-slate-400">
+              Awaiting payment
+            </span>
+          );
+        }
+
+        if (reviewStatus === "verified") {
+          return (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
+              <CheckCircle2 size={12} />
+              Verified
+            </span>
+          );
+        }
+
+        if (reviewStatus === "rejected") {
+          return (
+            <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700">
+              <XCircle size={12} />
+              Rejected
+            </span>
+          );
+        }
+
+        return (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={isBusy}
+              onClick={() => handleRevenueAction(row, true)}
+              className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isBusy ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : (
+                <CheckCircle2 size={12} />
+              )}
+              Verify
+            </button>
+            <button
+              type="button"
+              disabled={isBusy}
+              onClick={() => handleRevenueAction(row, false)}
+              className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <XCircle size={12} />
+              Reject
+            </button>
+          </div>
+        );
+      },
     },
     {
       header: "Notes",

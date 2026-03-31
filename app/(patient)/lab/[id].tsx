@@ -1,12 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import {
-    ArrowLeft,
-    Check,
-    Clock,
-    FlaskConical,
-    Home,
-    ShieldCheck,
-} from "lucide-react-native";
+import { ArrowLeft, Clock, FlaskConical } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
 import {
     Image,
@@ -17,73 +10,21 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import ActionModal from "../../../components/ActionModal";
-import ButtonPrimary from "../../../components/ButtonPrimary";
 import { Colors } from "../../../constants/Colors";
-import { bookLab, getLabTestById } from "../../../services/api";
-import { processEntityPayment } from "../../../services/payment";
-
-const TEST_INFO: Record<
-  string,
-  { overview: string; prepSteps: string[]; includes: string[] }
-> = {
-  l1: {
-    overview:
-      "A Complete Blood Count (CBC) measures the cells that make up your blood — red cells, white cells, and platelets. It is one of the most commonly ordered tests and helps detect infections, anemia, and other disorders.",
-    prepSteps: [
-      "Fast for 8–12 hours before the test",
-      "Drink water — stay hydrated",
-      "Avoid heavy exercise 24 hours prior",
-      "Inform your doctor of any medications",
-    ],
-    includes: [
-      "Hemoglobin (Hb)",
-      "Hematocrit (HCT)",
-      "White Blood Cell (WBC) Count",
-      "Platelet Count",
-      "Red Blood Cell (RBC) Count",
-      "Mean Corpuscular Volume (MCV)",
-    ],
-  },
-  l5: {
-    overview:
-      "The Full Body Checkup is a comprehensive preventive health screening that covers 80+ parameters across vital organs. Designed for adults 25+ for proactive health management.",
-    prepSteps: [
-      "12-hour fasting required",
-      "Drink water normally",
-      "Avoid alcohol 48 hours before",
-      "Come with a valid ID for home collection",
-    ],
-    includes: [
-      "Liver Function Test",
-      "Kidney Function Test",
-      "Thyroid Profile",
-      "Lipid Profile",
-      "Blood Sugar (Fasting)",
-      "Complete Blood Count",
-      "Urine Analysis",
-      "Vitamin D & B12",
-    ],
-  },
-};
-
-const getInfo = (id: string) => TEST_INFO[id] ?? TEST_INFO.l1;
+import { getLabTestById } from "../../../services/api";
 
 export default function LabTestDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [test, setTest] = useState<any | null>(null);
+  const [selectedFlow, setSelectedFlow] = useState<"home" | "lab">("home");
   const discount = useMemo(() => {
     if (!test) return 0;
+    if (!test.originalPrice) return 0;
     return Math.round(
       ((test.originalPrice - test.price) / test.originalPrice) * 100,
     );
   }, [test]);
-  const info = getInfo(String(test?.id || test?._id || "l1"));
-  const [booked, setBooked] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [errorModal, setErrorModal] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("Unable to complete booking");
 
   useEffect(() => {
     const load = async () => {
@@ -94,76 +35,24 @@ export default function LabTestDetailsScreen() {
     load();
   }, [id]);
 
-  const handleBook = async () => {
-    setLoading(true);
-    if (!test) {
-      setLoading(false);
-      return;
-    }
-
-    const booking = await bookLab(String(test.id || test._id), new Date().toISOString());
-    if (booking.status !== "success" || !booking.data) {
-      setLoading(false);
-      if (
-        (booking.error || "")
-          .toLowerCase()
-          .includes("complete your profile")
-      ) {
-        router.push("/(patient)/profile");
-        return;
-      }
-      setErrorMessage(booking.error || "Unable to create lab booking");
-      setErrorModal(true);
-      return;
-    }
-
-    const bookingId = String((booking.data as any)._id || (booking.data as any).id);
-    const payment = await processEntityPayment("lab", bookingId);
-    setLoading(false);
-
-    if (payment.status === "success") {
-      setBooked(true);
-      return;
-    }
-
+  const handleFlow = (flow: "home" | "lab") => {
+    if (!test) return;
+    setSelectedFlow(flow);
     router.push({
-      pathname: "/(patient)/payment-result",
-      params: {
-        success: "false",
-        amount: String(test.price || 0),
-        doctorName: test.name,
-        context: "Lab Test",
-        retryPath: `/(patient)/lab/${id}`,
-        reason: payment.error || "Payment verification failed",
-      },
+      pathname:
+        flow === "home"
+          ? "/(patient)/lab/home-booking"
+          : "/(patient)/lab/visit-booking",
+      params: { id: String(test.id || test._id) },
     });
   };
 
   if (!test) return null;
 
+  const imageUrl =
+    test.testImage || test.imageUrl || test.testImageUrl || test.image || "";
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <ActionModal
-        visible={booked}
-        type="success"
-        title="Test Booked!"
-        message="A phlebotomist will visit your home within the scheduled window. Results will be shared digitally."
-        confirmLabel="Go to Records"
-        onConfirm={() => {
-          setBooked(false);
-          router.push("/(patient)/records");
-        }}
-      />
-
-      <ActionModal
-        visible={errorModal}
-        type="error"
-        title="Booking Error"
-        message={errorMessage}
-        confirmLabel="OK"
-        onConfirm={() => setErrorModal(false)}
-      />
-
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -181,96 +70,241 @@ export default function LabTestDetailsScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
       >
-        {/* Hero */}
         <View style={styles.heroCard}>
-          {test.image ? (
-            <Image source={{ uri: test.image }} style={styles.testImage} />
+          {imageUrl ? (
+            <Image
+              source={{ uri: imageUrl }}
+              style={styles.heroImage}
+              resizeMode="cover"
+            />
           ) : (
-            <View style={styles.testIconBg}>
-              <FlaskConical color={Colors.primary} size={40} />
+            <View style={styles.heroImageFallback}>
+              <FlaskConical color={Colors.primary} size={44} />
             </View>
           )}
-          <View style={{ flex: 1 }}>
+          <View style={styles.heroBody}>
             <Text style={styles.testName}>{test.name}</Text>
-            {test.turnaround && (
+            {test.shortDescription ? (
+              <Text style={styles.shortDesc}>{test.shortDescription}</Text>
+            ) : null}
+            {(test.reportTime || test.turnaround) && (
               <View style={styles.turnaroundRow}>
                 <Clock size={14} color={Colors.textSecondary} />
                 <Text style={styles.turnaroundText}>
-                  Results in {test.turnaround}
+                  Results in {test.reportTime || test.turnaround}
                 </Text>
               </View>
             )}
             <View style={styles.priceRow}>
               <Text style={styles.price}>₹{test.price}</Text>
-              <Text style={styles.originalPrice}>₹{test.originalPrice}</Text>
-              <View style={styles.discBadge}>
-                <Text style={styles.discText}>{discount}% OFF</Text>
-              </View>
+              {test.originalPrice ? (
+                <Text style={styles.originalPrice}>₹{test.originalPrice}</Text>
+              ) : null}
+              {discount > 0 ? (
+                <View style={styles.discBadge}>
+                  <Text style={styles.discText}>{discount}% OFF</Text>
+                </View>
+              ) : null}
             </View>
           </View>
         </View>
 
-        {/* Home Collection Banner */}
-        <View style={styles.collectionBanner}>
-          <Home color={Colors.primary} size={20} />
-          <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={styles.collectionTitle}>
-              Free Home Sample Collection
-            </Text>
-            <Text style={styles.collectionSub}>
-              Available 7 AM – 9 PM on all days
-            </Text>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionAccent} />
+            <Text style={styles.sectionTitle}>Overview</Text>
           </View>
-          <ShieldCheck color="#16A34A" size={20} />
-        </View>
-
-        {/* Overview */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Overview</Text>
-          <Text style={styles.overviewText}>{info.overview}</Text>
-        </View>
-
-        {/* Preparation */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Test Preparation</Text>
-          {info.prepSteps.map((step, i) => (
-            <View key={i} style={styles.prepRow}>
-              <View style={styles.prepIcon}>
-                <Text style={styles.prepNum}>{i + 1}</Text>
+          {test.fullDescription ? (
+            <Text style={styles.overviewText}>{test.fullDescription}</Text>
+          ) : null}
+          <View style={styles.metaRow}>
+            {test.category ? (
+              <View style={styles.metaChip}>
+                <Text style={styles.metaText}>{test.category}</Text>
               </View>
-              <Text style={styles.prepText}>{step}</Text>
+            ) : null}
+            {test.subcategory ? (
+              <View style={styles.metaChip}>
+                <Text style={styles.metaText}>{test.subcategory}</Text>
+              </View>
+            ) : null}
+          </View>
+          {Array.isArray(test.tags) && test.tags.length ? (
+            <View style={styles.tagRow}>
+              {test.tags.map((tag: string) => (
+                <View key={tag} style={styles.tagChip}>
+                  <Text style={styles.tagText}>{tag}</Text>
+                </View>
+              ))}
             </View>
-          ))}
+          ) : null}
         </View>
 
-        {/* Parameters */}
-        <View style={[styles.section, { marginBottom: 100 }]}>
-          <Text style={styles.sectionTitle}>
-            Parameters Included ({info.includes.length})
-          </Text>
-          <View style={styles.paramsGrid}>
-            {info.includes.map((param, i) => (
-              <View key={i} style={styles.paramChip}>
-                <Check size={12} color={Colors.primary} />
-                <Text style={styles.paramText}>{param}</Text>
+        {Array.isArray(test.parameters) && test.parameters.length ? (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionAccent} />
+              <Text style={styles.sectionTitle}>Parameters</Text>
+            </View>
+            <View style={styles.tableWrap}>
+              {test.parameters.map((item: any, index: number) => (
+                <View key={`${item.name}-${index}`} style={styles.tableRow}>
+                  <Text style={styles.tableCellPrimary}>{item.name}</Text>
+                  <Text style={styles.tableCell}>{item.normalRange || ""}</Text>
+                  <Text style={styles.tableCell}>{item.unit || ""}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionAccent} />
+            <Text style={styles.sectionTitle}>Sample</Text>
+          </View>
+          <View style={styles.infoStack}>
+            {test.sampleType ? (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Sample Type</Text>
+                <Text style={styles.infoValue}>{test.sampleType}</Text>
               </View>
-            ))}
+            ) : null}
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Fasting Required</Text>
+              <Text style={styles.infoValue}>
+                {test.fastingRequired ? "Yes" : "No"}
+              </Text>
+            </View>
+            {test.fastingRequired && test.fastingHours ? (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Fasting Hours</Text>
+                <Text style={styles.infoValue}>{test.fastingHours}</Text>
+              </View>
+            ) : null}
+            {test.reportSampleUrl ? (
+              <TouchableOpacity
+                style={styles.linkCard}
+                onPress={() =>
+                  router.push({
+                    pathname: "/(patient)/lab/sample-report",
+                    params: {
+                      url: encodeURIComponent(test.reportSampleUrl),
+                      title: test.name,
+                    },
+                  })
+                }
+              >
+                <Text style={styles.linkTitle}>Sample Report</Text>
+                <Text style={styles.linkSub}>Tap to view PDF</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         </View>
+
+        {test.method || test.department ? (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionAccent} />
+              <Text style={styles.sectionTitle}>Medical</Text>
+            </View>
+            <View style={styles.infoStack}>
+              {test.method ? (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Method</Text>
+                  <Text style={styles.infoValue}>{test.method}</Text>
+                </View>
+              ) : null}
+              {test.department ? (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Department</Text>
+                  <Text style={styles.infoValue}>{test.department}</Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+        ) : null}
+
+        {test.preparationInstructions ||
+        test.beforeTestInstructions ||
+        test.afterTestInstructions ||
+        test.collectionInstructions ? (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionAccent} />
+              <Text style={styles.sectionTitle}>Instructions</Text>
+            </View>
+            <View style={styles.infoStack}>
+              {test.preparationInstructions ? (
+                <View style={styles.blockCard}>
+                  <Text style={styles.blockTitle}>Preparation</Text>
+                  <Text style={styles.blockText}>
+                    {test.preparationInstructions}
+                  </Text>
+                </View>
+              ) : null}
+              {test.beforeTestInstructions ? (
+                <View style={styles.blockCard}>
+                  <Text style={styles.blockTitle}>Before Test</Text>
+                  <Text style={styles.blockText}>
+                    {test.beforeTestInstructions}
+                  </Text>
+                </View>
+              ) : null}
+              {test.afterTestInstructions ? (
+                <View style={styles.blockCard}>
+                  <Text style={styles.blockTitle}>After Test</Text>
+                  <Text style={styles.blockText}>
+                    {test.afterTestInstructions}
+                  </Text>
+                </View>
+              ) : null}
+              {test.collectionInstructions ? (
+                <View style={styles.blockCard}>
+                  <Text style={styles.blockTitle}>Collection</Text>
+                  <Text style={styles.blockText}>
+                    {test.collectionInstructions}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+        ) : null}
       </ScrollView>
 
-      {/* Bottom CTA */}
       <View style={styles.bottomBar}>
-        <View>
-          <Text style={styles.totalLabel}>Total Cost</Text>
-          <Text style={styles.totalPrice}>₹{test.price}</Text>
-        </View>
-        <ButtonPrimary
-          title={loading ? "Booking…" : "Book Home Collection"}
-          onPress={handleBook}
-          loading={loading}
-          style={{ flex: 1, marginLeft: 20, paddingVertical: 18 }}
-        />
+        <TouchableOpacity
+          style={[
+            styles.actionBtn,
+            selectedFlow === "home" && styles.actionBtnActive,
+          ]}
+          onPress={() => handleFlow("home")}
+        >
+          <Text
+            style={[
+              styles.actionText,
+              selectedFlow === "home" && styles.actionTextActive,
+            ]}
+          >
+            Collect From Home
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.actionBtn,
+            selectedFlow === "lab" && styles.actionBtnActive,
+          ]}
+          onPress={() => handleFlow("lab")}
+        >
+          <Text
+            style={[
+              styles.actionText,
+              selectedFlow === "lab" && styles.actionTextActive,
+            ]}
+          >
+            Visit Lab
+          </Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -305,35 +339,36 @@ const styles = StyleSheet.create({
   },
   scroll: { padding: 20, paddingBottom: 120 },
   heroCard: {
-    flexDirection: "row",
     backgroundColor: Colors.surface,
-    borderRadius: 18,
-    padding: 20,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: Colors.border,
-    alignItems: "center",
-    marginBottom: 16,
+    overflow: "hidden",
     shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  testIconBg: {
-    width: 72,
-    height: 72,
-    borderRadius: 22,
-    backgroundColor: "#DBEAFE",
+  heroImage: { width: "100%", height: 170, backgroundColor: Colors.border },
+  heroImageFallback: {
+    width: "100%",
+    height: 170,
+    backgroundColor: "#EEF2FF",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 16,
   },
-  testImage: { width: 72, height: 72, borderRadius: 16, marginRight: 16 },
+  heroBody: { padding: 16 },
   testName: {
     fontSize: 17,
     fontWeight: "800",
     color: Colors.text,
     marginBottom: 6,
+  },
+  shortDesc: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginBottom: 8,
   },
   turnaroundRow: {
     flexDirection: "row",
@@ -356,54 +391,92 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   discText: { fontSize: 10, fontWeight: "700", color: "#16A34A" },
-  collectionBanner: {
+  section: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
+    marginTop: 16,
+  },
+  sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#EFF6FF",
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#BFDBFE",
-    marginBottom: 24,
+    gap: 8,
+    marginBottom: 12,
   },
-  collectionTitle: { fontSize: 14, fontWeight: "700", color: Colors.primary },
-  collectionSub: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
-  section: { marginBottom: 28 },
+  sectionAccent: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: Colors.primary,
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: "700",
     color: Colors.text,
-    marginBottom: 12,
   },
   overviewText: { fontSize: 14, color: Colors.textSecondary, lineHeight: 22 },
-  prepRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 12,
-    gap: 12,
-  },
-  prepIcon: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 1,
-  },
-  prepNum: { fontSize: 12, fontWeight: "700", color: Colors.surface },
-  prepText: { flex: 1, fontSize: 14, color: Colors.text, lineHeight: 22 },
-  paramsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  paramChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
+  metaRow: { flexDirection: "row", gap: 8, marginTop: 14 },
+  metaChip: {
     backgroundColor: "#EFF6FF",
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
   },
-  paramText: { fontSize: 12, fontWeight: "500", color: Colors.text },
+  metaText: { fontSize: 12, fontWeight: "600", color: Colors.primary },
+  tagRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 },
+  tagChip: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: Colors.surface,
+  },
+  tagText: { fontSize: 12, color: Colors.textSecondary, fontWeight: "600" },
+  tableWrap: { gap: 8 },
+  tableRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  tableCellPrimary: { flex: 1.2, fontSize: 13, color: Colors.text },
+  tableCell: { flex: 1, fontSize: 12, color: Colors.textSecondary },
+  infoStack: { gap: 12 },
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  infoLabel: { fontSize: 12, color: Colors.textSecondary, fontWeight: "600" },
+  infoValue: { fontSize: 13, color: Colors.text, fontWeight: "600" },
+  blockCard: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    padding: 12,
+    backgroundColor: "#F8FAFF",
+  },
+  blockTitle: { fontSize: 12, color: Colors.primary, fontWeight: "700" },
+  blockText: { fontSize: 13, color: Colors.text, marginTop: 6 },
+  linkCard: {
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    borderRadius: 12,
+    padding: 12,
+    backgroundColor: "#EFF6FF",
+  },
+  linkTitle: { fontSize: 13, fontWeight: "700", color: Colors.primary },
+  linkSub: { fontSize: 12, color: Colors.textSecondary, marginTop: 4 },
   bottomBar: {
     position: "absolute",
     bottom: 0,
@@ -418,7 +491,21 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Colors.border,
     elevation: 10,
+    gap: 12,
   },
-  totalLabel: { fontSize: 12, color: Colors.textSecondary },
-  totalPrice: { fontSize: 22, fontWeight: "800", color: Colors.primary },
+  actionBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+    backgroundColor: Colors.surface,
+  },
+  actionBtnActive: {
+    borderColor: Colors.primary,
+    backgroundColor: "#2563EB",
+  },
+  actionText: { fontSize: 13, fontWeight: "700", color: Colors.text },
+  actionTextActive: { color: Colors.surface },
 });

@@ -4,7 +4,9 @@ const validate = require("../middlewares/validate");
 const {
   getDashboard,
   getPatients,
+  deletePatient,
   getDoctors,
+  deleteDoctor,
   getDoctorRequests,
   approveDoctor,
   getAppointments,
@@ -28,7 +30,26 @@ const {
   getSlots,
   getRevenueBreakdown,
   getSubscriptions,
+  getSystemErrors,
+  getAuditLogs,
 } = require("../controllers/adminController");
+const {
+  getEcosystemMetrics,
+  getPendingPartners,
+  getApprovedPartners,
+  getPartnerDetails,
+  togglePartnerBan,
+  deletePartner,
+  approvePartner,
+  rejectPartner,
+  getLabApprovalRequests,
+  decideLabApproval,
+  getPharmacyApprovalRequests,
+  decidePharmacyApproval,
+  getPendingContentApprovals,
+  decideLabTestContent,
+  decideMedicineContent,
+} = require("../controllers/adminEcosystemController");
 const {
   approveDoctorSchema,
   createLabSchema,
@@ -38,6 +59,7 @@ const {
   createNotificationSchema,
   updateSettingsSchema,
 } = require("../validators/businessValidators");
+const { approvalDecisionSchema } = require("../validators/ecosystemValidators");
 
 const router = express.Router();
 
@@ -45,7 +67,9 @@ router.use(protectRoute, authorizeRoles("admin"));
 
 router.get("/dashboard", getDashboard);
 router.get("/patients", getPatients);
+router.delete("/patients/:id", deletePatient);
 router.get("/doctors", getDoctors);
+router.delete("/doctors/:id", deleteDoctor);
 router.get("/doctors/requests", getDoctorRequests);
 router.put("/doctors/approve", validate(approveDoctorSchema), approveDoctor);
 router.get("/appointments", getAppointments);
@@ -73,5 +97,38 @@ router.get("/reviews", getReviews);
 router.delete("/reviews/:id", deleteReview);
 router.get("/revenue", getRevenueBreakdown);
 router.get("/subscriptions", getSubscriptions);
+router.get("/errors", getSystemErrors);
+router.get("/audit-logs", getAuditLogs);
+router.get("/ecosystem/metrics", getEcosystemMetrics);
+router.get("/partners/pending", getPendingPartners);
+router.get("/partners/approved", getApprovedPartners);
+router.get("/partners/:id", getPartnerDetails);
+router.put("/partners/:id/ban", togglePartnerBan);
+router.delete("/partners/:id", deletePartner);
+router.put("/partners/:id/approve", approvePartner);
+router.put("/partners/:id/reject", rejectPartner);
+router.get("/approvals/labs", getLabApprovalRequests);
+router.put(
+  "/approvals/labs/:id",
+  validate(approvalDecisionSchema),
+  decideLabApproval,
+);
+router.get("/approvals/pharmacies", getPharmacyApprovalRequests);
+router.put(
+  "/approvals/pharmacies/:id",
+  validate(approvalDecisionSchema),
+  decidePharmacyApproval,
+);
+router.get("/content/pending", getPendingContentApprovals);
+router.put(
+  "/content/lab-tests/:id/decision",
+  validate(approvalDecisionSchema),
+  decideLabTestContent,
+);
+router.put(
+  "/content/medicines/:id/decision",
+  validate(approvalDecisionSchema),
+  decideMedicineContent,
+);
 
 module.exports = router;

@@ -20,6 +20,8 @@ const slotSchema = new mongoose.Schema(
       index: true,
     },
     appointment: { type: mongoose.Schema.Types.ObjectId, ref: "Appointment" },
+    heldBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },
+    holdExpiresAt: { type: Date, index: true },
   },
   { timestamps: true },
 );

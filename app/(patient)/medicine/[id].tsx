@@ -1,21 +1,22 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-    ArrowLeft,
-    Minus,
-    Plus,
-    RefreshCcw,
-    ShieldCheck,
-    Star,
-    Truck,
+  AlertTriangle,
+  ArrowLeft,
+  Minus,
+  Plus,
+  RefreshCcw,
+  ShieldCheck,
+  Star,
+  Truck,
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ActionModal from "../../../components/ActionModal";
@@ -75,6 +76,10 @@ export default function MedicineDetailsScreen() {
         name: med.name,
         price: med.price,
         image: med.image || "",
+        category: med.category,
+        prescriptionRequired: med.prescriptionRequired,
+        mrp: med.mrp,
+        deliveryEtaHours: med.deliveryEtaHours,
       });
     }
     setAdded(true);
@@ -136,8 +141,19 @@ export default function MedicineDetailsScreen() {
             )}
           </View>
           <Text style={styles.category}>
-            {med.category ?? "General Medicine"}
+            {med.brand
+              ? `${med.brand} · ${med.category ?? "General Medicine"}`
+              : (med.category ?? "General Medicine")}
           </Text>
+
+          {med.prescriptionRequired ? (
+            <View style={styles.rxNotice}>
+              <AlertTriangle size={14} color="#92400E" />
+              <Text style={styles.rxNoticeText}>
+                Prescription required at checkout
+              </Text>
+            </View>
+          ) : null}
 
           <View style={styles.ratingRow}>
             {[1, 2, 3, 4, 5].map((s) => (
@@ -151,9 +167,14 @@ export default function MedicineDetailsScreen() {
             <Text style={styles.ratingText}>4.2 (128 reviews)</Text>
           </View>
 
-          <Text style={styles.price}>${med.price.toFixed(2)}</Text>
+          <Text style={styles.price}>
+            Rs {Number(med.price || 0).toFixed(2)}
+          </Text>
+          {med.mrp && Number(med.mrp) > Number(med.price) ? (
+            <Text style={styles.mrp}>MRP Rs {Number(med.mrp).toFixed(2)}</Text>
+          ) : null}
           <Text style={styles.perUnit}>
-            per unit · MRP inclusive of all taxes
+            {med.packSize || "Per unit"} · MRP inclusive of all taxes
           </Text>
 
           {/* Quantity */}
@@ -182,7 +203,9 @@ export default function MedicineDetailsScreen() {
               <View style={styles.highlightIcon}>
                 <Truck size={16} color={Colors.primary} />
               </View>
-              <Text style={styles.highlightText}>Free delivery above $30</Text>
+              <Text style={styles.highlightText}>
+                Estimated delivery in {med.deliveryEtaHours || 24} hours
+              </Text>
             </View>
             <View style={styles.highlightRow}>
               <View style={styles.highlightIcon}>
@@ -202,13 +225,38 @@ export default function MedicineDetailsScreen() {
           <View style={styles.descSection}>
             <Text style={styles.descTitle}>About this Medicine</Text>
             <Text style={styles.descText}>
-              {med.name} is a commonly used medication for{" "}
-              {med.category?.toLowerCase() ?? "general use"}. Always consult
-              your physician before starting any medication. Keep out of reach
-              of children. Store below 25°C in a dry place and away from direct
-              sunlight. Do not exceed the recommended dosage without medical
-              supervision.
+              {med.description ||
+                `${med.name} is commonly used for ${med.category?.toLowerCase() ?? "general care"}. Please use only under medical advice.`}
             </Text>
+
+            <View style={styles.metaList}>
+              {!!med.composition && (
+                <Text style={styles.metaItem}>
+                  Composition: {med.composition}
+                </Text>
+              )}
+              {!!med.strength && (
+                <Text style={styles.metaItem}>Strength: {med.strength}</Text>
+              )}
+              {!!med.dosageForm && (
+                <Text style={styles.metaItem}>Form: {med.dosageForm}</Text>
+              )}
+              {!!med.manufacturer && (
+                <Text style={styles.metaItem}>
+                  Manufacturer: {med.manufacturer}
+                </Text>
+              )}
+              {!!med.usageInstructions && (
+                <Text style={styles.metaItem}>
+                  Usage: {med.usageInstructions}
+                </Text>
+              )}
+              {!!med.storageInstructions && (
+                <Text style={styles.metaItem}>
+                  Storage: {med.storageInstructions}
+                </Text>
+              )}
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -221,7 +269,7 @@ export default function MedicineDetailsScreen() {
           <Text
             style={{ fontSize: 20, fontWeight: "800", color: Colors.primary }}
           >
-            ${(med.price * qty).toFixed(2)}
+            Rs {(Number(med.price || 0) * qty).toFixed(2)}
           </Text>
         </View>
         <ButtonPrimary
@@ -305,6 +353,22 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 10,
   },
+  rxNotice: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: "#FEF3C7",
+    marginBottom: 10,
+  },
+  rxNoticeText: {
+    marginLeft: 6,
+    fontSize: 11,
+    color: "#92400E",
+    fontWeight: "700",
+  },
   ratingRow: { flexDirection: "row", alignItems: "center", marginBottom: 14 },
   ratingText: { fontSize: 12, color: Colors.textSecondary, marginLeft: 6 },
   price: {
@@ -314,6 +378,12 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   perUnit: { fontSize: 12, color: Colors.textSecondary, marginBottom: 20 },
+  mrp: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    textDecorationLine: "line-through",
+    marginBottom: 2,
+  },
   qtyRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -372,6 +442,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   descText: { fontSize: 14, color: Colors.textSecondary, lineHeight: 22 },
+  metaList: {
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  metaItem: { fontSize: 12, color: Colors.text, marginBottom: 6 },
   bottomBar: {
     position: "absolute",
     bottom: 0,

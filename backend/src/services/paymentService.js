@@ -21,7 +21,22 @@ function verifyRazorpaySignature({ orderId, paymentId, signature }) {
   return generated === signature;
 }
 
+async function validateRazorpayPayment({ orderId, paymentId, expectedAmount }) {
+  const razorpay = getRazorpay();
+  const payment = await razorpay.payments.fetch(paymentId);
+  const expectedPaise = Math.round(expectedAmount * 100);
+
+  const isValid =
+    Boolean(payment) &&
+    payment.order_id === orderId &&
+    ["captured", "authorized"].includes(payment.status) &&
+    Number(payment.amount) === expectedPaise;
+
+  return { isValid, payment };
+}
+
 module.exports = {
   createRazorpayOrder,
   verifyRazorpaySignature,
+  validateRazorpayPayment,
 };

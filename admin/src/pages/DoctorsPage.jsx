@@ -1,16 +1,17 @@
-import { Edit, Eye, Star, UserCheck, UserX } from "lucide-react";
+import { Edit, Eye, Star, Trash2, UserCheck, UserX } from "lucide-react";
 import { useEffect, useState } from "react";
 import Badge from "../components/Badge";
 import Button from "../components/Button";
 import DataTable from "../components/DataTable";
 import Modal from "../components/Modal";
 import PageHeader from "../components/PageHeader";
-import { getAdminDoctors } from "../services/api";
+import { deleteAdminDoctor, getAdminDoctors } from "../services/api";
 
 export default function DoctorsPage() {
   const [doctors, setDoctors] = useState([]);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -42,6 +43,30 @@ export default function DoctorsPage() {
   const closeDoctorDetails = () => {
     setIsDetailsOpen(false);
     setSelectedDoctor(null);
+  };
+
+  const handleDelete = async (row) => {
+    const id = row.id || row._id;
+    if (!id) return;
+
+    const confirmed = window.confirm(
+      `Delete doctor "${row.name || "this doctor"}"? This action cannot be undone.`,
+    );
+    if (!confirmed) return;
+
+    setDeletingId(id);
+    const response = await deleteAdminDoctor(id);
+    setDeletingId(null);
+
+    if (response.status === "success") {
+      setDoctors((prev) => prev.filter((item) => (item.id || item._id) !== id));
+      if ((selectedDoctor?.id || selectedDoctor?._id) === id) {
+        closeDoctorDetails();
+      }
+      return;
+    }
+
+    window.alert(response.error || "Failed to delete doctor");
   };
 
   const columns = [
@@ -154,6 +179,16 @@ export default function DoctorsPage() {
             ) : (
               <UserCheck size={18} />
             )}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleDelete(row)}
+            disabled={deletingId === (row.id || row._id)}
+            className="p-1.5 text-red-600 hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+            title="Delete Doctor"
+          >
+            <Trash2 size={18} />
           </Button>
         </div>
       ),

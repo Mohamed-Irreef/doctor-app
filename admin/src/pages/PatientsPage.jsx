@@ -1,13 +1,14 @@
-import { Edit, Eye, UserCheck, UserX } from "lucide-react";
+import { Edit, Eye, Trash2, UserCheck, UserX } from "lucide-react";
 import { useEffect, useState } from "react";
 import Badge from "../components/Badge";
 import Button from "../components/Button";
 import DataTable from "../components/DataTable";
 import PageHeader from "../components/PageHeader";
-import { getAdminPatients } from "../services/api";
+import { deleteAdminPatient, getAdminPatients } from "../services/api";
 
 export default function PatientsPage() {
   const [patients, setPatients] = useState([]);
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -29,6 +30,29 @@ export default function PatientsPage() {
         return p;
       }),
     );
+  };
+
+  const handleDelete = async (row) => {
+    const id = row.id || row._id;
+    if (!id) return;
+
+    const confirmed = window.confirm(
+      `Delete patient "${row.name || "this patient"}"? This action cannot be undone.`,
+    );
+    if (!confirmed) return;
+
+    setDeletingId(id);
+    const response = await deleteAdminPatient(id);
+    setDeletingId(null);
+
+    if (response.status === "success") {
+      setPatients((prev) =>
+        prev.filter((item) => (item.id || item._id) !== id),
+      );
+      return;
+    }
+
+    window.alert(response.error || "Failed to delete patient");
   };
 
   const columns = [
@@ -105,6 +129,16 @@ export default function PatientsPage() {
             ) : (
               <UserCheck size={18} />
             )}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleDelete(row)}
+            disabled={deletingId === (row.id || row._id)}
+            className="p-1.5 text-red-600 hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+            title="Delete Patient"
+          >
+            <Trash2 size={18} />
           </Button>
         </div>
       ),

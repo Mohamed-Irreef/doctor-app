@@ -18,30 +18,32 @@ export default function OrdersPage() {
   }, []);
 
   const getStatusBadge = (status) => {
-    switch (status) {
-      case "Ordered":
-      case "ordered":
+    const normalized = String(status || "").toLowerCase();
+    switch (normalized) {
+      case "placed":
+      case "confirmed":
+      case "packed":
         return "warning";
-      case "Shipped":
       case "shipped":
         return "primary";
-      case "Delivered":
       case "delivered":
         return "success";
+      case "cancelled":
+        return "danger";
       default:
         return "default";
     }
   };
 
   const getStatusIcon = (status) => {
-    switch (status) {
-      case "Ordered":
-      case "ordered":
+    const normalized = String(status || "").toLowerCase();
+    switch (normalized) {
+      case "placed":
+      case "confirmed":
+      case "packed":
         return <Package size={16} className="text-amber-500" />;
-      case "Shipped":
       case "shipped":
         return <Truck size={16} className="text-blue-500" />;
-      case "Delivered":
       case "delivered":
         return <CheckCircle size={16} className="text-green-500" />;
       default:
@@ -50,11 +52,15 @@ export default function OrdersPage() {
   };
 
   const advanceStatus = async (id, currentStatus) => {
-    let nextStatus = currentStatus;
-    if (currentStatus === "ordered") nextStatus = "shipped";
-    else if (currentStatus === "shipped") nextStatus = "delivered";
+    const flow = ["placed", "confirmed", "packed", "shipped", "delivered"];
+    const normalized = String(currentStatus || "").toLowerCase();
+    const currentIndex = flow.indexOf(normalized);
+    const nextStatus =
+      currentIndex >= 0 && currentIndex < flow.length - 1
+        ? flow[currentIndex + 1]
+        : normalized;
 
-    if (nextStatus !== currentStatus) {
+    if (nextStatus !== normalized) {
       await updateAdminOrderStatus(id, nextStatus);
       setOrders(
         orders.map((o) =>
@@ -121,14 +127,16 @@ export default function OrdersPage() {
       accessor: "id",
       render: (row) => (
         <div className="flex gap-2">
-          {row.status !== "delivered" && (
+          {!["delivered", "cancelled"].includes(
+            String(row.status).toLowerCase(),
+          ) && (
             <Button
               variant="ghost"
               size="sm"
               onClick={() => advanceStatus(row.id || row._id, row.status)}
               className="text-[11px] uppercase tracking-widest font-black bg-slate-50 border border-slate-100"
             >
-              Mark {row.status === "ordered" ? "Shipped" : "Delivered"}
+              Advance Status
             </Button>
           )}
         </div>

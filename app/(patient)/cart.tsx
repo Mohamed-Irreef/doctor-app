@@ -1,19 +1,23 @@
 import { useRouter } from "expo-router";
+import * as DocumentPicker from "expo-document-picker";
 import { ArrowLeft, Minus, Plus, Tag, Trash2 } from "lucide-react-native";
 import React from "react";
 import {
-    FlatList,
-    Image,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  Image,
+  Linking,
+  TextInput,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ButtonPrimary from "../../components/ButtonPrimary";
 import { Colors } from "../../constants/Colors";
 import { Typography } from "../../constants/Typography";
-import { createOrder } from "../../services/api";
+import { createOrder, uploadFile } from "../../services/api";
 import { processEntityPayment } from "../../services/payment";
 import { useCartStore } from "../../store/cartStore";
 
@@ -22,6 +26,16 @@ export default function CartScreen() {
   const { items, incrementQuantity, decrementQuantity, removeItem, clearCart } =
     useCartStore();
   const [loading, setLoading] = React.useState(false);
+  const [deliveryAddress, setDeliveryAddress] = React.useState("");
+  const [contactName, setContactName] = React.useState("");
+  const [contactPhone, setContactPhone] = React.useState("");
+  const [prescription, setPrescription] = React.useState<{
+    url: string;
+    name: string;
+    mimeType: string;
+  } | null>(null);
+  const [uploadingPrescription, setUploadingPrescription] =
+    React.useState(false);
 
   const subtotal = items.reduce(
     (sum, item) => sum + item.price * item.quantity,
@@ -29,6 +43,65 @@ export default function CartScreen() {
   );
   const delivery = 5.0;
   const total = subtotal + delivery;
+  const prescriptionRequired = items.some((item) => item.prescriptionRequired);
+
+  const pickPrescription = async () => {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ["application/pdf", "image/jpeg", "image/png"],
+      copyToCacheDirectory: true,
+      multiple: false,
+    });
+
+    if (result.canceled || !result.assets?.length) {
+      return;
+    }
+
+    const asset = result.assets[0];
+    const mimeType = String(asset.mimeType || "").toLowerCase();
+    const fileName = asset.name || "prescription";
+    const lowerName = fileName.toLowerCase();
+
+    const validMimeTypes = ["application/pdf", "image/jpeg", "image/png"];
+    const validExtensions = [".pdf", ".jpg", ".jpeg", ".png"];
+    const isValidType =
+      validMimeTypes.includes(mimeType) ||
+      validExtensions.some((ext) => lowerName.endsWith(ext));
+
+    if (!isValidType) {
+      Alert.alert(
+        "Unsupported file",
+        "Please upload prescription as PDF, JPG, or PNG.",
+      );
+      return;
+    }
+
+    setUploadingPrescription(true);
+
+    const uploadResponse = await uploadFile(
+      {
+        uri: asset.uri,
+        name: fileName,
+        type: mimeType || "application/octet-stream",
+      },
+      "nividoc/prescriptions",
+    );
+
+    setUploadingPrescription(false);
+
+    if (uploadResponse.status !== "success" || !uploadResponse.data?.url) {
+      Alert.alert(
+        "Upload failed",
+        uploadResponse.error || "Could not upload prescription file.",
+      );
+      return;
+    }
+
+    setPrescription({
+      url: uploadResponse.data.url,
+      name: fileName,
+      mimeType: mimeType || "application/octet-stream",
+    });
+  };
 
   const handlePlaceOrder = async () => {
     if (!items.length) {
@@ -36,18 +109,32 @@ export default function CartScreen() {
       return;
     }
 
+    if (prescriptionRequired && !prescription?.url) {
+      Alert.alert(
+        "Prescription required",
+        "Please upload a valid prescription before placing this order.",
+      );
+      return;
+    }
+
     setLoading(true);
 
     const response = await createOrder(
       items.map((item) => ({ medicineId: item.id, quantity: item.quantity })),
+      {
+        deliveryAddress: deliveryAddress || undefined,
+        deliveryContactName: contactName || undefined,
+        deliveryContactPhone: contactPhone || undefined,
+        prescription: prescription
+          ? { url: prescription.url, note: prescription.name }
+          : undefined,
+      },
     );
 
     if (response.status !== "success" || !response.data) {
       setLoading(false);
       if (
-        (response.error || "")
-          .toLowerCase()
-          .includes("complete your profile")
+        (response.error || "").toLowerCase().includes("complete your profile")
       ) {
         router.push("/(patient)/profile");
         return;
@@ -66,7 +153,9 @@ export default function CartScreen() {
       return;
     }
 
-    const orderId = String((response.data as any)._id || (response.data as any).id);
+    const orderId = String(
+      (response.data as any)._id || (response.data as any).id,
+    );
     const payment = await processEntityPayment("pharmacy", orderId);
     setLoading(false);
 
@@ -152,6 +241,75 @@ export default function CartScreen() {
                 </Text>
               </View>
             </View>
+
+            <View style={styles.checkoutCard}>
+              <Text style={styles.checkoutTitle}>Delivery Details</Text>
+              <TextInput
+                value={deliveryAddress}
+                onChangeText={setDeliveryAddress}
+                style={styles.input}
+                placeholder="Delivery address"
+                placeholderTextColor={Colors.textSecondary}
+                multiline
+              />
+              <TextInput
+                value={contactName}
+                onChangeText={setContactName}
+                style={styles.input}
+                placeholder="Contact name"
+                placeholderTextColor={Colors.textSecondary}
+              />
+              <TextInput
+                value={contactPhone}
+                onChangeText={setContactPhone}
+                style={styles.input}
+                placeholder="Contact phone"
+                placeholderTextColor={Colors.textSecondary}
+                keyboardType="phone-pad"
+              />
+
+              {prescriptionRequired ? (
+                <>
+                  <Text style={styles.prescriptionLabel}>
+                    Prescription Upload (PDF/JPG/PNG)
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.uploadBtn}
+                    onPress={pickPrescription}
+                    disabled={uploadingPrescription}
+                  >
+                    <Text style={styles.uploadBtnText}>
+                      {uploadingPrescription
+                        ? "Uploading..."
+                        : prescription
+                          ? "Replace Prescription"
+                          : "Upload Prescription"}
+                    </Text>
+                  </TouchableOpacity>
+                  {prescription ? (
+                    <View style={styles.prescriptionCard}>
+                      <Text style={styles.prescriptionName} numberOfLines={1}>
+                        {prescription.name}
+                      </Text>
+                      <View style={styles.prescriptionActions}>
+                        <TouchableOpacity
+                          onPress={() => Linking.openURL(prescription.url)}
+                        >
+                          <Text style={styles.prescriptionLink}>Preview</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setPrescription(null)}>
+                          <Text style={styles.prescriptionRemove}>Remove</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ) : (
+                    <Text style={styles.prescriptionHint}>
+                      Upload is required for medicines marked prescription-only.
+                    </Text>
+                  )}
+                </>
+              ) : null}
+            </View>
           </>
         )}
         renderItem={({ item }) => (
@@ -210,8 +368,8 @@ export default function CartScreen() {
             loading
               ? "Processing Payment..."
               : items.length
-              ? `Place Order · Rs ${total.toFixed(2)}`
-              : "Go to Pharmacy"
+                ? `Place Order · Rs ${total.toFixed(2)}`
+                : "Go to Pharmacy"
           }
           onPress={handlePlaceOrder}
           loading={loading}
@@ -307,6 +465,75 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.border,
+  },
+  checkoutCard: {
+    marginTop: 16,
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 16,
+    gap: 10,
+  },
+  checkoutTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: Colors.text,
+  },
+  prescriptionLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#92400E",
+  },
+  uploadBtn: {
+    borderRadius: 10,
+    backgroundColor: Colors.primary,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  uploadBtnText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  prescriptionCard: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 10,
+    backgroundColor: Colors.background,
+  },
+  prescriptionName: {
+    fontSize: 12,
+    color: Colors.text,
+    fontWeight: "600",
+  },
+  prescriptionActions: {
+    marginTop: 8,
+    flexDirection: "row",
+    gap: 16,
+  },
+  prescriptionLink: {
+    color: Colors.primary,
+    fontWeight: "700",
+    fontSize: 12,
+  },
+  prescriptionRemove: {
+    color: Colors.error,
+    fontWeight: "700",
+    fontSize: 12,
+  },
+  prescriptionHint: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: Colors.text,
+    backgroundColor: Colors.background,
   },
   billRow: {
     flexDirection: "row",

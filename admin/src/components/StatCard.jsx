@@ -1,6 +1,8 @@
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 
-export default function StatCard({ title, value, icon: Icon, trend, trendUp }) {
+export default function StatCard({ title, value, icon, trend, trendUp }) {
+  const IconComponent = icon;
+
   return (
     <article className="group panel-card relative overflow-hidden p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/10">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-blue via-indigo-500 to-brand-teal opacity-70" />
@@ -9,7 +11,7 @@ export default function StatCard({ title, value, icon: Icon, trend, trendUp }) {
         <div
           className={`flex h-12 w-12 items-center justify-center rounded-xl transition-colors ${trendUp ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"}`}
         >
-          <Icon
+          <IconComponent
             size={22}
             className="transition-transform group-hover:scale-110"
           />

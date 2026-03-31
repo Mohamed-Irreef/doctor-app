@@ -1,23 +1,23 @@
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import {
-  Camera,
-  ChevronDown,
-  ChevronUp,
-  Edit2,
-  LogOut,
-  Star,
+    Camera,
+    ChevronDown,
+    ChevronUp,
+    Edit2,
+    LogOut,
+    Star,
 } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Image,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ActionModal from "../../components/ActionModal";
@@ -195,7 +195,7 @@ export default function DoctorProfileScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.MediaType.Images,
       allowsEditing: true,
       quality: 0.8,
     });
@@ -218,7 +218,7 @@ export default function DoctorProfileScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.MediaType.Images,
       allowsEditing: true,
       quality: 0.8,
     });
@@ -235,6 +235,27 @@ export default function DoctorProfileScreen() {
     }
 
     setSaving(true);
+
+    let uploadedProfileUrl = doctorImage;
+    if (newImageUri) {
+      const upload = await api.uploadFile(
+        {
+          uri: newImageUri,
+          name: "doctor-profile.jpg",
+          type: "image/jpeg",
+        },
+        "nividoc/doctors/profiles",
+        true,
+      );
+
+      if (upload.status !== "success" || !upload.data) {
+        setSaving(false);
+        setError(upload.error || "Profile image upload failed.");
+        return;
+      }
+
+      uploadedProfileUrl = (upload.data as any).url;
+    }
 
     let uploadedBannerUrl = bannerImage;
     if (newBannerUri) {
@@ -260,6 +281,10 @@ export default function DoctorProfileScreen() {
     const payload: Record<string, any> = {
       bio: bioText.trim(),
     };
+
+    if (uploadedProfileUrl) {
+      payload.image = uploadedProfileUrl;
+    }
 
     if (uploadedBannerUrl) {
       payload.bannerImage = uploadedBannerUrl;

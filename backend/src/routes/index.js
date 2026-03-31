@@ -11,6 +11,8 @@ const adminRoutes = require("./adminRoutes");
 const subscriptionRoutes = require("./subscriptionRoutes");
 const miscRoutes = require("./miscRoutes");
 const planRoutes = require("./planRoutes");
+const businessRoutes = require("./businessRoutes");
+const partnerRoutes = require("./partnerRoutes");
 
 const router = express.Router();
 
@@ -23,6 +25,8 @@ router.use("/pharmacy", pharmacyRoutes);
 router.use("/", commerceRoutes);
 router.use("/payments", paymentRoutes);
 router.use("/admin", adminRoutes);
+router.use("/", businessRoutes);
+router.use("/", partnerRoutes);
 router.use("/subscriptions", subscriptionRoutes);
 router.use("/plans", planRoutes);
 router.use("/", miscRoutes);

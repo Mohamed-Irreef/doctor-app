@@ -24,6 +24,8 @@ function buildAuthPayload(user) {
       image: user.image,
       role: user.role,
       doctorApprovalStatus: user.doctorApprovalStatus,
+      labApprovalStatus: user.labApprovalStatus,
+      pharmacyApprovalStatus: user.pharmacyApprovalStatus,
     },
   };
 }
@@ -31,13 +33,13 @@ function buildAuthPayload(user) {
 function isPatientProfileComplete(user, profile) {
   return Boolean(
     user?.name &&
-      user?.phone &&
-      user?.image &&
-      profile?.gender &&
-      profile?.dateOfBirth &&
-      profile?.bloodGroup &&
-      profile?.address &&
-      profile?.emergencyContact,
+    user?.phone &&
+    user?.image &&
+    profile?.gender &&
+    profile?.dateOfBirth &&
+    profile?.bloodGroup &&
+    profile?.address &&
+    profile?.emergencyContact,
   );
 }
 
@@ -94,6 +96,15 @@ const login = catchAsync(async (req, res) => {
 
   if (user.role === "doctor" && user.doctorApprovalStatus !== "approved") {
     throw new ApiError(403, "Doctor account is pending admin approval");
+  }
+  if (user.role === "lab_admin" && user.labApprovalStatus !== "approved") {
+    throw new ApiError(403, "Lab account is pending admin approval");
+  }
+  if (
+    user.role === "pharmacy_admin" &&
+    user.pharmacyApprovalStatus !== "approved"
+  ) {
+    throw new ApiError(403, "Pharmacy account is pending admin approval");
   }
 
   if (user.status !== "active") throw new ApiError(403, "Account is inactive");
@@ -157,17 +168,25 @@ const googleAuth = catchAsync(async (req, res) => {
 
 const me = catchAsync(async (req, res) => {
   const user = await User.findById(req.user._id).select("-passwordHash").lean();
-  const profile =
-    user.role === "doctor"
-      ? await DoctorProfile.findOne({ user: user._id }).lean()
-      : await PatientProfile.findOne({ user: user._id }).lean();
+  let profile = null;
+  if (user.role === "doctor") {
+    profile = await DoctorProfile.findOne({ user: user._id }).lean();
+  } else if (user.role === "patient") {
+    profile = await PatientProfile.findOne({ user: user._id }).lean();
+  }
 
   const profileComplete =
     user.role === "patient" ? isPatientProfileComplete(user, profile) : true;
 
   return res
     .status(200)
-    .json(new ApiResponse(200, "Profile fetched", { user, profile, profileComplete }));
+    .json(
+      new ApiResponse(200, "Profile fetched", {
+        user,
+        profile,
+        profileComplete,
+      }),
+    );
 });
 
 const updatePatientProfile = catchAsync(async (req, res) => {

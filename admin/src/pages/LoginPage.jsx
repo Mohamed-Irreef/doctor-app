@@ -1,9 +1,9 @@
 import { Stethoscope } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "../components/Button";
 import Input from "../components/Input";
-import { loginAdmin } from "../services/api";
+import { isRoleAuthenticated, loginAdmin } from "../services/api";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -11,6 +11,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (isRoleAuthenticated("admin")) {
+      navigate("/admin", { replace: true });
+    }
+  }, [navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -20,7 +26,7 @@ export default function LoginPage() {
     const result = await loginAdmin(email, password);
     setLoading(false);
     if (result.status === "success") {
-      navigate("/");
+      navigate("/admin", { replace: true });
       return;
     }
     setError(result.error || "Invalid credentials");

@@ -1,6 +1,8 @@
 import {
     Activity,
+    AlertTriangle,
     Bell,
+    Building2,
     Calendar,
     ChevronDown,
     ChevronRight,
@@ -26,10 +28,10 @@ const NAV_SECTIONS = [
   {
     label: "Core",
     items: [
-      { to: "/", icon: LayoutDashboard, label: "Dashboard" },
-      { to: "/appointments", icon: Calendar, label: "Appointments" },
-      { to: "/slots", icon: Clock, label: "Slots" },
-      { to: "/patients", icon: Users, label: "Patients" },
+      { to: "/admin", icon: LayoutDashboard, label: "Dashboard" },
+      { to: "/admin/appointments", icon: Calendar, label: "Appointments" },
+      { to: "/admin/slots", icon: Clock, label: "Slots" },
+      { to: "/admin/patients", icon: Users, label: "Patients" },
     ],
   },
   {
@@ -40,22 +42,27 @@ const NAV_SECTIONS = [
         label: "Doctors",
         key: "doctors",
         children: [
-          { to: "/doctors/requests", icon: UserPlus, label: "Requests" },
-          { to: "/doctors", icon: UserCheck, label: "Approved" },
+          { to: "/admin/doctors/requests", icon: UserPlus, label: "Requests" },
+          { to: "/admin/doctors", icon: UserCheck, label: "Approved" },
         ],
       },
-      { to: "/lab-tests", icon: FlaskConical, label: "Lab Tests" },
-      { to: "/pharmacy", icon: Pill, label: "Pharmacy" },
-      { to: "/orders", icon: ShoppingCart, label: "Orders" },
-      { to: "/payments", icon: CreditCard, label: "Payments" },
-      { to: "/reviews", icon: Star, label: "Reviews" },
+      { to: "/admin/lab-tests", icon: FlaskConical, label: "Lab Tests" },
+      { to: "/admin/pharmacy", icon: Pill, label: "Pharmacy" },
+      { to: "/admin/partners", icon: Building2, label: "Partners" },
+      { to: "/admin/orders", icon: ShoppingCart, label: "Orders" },
+      { to: "/admin/payments", icon: CreditCard, label: "Payments" },
+      { to: "/admin/reviews", icon: Star, label: "Reviews" },
+      { to: "/admin/ecosystem", icon: Activity, label: "Ecosystem" },
+      { to: "/admin/approvals", icon: ShieldCheck, label: "Approval Hub" },
     ],
   },
   {
     label: "System",
     items: [
-      { to: "/notifications", icon: Bell, label: "Notifications" },
-      { to: "/settings", icon: Settings, label: "Settings" },
+      { to: "/admin/notifications", icon: Bell, label: "Notifications" },
+      { to: "/admin/audit-logs", icon: ShieldCheck, label: "Audit Logs" },
+      { to: "/admin/errors", icon: AlertTriangle, label: "Errors" },
+      { to: "/admin/settings", icon: Settings, label: "Settings" },
     ],
   },
 ];
@@ -174,7 +181,7 @@ export default function Sidebar({ mobileOpen, onCloseMobile, collapsed }) {
                   <NavLink
                     key={item.to}
                     to={item.to}
-                    end={item.to === "/"}
+                    end={item.to === "/admin"}
                     title={collapsed ? item.label : undefined}
                     onClick={onCloseMobile}
                     className={({ isActive }) =>

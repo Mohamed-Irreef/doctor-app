@@ -1,14 +1,21 @@
 import { useRouter } from "expo-router";
-import { ArrowLeft, Plus, Search, ShoppingCart } from "lucide-react-native";
+import {
+  ArrowLeft,
+  ClipboardList,
+  Plus,
+  Search,
+  ShoppingCart,
+} from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-    FlatList,
-    Image,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../constants/Colors";
@@ -31,11 +38,14 @@ export default function PharmacyScreen() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [query, setQuery] = useState("");
   const [medicines, setMedicines] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
+      setLoading(true);
       const response = await getMedicines();
       if (response.data) setMedicines(response.data);
+      setLoading(false);
     };
     load();
   }, []);
@@ -74,127 +84,161 @@ export default function PharmacyScreen() {
             </View>
           )}
         </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.historyBtn}
+          onPress={() => router.push("/(patient)/medicine-orders")}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <ClipboardList color={Colors.primary} size={20} />
+        </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={filtered}
-        numColumns={2}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        columnWrapperStyle={{ justifyContent: "space-between" }}
-        keyExtractor={(m) => String(m.id || m._id)}
-        ListHeaderComponent={() => (
-          <>
-            {/* Promo Banner */}
-            <View style={styles.promoBanner}>
-              <Text style={styles.promoTitle}>💊 Up to 30% Off Medicines</Text>
-              <Text style={styles.promoSub}>
-                Free delivery on orders above $30 · Use code MEDI30
+      {loading ? (
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator color={Colors.primary} />
+          <Text style={styles.loadingText}>Loading pharmacy catalog...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filtered}
+          numColumns={2}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          columnWrapperStyle={{ justifyContent: "space-between" }}
+          keyExtractor={(m) => String(m.id || m._id)}
+          ListHeaderComponent={() => (
+            <>
+              {/* Promo Banner */}
+              <View style={styles.promoBanner}>
+                <Text style={styles.promoTitle}>Up to 30% Off Medicines</Text>
+                <Text style={styles.promoSub}>
+                  Free delivery on orders above Rs 499 · Use code MEDI30
+                </Text>
+              </View>
+
+              {/* Search */}
+              <View style={styles.searchRow}>
+                <Search color={Colors.textSecondary} size={16} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search medicines..."
+                  placeholderTextColor={Colors.textSecondary}
+                  value={query}
+                  onChangeText={setQuery}
+                />
+              </View>
+
+              {/* Categories */}
+              <FlatList
+                data={CATS}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.catScroll}
+                keyExtractor={(c) => c}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[
+                      styles.catChip,
+                      activeCategory === item && styles.catChipActive,
+                    ]}
+                    onPress={() => setActiveCategory(item)}
+                    activeOpacity={0.75}
+                  >
+                    <Text
+                      style={[
+                        styles.catText,
+                        activeCategory === item && styles.catTextActive,
+                      ]}
+                    >
+                      {item}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              />
+            </>
+          )}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Text
+                style={{
+                  fontSize: 16,
+                  fontWeight: "600",
+                  color: Colors.textSecondary,
+                }}
+              >
+                No medicines found
               </Text>
             </View>
-
-            {/* Search */}
-            <View style={styles.searchRow}>
-              <Search color={Colors.textSecondary} size={16} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search medicines..."
-                placeholderTextColor={Colors.textSecondary}
-                value={query}
-                onChangeText={setQuery}
-              />
-            </View>
-
-            {/* Categories */}
-            <FlatList
-              data={CATS}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.catScroll}
-              keyExtractor={(c) => c}
-              renderItem={({ item }) => (
+          }
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.medCard}
+              onPress={() =>
+                router.push({
+                  pathname: "/(patient)/medicine/[id]",
+                  params: { id: item.id || item._id },
+                })
+              }
+              activeOpacity={0.85}
+            >
+              <Image source={{ uri: item.image }} style={styles.medImage} />
+              {item.inStock === false && (
+                <View style={styles.outBadge}>
+                  <Text style={styles.outText}>Out of Stock</Text>
+                </View>
+              )}
+              <Text style={styles.medName} numberOfLines={2}>
+                {item.name}
+              </Text>
+              <Text style={styles.medCat}>{item.brand || item.category}</Text>
+              {item.prescriptionRequired ? (
+                <View style={styles.rxTag}>
+                  <Text style={styles.rxText}>Prescription</Text>
+                </View>
+              ) : null}
+              <View style={styles.medBottom}>
+                <View>
+                  <Text style={styles.medPrice}>
+                    Rs {Number(item.price || 0).toFixed(2)}
+                  </Text>
+                  {item.mrp && Number(item.mrp) > Number(item.price) ? (
+                    <Text style={styles.mrpText}>
+                      MRP Rs {Number(item.mrp).toFixed(2)}
+                    </Text>
+                  ) : null}
+                </View>
                 <TouchableOpacity
                   style={[
-                    styles.catChip,
-                    activeCategory === item && styles.catChipActive,
+                    styles.addBtn,
+                    item.inStock === false && {
+                      backgroundColor: Colors.border,
+                    },
                   ]}
-                  onPress={() => setActiveCategory(item)}
+                  onPress={(e) => {
+                    e.stopPropagation?.();
+                    if (item.inStock !== false) {
+                      addItem({
+                        id: item.id || item._id,
+                        name: item.name,
+                        price: item.price,
+                        image: item.image || "",
+                        category: item.category,
+                        prescriptionRequired: item.prescriptionRequired,
+                        mrp: item.mrp,
+                        deliveryEtaHours: item.deliveryEtaHours,
+                      });
+                    }
+                  }}
+                  disabled={item.inStock === false}
                   activeOpacity={0.75}
                 >
-                  <Text
-                    style={[
-                      styles.catText,
-                      activeCategory === item && styles.catTextActive,
-                    ]}
-                  >
-                    {item}
-                  </Text>
+                  <Plus size={16} color={Colors.surface} />
                 </TouchableOpacity>
-              )}
-            />
-          </>
-        )}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text
-              style={{
-                fontSize: 16,
-                fontWeight: "600",
-                color: Colors.textSecondary,
-              }}
-            >
-              No medicines found
-            </Text>
-          </View>
-        }
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.medCard}
-            onPress={() =>
-              router.push({
-                pathname: "/(patient)/medicine/[id]",
-                params: { id: item.id || item._id },
-              })
-            }
-            activeOpacity={0.85}
-          >
-            <Image source={{ uri: item.image }} style={styles.medImage} />
-            {item.inStock === false && (
-              <View style={styles.outBadge}>
-                <Text style={styles.outText}>Out of Stock</Text>
               </View>
-            )}
-            <Text style={styles.medName} numberOfLines={2}>
-              {item.name}
-            </Text>
-            <Text style={styles.medCat}>{item.category}</Text>
-            <View style={styles.medBottom}>
-              <Text style={styles.medPrice}>${item.price.toFixed(2)}</Text>
-              <TouchableOpacity
-                style={[
-                  styles.addBtn,
-                  item.inStock === false && { backgroundColor: Colors.border },
-                ]}
-                onPress={(e) => {
-                  e.stopPropagation?.();
-                  if (item.inStock !== false) {
-                    addItem({
-                      id: item.id || item._id,
-                      name: item.name,
-                      price: item.price,
-                      image: item.image || "",
-                    });
-                  }
-                }}
-                disabled={item.inStock === false}
-                activeOpacity={0.75}
-              >
-                <Plus size={16} color={Colors.surface} />
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        )}
-      />
+            </TouchableOpacity>
+          )}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -232,6 +276,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
+    marginLeft: 6,
+  },
+  historyBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   cartBadge: {
     position: "absolute",
@@ -247,13 +301,13 @@ const styles = StyleSheet.create({
   cartBadgeText: { fontSize: 9, fontWeight: "800", color: "#fff" },
   listContent: { padding: 16, paddingBottom: 40 },
   promoBanner: {
-    backgroundColor: "#F3E8FF",
+    backgroundColor: "#ECFEFF",
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
   },
-  promoTitle: { fontSize: 15, fontWeight: "800", color: "#7C3AED" },
-  promoSub: { fontSize: 12, color: "#6D28D9", marginTop: 4 },
+  promoTitle: { fontSize: 15, fontWeight: "800", color: "#0E7490" },
+  promoSub: { fontSize: 12, color: "#0F766E", marginTop: 4 },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -276,7 +330,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     backgroundColor: Colors.surface,
   },
-  catChipActive: { backgroundColor: "#7C3AED", borderColor: "#7C3AED" },
+  catChipActive: { backgroundColor: "#0EA5E9", borderColor: "#0EA5E9" },
   catText: { fontSize: 12, fontWeight: "500", color: Colors.textSecondary },
   catTextActive: { color: Colors.surface },
   medCard: {
@@ -323,19 +377,35 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     marginBottom: 8,
   },
+  rxTag: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    backgroundColor: "#FEF3C7",
+    marginBottom: 6,
+  },
+  rxText: { fontSize: 10, fontWeight: "700", color: "#92400E" },
   medBottom: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
   medPrice: { fontSize: 15, fontWeight: "800", color: Colors.text },
+  mrpText: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    textDecorationLine: "line-through",
+  },
   addBtn: {
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "#7C3AED",
+    backgroundColor: "#0EA5E9",
     alignItems: "center",
     justifyContent: "center",
   },
   emptyState: { flex: 1, alignItems: "center", paddingTop: 60 },
+  loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
+  loadingText: { marginTop: 8, color: Colors.textSecondary, fontSize: 13 },
 });

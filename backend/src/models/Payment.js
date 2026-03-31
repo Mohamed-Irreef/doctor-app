@@ -17,6 +17,13 @@ const paymentSchema = new mongoose.Schema(
     amount: { type: Number, required: true },
     commissionAmount: { type: Number, default: 0 },
     platformFee: { type: Number, default: 0 },
+    revenueSplit: {
+      total: { type: Number, default: 0 },
+      adminShare: { type: Number, default: 0 },
+      partnerShare: { type: Number, default: 0 },
+      partnerSharePercent: { type: Number, default: 0 },
+      adminSharePercent: { type: Number, default: 0 },
+    },
     status: {
       type: String,
       enum: ["created", "paid", "failed", "pending", "refunded"],

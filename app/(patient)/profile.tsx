@@ -5,19 +5,19 @@ import { useRouter } from "expo-router";
 import { Calendar, Camera, MapPin, Save } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ActionModal from "../../components/ActionModal";
 import { Colors } from "../../constants/Colors";
-import { useAuthStore } from "../../store/authStore";
 import * as api from "../../services/api";
+import { useAuthStore } from "../../store/authStore";
 
 const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 const GENDERS = ["Male", "Female", "Other"];
@@ -48,7 +48,9 @@ export default function PatientProfileScreen() {
 
   const [loading, setLoading] = useState(false);
   const [errorModal, setErrorModal] = useState(false);
-  const [errorText, setErrorText] = useState("Please complete required fields.");
+  const [errorText, setErrorText] = useState(
+    "Please complete required fields.",
+  );
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -82,7 +84,7 @@ export default function PatientProfileScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.MediaType.Images,
       allowsEditing: true,
       quality: 0.8,
     });
@@ -100,7 +102,9 @@ export default function PatientProfileScreen() {
       return;
     }
 
-    const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+    const current = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.High,
+    });
     setLatitude(current.coords.latitude);
     setLongitude(current.coords.longitude);
   };
@@ -117,7 +121,15 @@ export default function PatientProfileScreen() {
   };
 
   const saveProfile = async () => {
-    if (!name.trim() || !phone.trim() || !gender || !dob || !bloodGroup || !address.trim() || !emergencyContact.trim()) {
+    if (
+      !name.trim() ||
+      !phone.trim() ||
+      !gender ||
+      !dob ||
+      !bloodGroup ||
+      !address.trim() ||
+      !emergencyContact.trim()
+    ) {
       setErrorText("Please complete all required profile fields.");
       setErrorModal(true);
       return;
@@ -152,7 +164,10 @@ export default function PatientProfileScreen() {
       bloodGroup,
       address: address.trim(),
       emergencyContact: emergencyContact.trim(),
-      location: latitude !== null && longitude !== null ? { latitude, longitude } : undefined,
+      location:
+        latitude !== null && longitude !== null
+          ? { latitude, longitude }
+          : undefined,
     });
 
     setLoading(false);
@@ -178,13 +193,21 @@ export default function PatientProfileScreen() {
         onConfirm={() => setErrorModal(false)}
       />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scroll}
+      >
         <Text style={styles.title}>Complete Your Profile</Text>
-        <Text style={styles.subtitle}>Fill all details before booking appointments or placing orders.</Text>
+        <Text style={styles.subtitle}>
+          Fill all details before booking appointments or placing orders.
+        </Text>
 
         <TouchableOpacity style={styles.avatarWrap} onPress={pickImage}>
           {imageUri || imageUrl ? (
-            <Image source={{ uri: imageUri || imageUrl }} style={styles.avatar} />
+            <Image
+              source={{ uri: imageUri || imageUrl }}
+              style={styles.avatar}
+            />
           ) : (
             <View style={[styles.avatar, styles.avatarPlaceholder]}>
               <Camera color={Colors.primary} size={24} />
@@ -193,24 +216,47 @@ export default function PatientProfileScreen() {
           <Text style={styles.avatarText}>Upload Profile Photo *</Text>
         </TouchableOpacity>
 
-        <TextInput style={styles.input} placeholder="Full Name *" value={name} onChangeText={setName} />
-        <TextInput style={styles.input} placeholder="Phone *" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+        <TextInput
+          style={styles.input}
+          placeholder="Full Name *"
+          value={name}
+          onChangeText={setName}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Phone *"
+          value={phone}
+          onChangeText={setPhone}
+          keyboardType="phone-pad"
+        />
 
         <View style={styles.optionRow}>
           {GENDERS.map((item) => (
             <TouchableOpacity
               key={item}
               onPress={() => setGender(item)}
-              style={[styles.optionChip, gender === item && styles.optionChipActive]}
+              style={[
+                styles.optionChip,
+                gender === item && styles.optionChipActive,
+              ]}
             >
-              <Text style={[styles.optionChipText, gender === item && styles.optionChipTextActive]}>{item}</Text>
+              <Text
+                style={[
+                  styles.optionChipText,
+                  gender === item && styles.optionChipTextActive,
+                ]}
+              >
+                {item}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
 
         <TouchableOpacity style={styles.inputButton} onPress={openDobPicker}>
           <Calendar color="#6B7280" size={18} />
-          <Text style={{ marginLeft: 10, color: dob ? "#111827" : "#9CA3AF" }}>{dob ? formatDate(dob) : "Date of Birth *"}</Text>
+          <Text style={{ marginLeft: 10, color: dob ? "#111827" : "#9CA3AF" }}>
+            {dob ? formatDate(dob) : "Date of Birth *"}
+          </Text>
         </TouchableOpacity>
 
         <View style={styles.optionRow}>
@@ -218,15 +264,35 @@ export default function PatientProfileScreen() {
             <TouchableOpacity
               key={item}
               onPress={() => setBloodGroup(item)}
-              style={[styles.optionChip, bloodGroup === item && styles.optionChipActive]}
+              style={[
+                styles.optionChip,
+                bloodGroup === item && styles.optionChipActive,
+              ]}
             >
-              <Text style={[styles.optionChipText, bloodGroup === item && styles.optionChipTextActive]}>{item}</Text>
+              <Text
+                style={[
+                  styles.optionChipText,
+                  bloodGroup === item && styles.optionChipTextActive,
+                ]}
+              >
+                {item}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <TextInput style={styles.input} placeholder="City, State, Pincode *" value={address} onChangeText={setAddress} />
-        <TextInput style={styles.input} placeholder="Emergency Contact *" value={emergencyContact} onChangeText={setEmergencyContact} />
+        <TextInput
+          style={styles.input}
+          placeholder="City, State, Pincode *"
+          value={address}
+          onChangeText={setAddress}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Emergency Contact *"
+          value={emergencyContact}
+          onChangeText={setEmergencyContact}
+        />
 
         <TouchableOpacity style={styles.locationBtn} onPress={captureLocation}>
           <MapPin color={Colors.primary} size={18} />
@@ -237,9 +303,15 @@ export default function PatientProfileScreen() {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.saveBtn} onPress={saveProfile} disabled={loading}>
+        <TouchableOpacity
+          style={styles.saveBtn}
+          onPress={saveProfile}
+          disabled={loading}
+        >
           <Save color="#FFFFFF" size={18} />
-          <Text style={styles.saveText}>{loading ? "Saving..." : "Save Profile"}</Text>
+          <Text style={styles.saveText}>
+            {loading ? "Saving..." : "Save Profile"}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -282,7 +354,12 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     marginBottom: 12,
   },
-  optionRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
+  optionRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 12,
+  },
   optionChip: {
     borderWidth: 1,
     borderColor: Colors.border,
@@ -292,7 +369,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   optionChipActive: { borderColor: Colors.primary, backgroundColor: "#EFF6FF" },
-  optionChipText: { color: Colors.textSecondary, fontSize: 13, fontWeight: "600" },
+  optionChipText: {
+    color: Colors.textSecondary,
+    fontSize: 13,
+    fontWeight: "600",
+  },
   optionChipTextActive: { color: Colors.primary },
   locationBtn: {
     flexDirection: "row",
@@ -306,7 +387,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#EFF6FF",
     marginBottom: 16,
   },
-  locationText: { marginLeft: 10, color: Colors.primary, fontWeight: "600", flex: 1 },
+  locationText: {
+    marginLeft: 10,
+    color: Colors.primary,
+    fontWeight: "600",
+    flex: 1,
+  },
   saveBtn: {
     backgroundColor: Colors.primary,
     borderRadius: 12,

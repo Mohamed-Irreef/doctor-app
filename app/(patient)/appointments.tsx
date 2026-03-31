@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import {
     Calendar,
     Clock,
@@ -6,7 +6,7 @@ import {
     Video,
     XCircle,
 } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
     FlatList,
     Image,
@@ -23,15 +23,18 @@ export default function AppointmentsScreen() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const router = useRouter();
 
-  useEffect(() => {
-    const load = async () => {
-      const response = await getPatientAppointments();
-      if (response.data) {
-        setAppointments(response.data);
-      }
-    };
-    load();
+  const loadAppointments = useCallback(async () => {
+    const response = await getPatientAppointments();
+    if (response.data) {
+      setAppointments(response.data);
+    }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadAppointments();
+    }, [loadAppointments]),
+  );
 
   const renderCard = ({ item }: { item: any }) => {
     return (
@@ -64,6 +67,12 @@ export default function AppointmentsScreen() {
           <TouchableOpacity
             style={[styles.actionBtn, styles.primaryBtn]}
             activeOpacity={0.8}
+            onPress={() =>
+              router.push({
+                pathname: "/(patient)/appointment/video/[id]",
+                params: { id: String(item._id || item.id) },
+              })
+            }
           >
             <Video size={16} color={Colors.surface} />
             <Text style={[styles.actionBtnText, { color: Colors.surface }]}>
@@ -106,7 +115,7 @@ export default function AppointmentsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Upcoming Consultations</Text>
+        <Text style={styles.headerTitle}>Appointments</Text>
       </View>
 
       <FlatList
@@ -119,7 +128,7 @@ export default function AppointmentsScreen() {
             <Calendar size={48} color={Colors.border} />
             <Text style={styles.emptyTitle}>No Upcoming Appointments</Text>
             <Text style={styles.emptySub}>
-              You have no scheduled video consultations.
+              You do not have any appointments yet.
             </Text>
           </View>
         }

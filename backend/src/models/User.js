@@ -16,7 +16,7 @@ const userSchema = new mongoose.Schema(
     passwordHash: { type: String },
     role: {
       type: String,
-      enum: ["patient", "doctor", "admin"],
+      enum: ["patient", "doctor", "admin", "lab_admin", "pharmacy_admin"],
       required: true,
       index: true,
     },
@@ -35,8 +35,24 @@ const userSchema = new mongoose.Schema(
       default: "none",
       index: true,
     },
+    labApprovalStatus: {
+      type: String,
+      enum: ["none", "pending", "approved", "rejected"],
+      default: "none",
+      index: true,
+    },
+    pharmacyApprovalStatus: {
+      type: String,
+      enum: ["none", "pending", "approved", "rejected"],
+      default: "none",
+      index: true,
+    },
     refreshTokenHash: { type: String },
     isEmailVerified: { type: Boolean, default: false },
+    resetOtpHash: { type: String },
+    resetOtpExpiresAt: { type: Date },
+    resetTokenHash: { type: String },
+    resetTokenExpiresAt: { type: Date },
   },
   { timestamps: true },
 );

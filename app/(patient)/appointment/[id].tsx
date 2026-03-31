@@ -317,7 +317,12 @@ export default function AppointmentDetailsScreen() {
           <>
             <ButtonPrimary
               title="Join Consultation"
-              onPress={() => router.push("/(patient)/consultation")}
+              onPress={() =>
+                router.push({
+                  pathname: "/(patient)/appointment/video/[id]",
+                  params: { id: String(appt.id || appt._id) },
+                })
+              }
               style={{ flex: 1, marginRight: 10, paddingVertical: 18 }}
             />
             <ButtonPrimary

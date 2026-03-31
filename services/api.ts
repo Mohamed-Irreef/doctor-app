@@ -279,10 +279,79 @@ export async function getDoctorSlots(doctorId: string, date?: string) {
   }
 }
 
+export async function createDoctorSlot(payload: {
+  date: string;
+  startTime: string;
+  endTime: string;
+  durationMinutes: number;
+}) {
+  try {
+    const res = await API.post("/slots", payload);
+    return ok(res.data.data);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function updateDoctorSlot(
+  slotId: string,
+  payload: {
+    date?: string;
+    startTime?: string;
+    endTime?: string;
+    durationMinutes?: number;
+    status?: "available" | "booked" | "blocked";
+  },
+) {
+  try {
+    const res = await API.patch(`/slots/${slotId}`, payload);
+    return ok(res.data.data);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function deleteDoctorSlot(slotId: string) {
+  try {
+    const res = await API.delete(`/slots/${slotId}`);
+    return ok(res.data.data);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function bulkCopyDoctorSlots(payload: {
+  sourceDayOfWeek: number;
+  targetDayOfWeek: number;
+  fromDate: string;
+  toDate: string;
+}) {
+  try {
+    const res = await API.post("/slots/bulk-copy", payload);
+    return ok(res.data.data);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
 export async function createAppointment(payload: {
   doctorId: string;
   slotId: string;
   type: "video" | "chat" | "in-person";
+  medicalDetails?: {
+    disease?: string;
+    durationOfIssue?: string;
+    severityLevel?: string;
+    symptoms?: string[];
+    currentMedicines?: string[];
+    allergies?: string[];
+    heightCm?: number;
+    weightKg?: number;
+    bloodGroup?: string;
+    medicalHistory?: string[];
+    additionalNotes?: string;
+    reportFiles?: { url: string; name?: string; mimeType?: string }[];
+  };
 }) {
   try {
     const res = await API.post("/appointments", payload);
@@ -297,13 +366,84 @@ export async function bookAppointment(
   _date: string,
   slotId: string,
   type: "video" | "chat" | "in-person" = "video",
+  medicalDetails?: {
+    disease?: string;
+    durationOfIssue?: string;
+    severityLevel?: string;
+    symptoms?: string[];
+    currentMedicines?: string[];
+    allergies?: string[];
+    heightCm?: number;
+    weightKg?: number;
+    bloodGroup?: string;
+    medicalHistory?: string[];
+    additionalNotes?: string;
+    reportFiles?: { url: string; name?: string; mimeType?: string }[];
+  },
 ) {
-  return createAppointment({ doctorId, slotId, type });
+  return createAppointment({ doctorId, slotId, type, medicalDetails });
+}
+
+export async function releasePendingAppointment(id: string, reason?: string) {
+  try {
+    const res = await API.post(`/appointments/${id}/release`, { reason });
+    return ok(res.data.data);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function getVideoConsultationAccess(appointmentId: string) {
+  try {
+    const res = await API.get(`/appointments/${appointmentId}/video-access`);
+    return ok(res.data.data);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function submitAppointmentPrescription(
+  appointmentId: string,
+  payload: { text: string; pdfUrl: string },
+) {
+  try {
+    const res = await API.post(
+      `/appointments/${appointmentId}/prescription`,
+      payload,
+    );
+    return ok(res.data.data);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function verifyAppointmentRevenue(
+  appointmentId: string,
+  payload: { approved: boolean; payoutReference?: string },
+) {
+  try {
+    const res = await API.post(
+      `/appointments/${appointmentId}/revenue-verify`,
+      payload,
+    );
+    return ok(res.data.data);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
 }
 
 export async function getPatientAppointments() {
   try {
     const res = await API.get("/appointments/patient");
+    return ok(res.data.data || []);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function getDoctorAppointments() {
+  try {
+    const res = await API.get("/appointments/doctor");
     return ok(res.data.data || []);
   } catch (error) {
     return fail(getErrorMessage(error));
@@ -354,10 +494,76 @@ export async function getLabTestById(id: string) {
   }
 }
 
-export async function bookLab(labTestId: string, bookingDate: string) {
+export async function getLabSlotAvailability(id: string, date: string) {
   try {
-    const res = await API.post("/labs/book", { labTestId, bookingDate });
+    const res = await API.get(`/labs/${id}/slots`, { params: { date } });
     return ok(res.data.data);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function holdLabSlot(id: string, date: string, timeSlot: string) {
+  try {
+    const res = await API.post(`/labs/${id}/slots/hold`, { date, timeSlot });
+    return ok(res.data.data);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function releaseLabSlotHold(holdId: string) {
+  try {
+    const res = await API.post(`/labs/slots/hold/${holdId}/release`);
+    return ok(res.data.data);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function getLabVisitQuote(id: string) {
+  try {
+    const res = await API.get(`/labs/${id}/visit-quote`);
+    return ok(res.data.data);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function bookLab(
+  labTestId: string,
+  bookingDate: string,
+  options?: {
+    collectionType?: "home" | "lab";
+    scheduledDate?: string;
+    collectionTimeSlot?: string;
+    holdId?: string;
+    homeCollectionAddress?: {
+      flatHouse: string;
+      streetArea: string;
+      landmark?: string;
+      city: string;
+      pincode: string;
+      contactNumber: string;
+    };
+  },
+) {
+  try {
+    const res = await API.post("/labs/book", {
+      labTestId,
+      bookingDate,
+      ...options,
+    });
+    return ok(res.data.data);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function getMyLabBookings(params?: { status?: string }) {
+  try {
+    const res = await API.get("/labs/bookings/me", { params });
+    return ok(res.data.data || []);
   } catch (error) {
     return fail(getErrorMessage(error));
   }
@@ -383,18 +589,24 @@ export async function getMedicineById(id: string) {
 
 export async function createOrder(
   items: { medicineId: string; quantity: number }[],
+  options?: {
+    deliveryAddress?: string;
+    deliveryContactName?: string;
+    deliveryContactPhone?: string;
+    prescription?: { url: string; note?: string };
+  },
 ) {
   try {
-    const res = await API.post("/orders", { items });
+    const res = await API.post("/orders", { items, ...(options || {}) });
     return ok(res.data.data);
   } catch (error) {
     return fail(getErrorMessage(error));
   }
 }
 
-export async function getOrders() {
+export async function getOrders(params?: { status?: string }) {
   try {
-    const res = await API.get("/orders");
+    const res = await API.get("/orders", { params });
     return ok(res.data.data || []);
   } catch (error) {
     return fail(getErrorMessage(error));

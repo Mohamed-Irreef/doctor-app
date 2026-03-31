@@ -3,7 +3,7 @@ const PlatformSetting = require("../models/PlatformSetting");
 const DEFAULTS = {
   APPOINTMENT_COMMISSION_PERCENT: 10,
   LAB_COMMISSION_PERCENT: 20,
-  PHARMACY_COMMISSION_PERCENT: 15,
+  PHARMACY_COMMISSION_PERCENT: 20,
 };
 
 async function getPercent(key) {

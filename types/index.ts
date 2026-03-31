@@ -40,7 +40,14 @@ export interface Medicine {
   name: string;
   price: number;
   image: string;
+  mrp?: number;
+  discountPercent?: number;
   category?: string;
+  brand?: string;
+  composition?: string;
+  packSize?: string;
+  deliveryEtaHours?: number;
+  prescriptionRequired?: boolean;
   inStock?: boolean;
 }
 
@@ -58,6 +65,10 @@ export interface CartItem {
   name: string;
   price: number;
   image: string;
+  category?: string;
+  prescriptionRequired?: boolean;
+  mrp?: number;
+  deliveryEtaHours?: number;
   quantity: number;
 }
 

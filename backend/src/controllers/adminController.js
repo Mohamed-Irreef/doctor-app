@@ -1,4 +1,5 @@
 const dayjs = require("dayjs");
+const mongoose = require("mongoose");
 const User = require("../models/User");
 const DoctorProfile = require("../models/DoctorProfile");
 const PatientProfile = require("../models/PatientProfile");
@@ -6,6 +7,7 @@ const Appointment = require("../models/Appointment");
 const LabTest = require("../models/LabTest");
 const Medicine = require("../models/Medicine");
 const Order = require("../models/Order");
+const AuditLog = require("../models/AuditLog");
 const Payment = require("../models/Payment");
 const Notification = require("../models/Notification");
 const Review = require("../models/Review");
@@ -16,7 +18,16 @@ const cloudinary = require("../config/cloudinary");
 const ApiError = require("../utils/ApiError");
 const ApiResponse = require("../utils/ApiResponse");
 const catchAsync = require("../utils/catchAsync");
-const { sendDoctorApprovalEmail } = require("../services/emailService");
+const {
+  sendDoctorApprovalEmail,
+  sendPharmacyOrderStatusEmail,
+} = require("../services/emailService");
+const { getErrorLogs } = require("../services/errorLogService");
+const { logAuditEvent } = require("../services/auditLogService");
+const {
+  transitionPharmacyOrder,
+} = require("../services/pharmacyOrderStateMachine");
+const { logError } = require("../utils/logger");
 
 function parseCloudinaryAsset(url) {
   if (!url || typeof url !== "string") return null;
@@ -167,6 +178,20 @@ const getPatients = catchAsync(async (_req, res) => {
   return res.status(200).json(new ApiResponse(200, "Patients fetched", merged));
 });
 
+const deletePatient = catchAsync(async (req, res) => {
+  const patient = await User.findById(req.params.id);
+  if (!patient || patient.role !== "patient") {
+    throw new ApiError(404, "Patient not found");
+  }
+
+  await PatientProfile.deleteOne({ user: patient._id });
+  await patient.deleteOne();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "Patient deleted", { id: req.params.id }));
+});
+
 const getDoctors = catchAsync(async (req, res) => {
   const filter = { role: "doctor" };
   if (req.query.status) filter.doctorApprovalStatus = req.query.status;
@@ -186,6 +211,21 @@ const getDoctors = catchAsync(async (req, res) => {
   }));
 
   return res.status(200).json(new ApiResponse(200, "Doctors fetched", merged));
+});
+
+const deleteDoctor = catchAsync(async (req, res) => {
+  const doctor = await User.findById(req.params.id);
+  if (!doctor || doctor.role !== "doctor") {
+    throw new ApiError(404, "Doctor not found");
+  }
+
+  await DoctorProfile.deleteOne({ user: doctor._id });
+  await Slot.deleteMany({ doctor: doctor._id });
+  await doctor.deleteOne();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "Doctor deleted", { id: req.params.id }));
 });
 
 const getDoctorRequests = catchAsync(async (_req, res) => {
@@ -321,10 +361,80 @@ const getOrders = catchAsync(async (_req, res) => {
 });
 
 const updateOrderStatus = catchAsync(async (req, res) => {
-  const order = await Order.findById(req.params.id);
+  const order = await Order.findById(req.params.id).populate(
+    "user",
+    "name email",
+  );
   if (!order) throw new ApiError(404, "Order not found");
-  order.status = req.body.status;
+  const previousStatus = order.status;
+
+  const { next: nextStatus } = transitionPharmacyOrder({
+    order,
+    nextStatus: req.body.status,
+    note: req.body.note,
+    actorLabel: "admin",
+  });
+
+  if (req.body.trackingId) {
+    order.trackingId = req.body.trackingId;
+  }
+
+  if (nextStatus === "shipped") {
+    order.shippedAt = new Date();
+  }
+
+  if (nextStatus === "delivered") {
+    order.deliveredAt = new Date();
+  }
+
+  if (nextStatus === "cancelled") {
+    order.cancelledAt = new Date();
+  }
+
   await order.save();
+
+  await logAuditEvent({
+    entityType: "order",
+    entityId: order._id,
+    action: "admin_order_status_changed",
+    performedBy: req.user?._id,
+    performedByRole: req.user?.role,
+    metadata: {
+      previousStatus,
+      nextStatus,
+      trackingId: req.body.trackingId || order.trackingId || null,
+      note: req.body.note || null,
+    },
+  });
+
+  await Notification.create({
+    title: `Order ${nextStatus}`,
+    message: `Your medicine order status is now ${nextStatus}.`,
+    type: `pharmacy-${nextStatus}`,
+    audienceType: "single",
+    recipient: order.user?._id,
+    targetEntityType: "Order",
+    targetEntityId: order._id,
+  });
+
+  if (["shipped", "delivered"].includes(String(nextStatus).toLowerCase())) {
+    try {
+      if (order.user?.email) {
+        await sendPharmacyOrderStatusEmail({
+          to: order.user.email,
+          patientName: order.user.name,
+          orderId: order._id,
+          status: nextStatus,
+        });
+      }
+    } catch (error) {
+      logError("admin_order_status_email_failed", error, {
+        orderId: order._id,
+        status: nextStatus,
+      });
+    }
+  }
+
   return res.status(200).json(new ApiResponse(200, "Order updated", order));
 });
 
@@ -474,10 +584,79 @@ const getSubscriptions = catchAsync(async (_req, res) => {
     .json(new ApiResponse(200, "Subscriptions fetched", subs));
 });
 
+const getSystemErrors = catchAsync(async (req, res) => {
+  const limit = Number(req.query.limit || 100);
+  const errors = getErrorLogs({ limit });
+
+  return res.status(200).json(
+    new ApiResponse(200, "System errors fetched", {
+      total: errors.length,
+      entries: errors,
+    }),
+  );
+});
+
+const getAuditLogs = catchAsync(async (req, res) => {
+  const page = Math.max(Number(req.query.page || 1), 1);
+  const limit = Math.min(Math.max(Number(req.query.limit || 25), 1), 200);
+  const skip = (page - 1) * limit;
+
+  const filter = {};
+
+  if (req.query.action) {
+    filter.action = req.query.action;
+  }
+
+  if (req.query.entityType) {
+    filter.entityType = req.query.entityType;
+  }
+
+  if (req.query.performedBy) {
+    if (!mongoose.Types.ObjectId.isValid(req.query.performedBy)) {
+      throw new ApiError(400, "Invalid performedBy user id");
+    }
+    filter.performedBy = req.query.performedBy;
+  }
+
+  if (req.query.dateFrom || req.query.dateTo) {
+    filter.timestamp = {};
+    if (req.query.dateFrom) {
+      filter.timestamp.$gte = new Date(req.query.dateFrom);
+    }
+    if (req.query.dateTo) {
+      filter.timestamp.$lte = new Date(req.query.dateTo);
+    }
+  }
+
+  const [total, entries] = await Promise.all([
+    AuditLog.countDocuments(filter),
+    AuditLog.find(filter)
+      .populate("performedBy", "name email role")
+      .sort({ timestamp: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+  ]);
+
+  return res.status(200).json(
+    new ApiResponse(200, "Audit logs fetched", {
+      entries,
+      pagination: {
+        total,
+        page,
+        limit,
+        pages: Math.max(Math.ceil(total / limit), 1),
+      },
+    }),
+  );
+});
+
 module.exports = {
   getDashboard,
   getPatients,
+  deletePatient,
   getDoctors,
+  deleteDoctor,
   getDoctorRequests,
   approveDoctor,
   getAppointments,
@@ -501,4 +680,6 @@ module.exports = {
   getSlots,
   getRevenueBreakdown,
   getSubscriptions,
+  getSystemErrors,
+  getAuditLogs,
 };

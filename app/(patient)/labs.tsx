@@ -8,11 +8,13 @@ import {
 } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
 import {
+    ActivityIndicator,
     FlatList,
+    Image,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../constants/Colors";
@@ -31,11 +33,19 @@ export default function LabsScreen() {
   const router = useRouter();
   const [activeCategory, setActiveCategory] = useState("All");
   const [labTests, setLabTests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const load = async () => {
+      setLoading(true);
+      setError("");
       const response = await getLabTests();
+      if (response.status === "error") {
+        setError(response.error || "Unable to load lab tests");
+      }
       if (response.data) setLabTests(response.data);
+      setLoading(false);
     };
     load();
   }, []);
@@ -67,6 +77,20 @@ export default function LabsScreen() {
         data={filteredTests}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={() => (
+          <View style={styles.emptyWrap}>
+            {loading ? (
+              <>
+                <ActivityIndicator size="small" color={Colors.primary} />
+                <Text style={styles.emptyText}>Loading lab tests...</Text>
+              </>
+            ) : (
+              <Text style={styles.emptyText}>
+                {error || "No lab tests found for the selected category."}
+              </Text>
+            )}
+          </View>
+        )}
         ListHeaderComponent={() => (
           <>
             {/* Hero Banner */}
@@ -121,9 +145,14 @@ export default function LabsScreen() {
         )}
         keyExtractor={(t) => String(t.id || t._id)}
         renderItem={({ item }) => {
-          const disc = Math.round(
-            ((item.originalPrice - item.price) / item.originalPrice) * 100,
-          );
+          const originalPrice = Number(item.originalPrice || item.price || 0);
+          const offerPrice = Number(item.price || 0);
+          const disc =
+            originalPrice > 0
+              ? Math.round(((originalPrice - offerPrice) / originalPrice) * 100)
+              : 0;
+          const imageUrl =
+            item.testImage || item.imageUrl || item.testImageUrl || item.image;
           return (
             <TouchableOpacity
               style={styles.testCard}
@@ -136,22 +165,45 @@ export default function LabsScreen() {
               activeOpacity={0.85}
             >
               <View style={styles.testLeft}>
-                <View style={styles.testIcon}>
-                  <FlaskConical color={Colors.primary} size={22} />
-                </View>
+                {imageUrl ? (
+                  <Image
+                    source={{ uri: imageUrl }}
+                    style={styles.testThumbImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={styles.testThumbFallback}>
+                    <FlaskConical color={Colors.primary} size={22} />
+                  </View>
+                )}
                 <View style={{ flex: 1 }}>
                   <Text style={styles.testName}>{item.name}</Text>
-                  {item.turnaround && (
+                  <View style={styles.metaRow}>
+                    <View style={styles.categoryChip}>
+                      <Text style={styles.categoryText}>
+                        {item.category || "General"}
+                      </Text>
+                    </View>
+                    <View style={styles.dot} />
+                    <Text style={styles.metaText}>
+                      {item.sampleType || "Sample"}
+                    </Text>
+                  </View>
+                  {(item.reportTime || item.turnaround) && (
                     <View style={styles.timeRow}>
                       <Clock size={11} color={Colors.textSecondary} />
                       <Text style={styles.timeText}>
-                        Results in {item.turnaround}
+                        Results in {item.reportTime || item.turnaround}
                       </Text>
                     </View>
                   )}
                   <View style={styles.homeRow}>
                     <HomeIcon size={11} color={Colors.primary} />
-                    <Text style={styles.homeText}>Free home collection</Text>
+                    <Text style={styles.homeText}>
+                      {item.homeCollectionAvailable === false
+                        ? "Center visit required"
+                        : "Free home collection"}
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -161,11 +213,15 @@ export default function LabsScreen() {
                     <Text style={styles.popularText}>Popular</Text>
                   </View>
                 )}
-                <Text style={styles.testPrice}>₹{item.price}</Text>
-                <Text style={styles.testOriginal}>₹{item.originalPrice}</Text>
-                <View style={styles.offBadge}>
-                  <Text style={styles.offText}>{disc}% OFF</Text>
-                </View>
+                <Text style={styles.testPrice}>₹{offerPrice}</Text>
+                {originalPrice > offerPrice ? (
+                  <>
+                    <Text style={styles.testOriginal}>₹{originalPrice}</Text>
+                    <View style={styles.offBadge}>
+                      <Text style={styles.offText}>{disc}% OFF</Text>
+                    </View>
+                  </>
+                ) : null}
                 <View style={styles.addBtn}>
                   <Text style={styles.addBtnText}>Add</Text>
                 </View>
@@ -266,31 +322,62 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     marginHorizontal: 16,
     marginBottom: 12,
-    borderRadius: 18,
+    borderRadius: 20,
     padding: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: "#E6EDF7",
     shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
   },
   testLeft: { flex: 1, flexDirection: "row", marginRight: 12, gap: 12 },
-  testIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#DBEAFE",
+  testThumbImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 16,
+    backgroundColor: Colors.border,
+  },
+  testThumbFallback: {
+    width: 60,
+    height: 60,
+    borderRadius: 16,
+    backgroundColor: "#E0ECFF",
     alignItems: "center",
     justifyContent: "center",
   },
   testName: {
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 15,
+    fontWeight: "800",
     color: Colors.text,
-    marginBottom: 4,
+    marginBottom: 6,
   },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 6,
+  },
+  categoryChip: {
+    backgroundColor: "#EEF2FF",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  categoryText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: Colors.primary,
+    letterSpacing: 0.2,
+  },
+  dot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.border,
+  },
+  metaText: { fontSize: 11, color: Colors.textSecondary, fontWeight: "600" },
   timeRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -300,16 +387,16 @@ const styles = StyleSheet.create({
   timeText: { fontSize: 11, color: Colors.textSecondary },
   homeRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   homeText: { fontSize: 11, color: Colors.primary, fontWeight: "500" },
-  testRight: { alignItems: "flex-end" },
+  testRight: { alignItems: "flex-end", minWidth: 86 },
   popularBadge: {
-    backgroundColor: "#FEF3C7",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    marginBottom: 4,
+    backgroundColor: "#FFF3D6",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    marginBottom: 6,
   },
-  popularText: { fontSize: 9, fontWeight: "700", color: "#D97706" },
-  testPrice: { fontSize: 18, fontWeight: "800", color: Colors.text },
+  popularText: { fontSize: 9, fontWeight: "700", color: "#B45309" },
+  testPrice: { fontSize: 19, fontWeight: "800", color: Colors.text },
   testOriginal: {
     fontSize: 12,
     color: Colors.textSecondary,
@@ -317,18 +404,34 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   offBadge: {
-    backgroundColor: "#DCFCE7",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
+    backgroundColor: "#E8F7EE",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
     marginBottom: 10,
   },
-  offText: { fontSize: 10, fontWeight: "700", color: "#16A34A" },
+  offText: { fontSize: 10, fontWeight: "700", color: "#15803D" },
   addBtn: {
     backgroundColor: Colors.primary,
     paddingHorizontal: 16,
-    paddingVertical: 7,
-    borderRadius: 10,
+    paddingVertical: 8,
+    borderRadius: 12,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 2,
   },
   addBtnText: { color: Colors.surface, fontSize: 12, fontWeight: "700" },
+  emptyWrap: {
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    alignItems: "center",
+    gap: 10,
+  },
+  emptyText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    textAlign: "center",
+  },
 });
