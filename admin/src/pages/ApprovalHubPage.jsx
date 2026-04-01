@@ -111,6 +111,43 @@ function LabTestDocumentLinks({ item }) {
   );
 }
 
+function MedicineDocumentLinks({ item }) {
+  const docs = useMemo(() => {
+    if (!item) return [];
+    return [
+      {
+        label: "Medicine Image",
+        url: item.imageViewerUrl || item.image,
+      },
+      {
+        label: "Medicine Document",
+        url: item.pdfViewerUrl || item.pdfUrl,
+      },
+    ].filter((entry) => entry.url);
+  }, [item]);
+
+  if (!docs.length) {
+    return <p className="text-sm text-slate-500">No documents uploaded.</p>;
+  }
+
+  return (
+    <div className="grid gap-2 sm:grid-cols-2">
+      {docs.map((entry) => (
+        <a
+          key={entry.label}
+          href={entry.url}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+        >
+          <FileText size={15} />
+          <span>{entry.label}</span>
+        </a>
+      ))}
+    </div>
+  );
+}
+
 export default function ApprovalHubPage() {
   const [activeTab, setActiveTab] = useState(TABS.LABS);
   const [labs, setLabs] = useState([]);
@@ -123,6 +160,7 @@ export default function ApprovalHubPage() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [contentDetailOpen, setContentDetailOpen] = useState(false);
   const [selectedContent, setSelectedContent] = useState(null);
+  const [selectedContentKind, setSelectedContentKind] = useState("lab-content");
 
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
@@ -279,8 +317,6 @@ export default function ApprovalHubPage() {
     const id = item._id;
     const approveKey = `${kind}-${id}-approve`;
     const rejectKey = `${kind}-${id}-reject`;
-    const isLabContent = kind === "lab-content";
-
     return (
       <div
         key={id}
@@ -288,20 +324,19 @@ export default function ApprovalHubPage() {
       >
         <span className="font-bold">{item.name}</span>
         <div className="flex gap-2">
-          {isLabContent ? (
-            <button
-              className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
-              onClick={() => {
-                setSelectedContent(item);
-                setContentDetailOpen(true);
-              }}
-              title="View details"
-            >
-              <span className="inline-flex items-center gap-1">
-                <Eye size={14} /> View
-              </span>
-            </button>
-          ) : null}
+          <button
+            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
+            onClick={() => {
+              setSelectedContent(item);
+              setSelectedContentKind(kind);
+              setContentDetailOpen(true);
+            }}
+            title="View details"
+          >
+            <span className="inline-flex items-center gap-1">
+              <Eye size={14} /> View
+            </span>
+          </button>
           <button
             className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60"
             disabled={busyKey === approveKey}
@@ -564,10 +599,14 @@ export default function ApprovalHubPage() {
       <Modal
         isOpen={contentDetailOpen}
         onClose={() => setContentDetailOpen(false)}
-        title="Lab Test Details"
+        title={
+          selectedContentKind === "medicine-content"
+            ? "Medicine Details"
+            : "Lab Test Details"
+        }
         className="max-w-4xl"
       >
-        {selectedContent ? (
+        {selectedContent && selectedContentKind === "lab-content" ? (
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
               <Field label="Test Name" value={selectedContent.name} />
@@ -674,6 +713,224 @@ export default function ApprovalHubPage() {
                 Uploaded Documents
               </h3>
               <LabTestDocumentLinks item={selectedContent} />
+            </div>
+          </div>
+        ) : null}
+
+        {selectedContent && selectedContentKind === "medicine-content" ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+              <Field label="Medicine Name" value={selectedContent.name} />
+              <Field label="Generic Name" value={selectedContent.genericName} />
+              <Field label="Category" value={selectedContent.category} />
+              <Field label="Subcategory" value={selectedContent.subcategory} />
+              <Field label="Brand" value={selectedContent.brand} />
+              <Field label="Composition" value={selectedContent.composition} />
+              <Field label="Dosage Form" value={selectedContent.dosageForm} />
+              <Field label="Strength" value={selectedContent.strength} />
+              <Field
+                label="Manufacturer"
+                value={selectedContent.manufacturer}
+              />
+              <Field label="Pack Size" value={selectedContent.packSize} />
+              <Field label="Batch Number" value={selectedContent.batchNumber} />
+              <Field
+                label="Expiry Date"
+                value={
+                  selectedContent.expiryDate
+                    ? new Date(selectedContent.expiryDate).toLocaleDateString()
+                    : "-"
+                }
+              />
+              <Field
+                label="Manufacture Date"
+                value={
+                  selectedContent.manufactureDate
+                    ? new Date(
+                        selectedContent.manufactureDate,
+                      ).toLocaleDateString()
+                    : "-"
+                }
+              />
+              <Field
+                label="Prescription Required"
+                value={selectedContent.prescriptionRequired ? "Yes" : "No"}
+              />
+              <Field
+                label="Cold Storage Required"
+                value={selectedContent.requiresColdStorage ? "Yes" : "No"}
+              />
+              <Field
+                label="Schedule Type"
+                value={selectedContent.scheduleType}
+              />
+              <Field
+                label="MRP"
+                value={
+                  selectedContent.mrp !== undefined
+                    ? `INR ${selectedContent.mrp}`
+                    : "-"
+                }
+              />
+              <Field
+                label="Selling Price"
+                value={
+                  selectedContent.price !== undefined
+                    ? `INR ${selectedContent.price}`
+                    : "-"
+                }
+              />
+              <Field
+                label="Discount %"
+                value={
+                  selectedContent.discountPercent !== undefined
+                    ? `${selectedContent.discountPercent}%`
+                    : "-"
+                }
+              />
+              <Field
+                label="GST %"
+                value={
+                  selectedContent.gstPercent !== undefined
+                    ? `${selectedContent.gstPercent}%`
+                    : "-"
+                }
+              />
+              <Field
+                label="Final Price"
+                value={
+                  selectedContent.finalPrice !== undefined
+                    ? `INR ${selectedContent.finalPrice}`
+                    : "-"
+                }
+              />
+              <Field
+                label="Stock"
+                value={
+                  selectedContent.stock !== undefined
+                    ? selectedContent.stock
+                    : "-"
+                }
+              />
+              <Field
+                label="Low Stock Threshold"
+                value={
+                  selectedContent.lowStockThreshold !== undefined
+                    ? selectedContent.lowStockThreshold
+                    : "-"
+                }
+              />
+              <Field
+                label="In Stock"
+                value={selectedContent.inStock ? "Yes" : "No"}
+              />
+              <Field
+                label="Min Order Qty"
+                value={
+                  selectedContent.minOrderQuantity !== undefined
+                    ? selectedContent.minOrderQuantity
+                    : "-"
+                }
+              />
+              <Field
+                label="Max Order Qty"
+                value={
+                  selectedContent.maxOrderQuantity !== undefined
+                    ? selectedContent.maxOrderQuantity
+                    : "-"
+                }
+              />
+              <Field
+                label="Delivery ETA (Hours)"
+                value={
+                  selectedContent.deliveryEtaHours !== undefined
+                    ? selectedContent.deliveryEtaHours
+                    : "-"
+                }
+              />
+              <Field
+                label="Approval Status"
+                value={selectedContent.approvalStatus}
+              />
+              <Field label="Description" value={selectedContent.description} />
+              <Field
+                label="Usage Instructions"
+                value={selectedContent.usageInstructions}
+              />
+              <Field
+                label="Storage Instructions"
+                value={selectedContent.storageInstructions}
+              />
+              <Field label="Indications" value={selectedContent.indications} />
+              <Field
+                label="Dosage Instructions"
+                value={selectedContent.dosageInstructions}
+              />
+              <Field label="Precautions" value={selectedContent.precautions} />
+              <Field
+                label="Side Effects"
+                value={
+                  Array.isArray(selectedContent.sideEffects)
+                    ? selectedContent.sideEffects.join(", ")
+                    : "-"
+                }
+              />
+              <Field
+                label="Contraindications"
+                value={
+                  Array.isArray(selectedContent.contraindications)
+                    ? selectedContent.contraindications.join(", ")
+                    : "-"
+                }
+              />
+              <Field
+                label="Drug Interactions"
+                value={
+                  Array.isArray(selectedContent.drugInteractions)
+                    ? selectedContent.drugInteractions.join(", ")
+                    : "-"
+                }
+              />
+              <Field
+                label="Tags"
+                value={
+                  Array.isArray(selectedContent.tags)
+                    ? selectedContent.tags.join(", ")
+                    : "-"
+                }
+              />
+              <Field
+                label="Keywords"
+                value={
+                  Array.isArray(selectedContent.keywords)
+                    ? selectedContent.keywords.join(", ")
+                    : "-"
+                }
+              />
+            </div>
+
+            {selectedContent.imageViewerUrl || selectedContent.image ? (
+              <div>
+                <h3 className="mb-2 text-sm font-extrabold text-slate-900">
+                  Uploaded Image
+                </h3>
+                <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                  <img
+                    src={
+                      selectedContent.imageViewerUrl || selectedContent.image
+                    }
+                    alt={selectedContent.name || "Medicine"}
+                    className="max-h-72 w-full object-contain"
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            <div>
+              <h3 className="mb-2 text-sm font-extrabold text-slate-900">
+                Uploaded Documents
+              </h3>
+              <MedicineDocumentLinks item={selectedContent} />
             </div>
           </div>
         ) : null}

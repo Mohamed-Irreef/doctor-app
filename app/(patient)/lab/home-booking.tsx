@@ -2,25 +2,27 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, Calendar, Clock } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ActionModal from "../../../components/ActionModal";
 import ButtonPrimary from "../../../components/ButtonPrimary";
 import { Colors } from "../../../constants/Colors";
 import {
-    getLabSlotAvailability,
-    getLabTestById,
-    holdLabSlot,
+  getLabSlotAvailability,
+  getLabTestById,
+  holdLabSlot,
 } from "../../../services/api";
 
 const DATE_WINDOW_DAYS = 7;
+const DATE_LOAD_BATCH_SIZE = 4;
+const SLOT_LOAD_BATCH_SIZE = 12;
 
 function toISODateOnly(date: Date) {
   const year = date.getFullYear();
@@ -38,6 +40,10 @@ export default function LabHomeBookingScreen() {
   );
   const [slots, setSlots] = useState<{ time: string; status: string }[]>([]);
   const [selectedSlot, setSelectedSlot] = useState("");
+  const [visibleDateCount, setVisibleDateCount] =
+    useState(DATE_LOAD_BATCH_SIZE);
+  const [visibleSlotCount, setVisibleSlotCount] =
+    useState(SLOT_LOAD_BATCH_SIZE);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [address, setAddress] = useState({
     flatHouse: "",
@@ -64,6 +70,16 @@ export default function LabHomeBookingScreen() {
     });
   }, []);
 
+  const visibleDateOptions = useMemo(
+    () => dateOptions.slice(0, visibleDateCount),
+    [dateOptions, visibleDateCount],
+  );
+
+  const visibleSlots = useMemo(
+    () => slots.slice(0, visibleSlotCount),
+    [slots, visibleSlotCount],
+  );
+
   useEffect(() => {
     const load = async () => {
       if (!id) return;
@@ -85,10 +101,15 @@ export default function LabHomeBookingScreen() {
         );
         if (held) setSelectedSlot(held.time);
       }
+      setVisibleSlotCount(SLOT_LOAD_BATCH_SIZE);
       setLoadingSlots(false);
     };
     loadSlots();
   }, [id, selectedDate]);
+
+  useEffect(() => {
+    setVisibleDateCount(DATE_LOAD_BATCH_SIZE);
+  }, []);
 
   const updateAddress = (key: string, value: string) => {
     setAddress((prev) => ({ ...prev, [key]: value }));
@@ -181,7 +202,7 @@ export default function LabHomeBookingScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.dateRow}
           >
-            {dateOptions.map((item) => (
+            {visibleDateOptions.map((item) => (
               <TouchableOpacity
                 key={item.iso}
                 style={[
@@ -217,6 +238,16 @@ export default function LabHomeBookingScreen() {
               </TouchableOpacity>
             ))}
           </ScrollView>
+          {visibleDateCount < dateOptions.length ? (
+            <TouchableOpacity
+              style={styles.loadMoreBtn}
+              onPress={() =>
+                setVisibleDateCount((count) => count + DATE_LOAD_BATCH_SIZE)
+              }
+            >
+              <Text style={styles.loadMoreText}>Load More</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         <View style={styles.section}>
@@ -231,7 +262,7 @@ export default function LabHomeBookingScreen() {
             </View>
           ) : (
             <View style={styles.slotGrid}>
-              {slots.map((slot) => {
+              {visibleSlots.map((slot) => {
                 const disabled =
                   slot.status === "booked" || slot.status === "held";
                 const selected = selectedSlot === slot.time;
@@ -260,6 +291,16 @@ export default function LabHomeBookingScreen() {
               })}
             </View>
           )}
+          {!loadingSlots && visibleSlotCount < slots.length ? (
+            <TouchableOpacity
+              style={styles.loadMoreBtn}
+              onPress={() =>
+                setVisibleSlotCount((count) => count + SLOT_LOAD_BATCH_SIZE)
+              }
+            >
+              <Text style={styles.loadMoreText}>Load More</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         <View style={styles.section}>
@@ -420,6 +461,21 @@ const styles = StyleSheet.create({
   slotText: { fontSize: 11, color: Colors.textSecondary, fontWeight: "600" },
   slotTextActive: { color: Colors.primary, fontWeight: "700" },
   slotTextDisabled: { color: Colors.textSecondary },
+  loadMoreBtn: {
+    marginTop: 12,
+    alignSelf: "center",
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: Colors.surface,
+  },
+  loadMoreText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: Colors.primary,
+  },
   input: {
     borderWidth: 1,
     borderColor: Colors.border,

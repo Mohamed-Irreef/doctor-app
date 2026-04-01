@@ -10,6 +10,8 @@ const {
   getLabVisitQuote,
   bookLab,
   getMyLabBookings,
+  getLabReviews,
+  addLabReview,
 } = require("../controllers/labController");
 const {
   bookLabSchema,
@@ -51,6 +53,13 @@ router.get(
   getLabVisitQuote,
 );
 router.get("/:id", getLabById);
+router.get("/:id/reviews", getLabReviews);
+router.post(
+  "/:id/reviews",
+  protectRoute,
+  authorizeRoles("patient"),
+  addLabReview,
+);
 router.post(
   "/book",
   protectRoute,

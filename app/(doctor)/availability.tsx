@@ -1,37 +1,37 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
-  AlertCircle,
-  Ban,
-  CalendarCheck,
-  Check,
-  ChevronDown,
-  Clock,
-  Copy,
-  Edit2,
-  Plus,
-  Trash2,
-  X,
+    AlertCircle,
+    Ban,
+    CalendarCheck,
+    Check,
+    ChevronDown,
+    Clock,
+    Copy,
+    Edit2,
+    Plus,
+    Trash2,
+    X,
 } from "lucide-react-native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../constants/Colors";
 import {
-  bulkCopyDoctorSlots,
-  createDoctorSlot,
-  deleteDoctorSlot,
-  getDoctorSlots,
-  updateDoctorSlot,
+    bulkCopyDoctorSlots,
+    createDoctorSlot,
+    deleteDoctorSlot,
+    getDoctorSlots,
+    updateDoctorSlot,
 } from "../../services/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -257,7 +257,7 @@ export default function DoctorAvailabilityScreen() {
         status: slot.status,
         startTime: slot.startTime,
         endTime: slot.endTime,
-        date: String(slot.date).slice(0, 10),
+        date: toISODateOnly(rawDate),
         durationMinutes: Number(slot.durationMinutes || 30),
       });
 

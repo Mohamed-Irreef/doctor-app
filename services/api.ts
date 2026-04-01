@@ -29,6 +29,14 @@ export async function clearAuthSession() {
   await AsyncStorage.removeItem(USER_KEY);
 }
 
+export async function getAuthToken() {
+  return AsyncStorage.getItem(TOKEN_KEY);
+}
+
+export function getSocketBaseUrl() {
+  return baseURL.replace(/\/api\/?$/, "");
+}
+
 const ok = <T>(data: T) => ({ data, error: null, status: "success" as const });
 const fail = (message: string) => ({
   data: null,
@@ -268,6 +276,35 @@ export async function getDoctorById(id: string) {
   }
 }
 
+export async function getDoctorReviews(doctorId: string) {
+  try {
+    const res = await API.get(`/doctors/${doctorId}/reviews`);
+    return ok(Array.isArray(res.data?.data) ? res.data.data : []);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function getMyDoctorLikes(ids?: string[]) {
+  try {
+    const res = await API.get("/doctors/likes/my", {
+      params: ids?.length ? { ids: ids.join(",") } : undefined,
+    });
+    return ok(res.data?.data?.likedDoctorIds || []);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function toggleDoctorLike(doctorId: string) {
+  try {
+    const res = await API.post(`/doctors/${doctorId}/like`);
+    return ok(res.data?.data || { liked: false, likesCount: 0 });
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
 export async function getDoctorSlots(doctorId: string, date?: string) {
   try {
     const res = await API.get(`/slots/${doctorId}`, {
@@ -462,6 +499,103 @@ export async function updateAppointmentStatus(
   try {
     const res = await API.put(`/appointments/${id}/status`, payload);
     return ok(res.data.data);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function getAppointmentChatMessages(
+  appointmentId: string,
+  params?: { limit?: number },
+) {
+  try {
+    const res = await API.get(`/appointments/${appointmentId}/chat/messages`, {
+      params,
+    });
+    return ok(Array.isArray(res.data?.data) ? res.data.data : []);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function sendAppointmentChatMessage(
+  appointmentId: string,
+  payload: { text?: string; imageUrl?: string },
+) {
+  try {
+    const res = await API.post(
+      `/appointments/${appointmentId}/chat/messages`,
+      payload,
+    );
+    return ok(res.data?.data || null);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function createChat(payload: {
+  doctorId?: string;
+  patientId?: string;
+}) {
+  try {
+    const res = await API.post("/chat/create", payload);
+    return ok(res.data?.data || null);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function getUserChats() {
+  try {
+    const res = await API.get("/chat/user");
+    return ok(Array.isArray(res.data?.data) ? res.data.data : []);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function getChatMessages(
+  chatId: string,
+  params?: { page?: number; limit?: number },
+) {
+  try {
+    const res = await API.get(`/chat/${chatId}/messages`, { params });
+    return ok(
+      res.data?.data || {
+        items: [],
+        pagination: { page: 1, limit: 30, total: 0, pages: 1 },
+      },
+    );
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function sendChatMessage(
+  chatId: string,
+  payload: { type?: "text" | "image"; message?: string; fileUrl?: string },
+) {
+  try {
+    const res = await API.post(`/chat/${chatId}/message`, payload);
+    return ok(res.data?.data || null);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function markChatSeen(chatId: string) {
+  try {
+    const res = await API.put(`/chat/${chatId}/seen`);
+    return ok(res.data?.data || { chatId });
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function blockChat(chatId: string, block = true) {
+  try {
+    const res = await API.put(`/chat/${chatId}/block`, { block });
+    return ok(res.data?.data || null);
   } catch (error) {
     return fail(getErrorMessage(error));
   }
@@ -691,7 +825,7 @@ export async function getNotifications() {
 
 export async function createReview(payload: {
   doctorId: string;
-  appointmentId: string;
+  appointmentId?: string;
   rating: number;
   comment: string;
 }) {
@@ -703,9 +837,138 @@ export async function createReview(payload: {
   }
 }
 
-// Placeholder for article feed until backend endpoint is introduced.
-export async function getArticles() {
-  return ok([] as any[]);
+export async function getLabTestReviews(
+  labTestId: string,
+  params?: { page?: number; limit?: number; sortBy?: "latest" | "highest" },
+) {
+  try {
+    const res = await API.get(`/labs/${labTestId}/reviews`, { params });
+    return ok(
+      res.data?.data || {
+        items: [],
+        summary: { averageRating: 0, totalReviews: 0 },
+        pagination: {},
+      },
+    );
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function addLabTestReview(
+  labTestId: string,
+  payload: { rating: number; comment: string },
+) {
+  try {
+    const res = await API.post(`/labs/${labTestId}/reviews`, payload);
+    return ok(res.data?.data || null);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+function normalizeArticleCard(item: any) {
+  return {
+    id: String(item._id || item.id || ""),
+    slug: item.slug || "",
+    title: item.title || "",
+    description: item.shortDescription || "",
+    image: item.coverImage || item.image || "",
+    readTime: `${item.readTime || 1} min read`,
+    category: item.category || "General Health",
+    views: Number(item.views || 0),
+    likes: Number(item.likes || 0),
+    author: item.author || null,
+    createdAt: item.createdAt,
+  };
+}
+
+export async function getFeaturedArticles(limit = 8) {
+  try {
+    const res = await API.get("/v1/articles/featured", { params: { limit } });
+    const items = Array.isArray(res.data?.data) ? res.data.data : [];
+    return ok(items.map(normalizeArticleCard));
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function getArticles(params?: {
+  page?: number;
+  limit?: number;
+  q?: string;
+  category?: string;
+  tag?: string;
+  sortBy?: "latest" | "oldest" | "mostViewed" | "mostLiked";
+}) {
+  try {
+    const res = await API.get("/v1/articles", { params });
+    const payload = res.data?.data || { items: [], pagination: {} };
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    return ok({
+      items: items.map(normalizeArticleCard),
+      pagination: payload.pagination || {},
+    });
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function getArticleBySlug(slug: string) {
+  try {
+    const res = await API.get(`/v1/articles/${slug}`);
+    return ok(res.data?.data || { article: null, related: [] });
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function getArticleReviews(
+  articleId: string,
+  params?: { page?: number; limit?: number; sortBy?: "latest" | "highest" },
+) {
+  try {
+    const res = await API.get(`/v1/articles/${articleId}/reviews`, { params });
+    return ok(
+      res.data?.data || {
+        items: [],
+        summary: { averageRating: 0, totalReviews: 0 },
+        pagination: {},
+      },
+    );
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function addArticleReview(
+  articleId: string,
+  payload: { rating: number; comment: string },
+) {
+  try {
+    const res = await API.post(`/v1/articles/${articleId}/reviews`, payload);
+    return ok(res.data?.data || null);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function getArticleLikeStatus(articleId: string) {
+  try {
+    const res = await API.get(`/v1/articles/${articleId}/like-status`);
+    return ok(res.data?.data || { liked: false, likesCount: 0 });
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function toggleArticleLike(articleId: string) {
+  try {
+    const res = await API.post(`/v1/articles/${articleId}/like`);
+    return ok(res.data?.data || { liked: false, likesCount: 0 });
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
 }
 
 export default API;

@@ -1,22 +1,22 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  AlertTriangle,
-  ArrowLeft,
-  Minus,
-  Plus,
-  RefreshCcw,
-  ShieldCheck,
-  Star,
-  Truck,
+    AlertTriangle,
+    ArrowLeft,
+    Minus,
+    Plus,
+    RefreshCcw,
+    ShieldCheck,
+    Star,
+    Truck,
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ActionModal from "../../../components/ActionModal";
@@ -32,6 +32,26 @@ export default function MedicineDetailsScreen() {
   const { addItem } = useCartStore();
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
+  const [activeTab, setActiveTab] = useState<"about" | "reviews">("about");
+
+  const reviews = [
+    {
+      id: "r1",
+      userName: "Rahul T.",
+      userImage: "https://avatar.iran.liara.run/public/12",
+      rating: 5,
+      comment: "Worked effectively and delivery was quick.",
+      date: "Oct 10, 2026",
+    },
+    {
+      id: "r2",
+      userName: "Ananya S.",
+      userImage: "https://avatar.iran.liara.run/public/64",
+      rating: 4,
+      comment: "Good quality medicine and proper packaging.",
+      date: "Sep 22, 2026",
+    },
+  ];
 
   useEffect(() => {
     const load = async () => {
@@ -68,6 +88,7 @@ export default function MedicineDetailsScreen() {
   }
 
   const medicineId = String(med.id || med._id);
+  const isAboutTab = activeTab === "about";
 
   const handleAdd = () => {
     for (let i = 0; i < qty; i += 1) {
@@ -177,87 +198,172 @@ export default function MedicineDetailsScreen() {
             {med.packSize || "Per unit"} · MRP inclusive of all taxes
           </Text>
 
-          {/* Quantity */}
-          <View style={styles.qtyRow}>
-            <Text style={styles.qtyLabel}>Quantity</Text>
-            <View style={styles.qtyControl}>
-              <TouchableOpacity
-                onPress={() => setQty((q) => Math.max(1, q - 1))}
-                style={styles.qBtn}
+          <View style={styles.tabs}>
+            <TouchableOpacity
+              style={[
+                styles.tabBtn,
+                activeTab === "about" && styles.tabBtnActive,
+              ]}
+              onPress={() => setActiveTab("about")}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === "about" && styles.tabTextActive,
+                ]}
               >
-                <Minus size={16} color={Colors.text} />
-              </TouchableOpacity>
-              <Text style={styles.qtyText}>{qty}</Text>
-              <TouchableOpacity
-                onPress={() => setQty((q) => q + 1)}
-                style={styles.qBtn}
-              >
-                <Plus size={16} color={Colors.text} />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Highlights */}
-          <View style={styles.highlights}>
-            <View style={styles.highlightRow}>
-              <View style={styles.highlightIcon}>
-                <Truck size={16} color={Colors.primary} />
-              </View>
-              <Text style={styles.highlightText}>
-                Estimated delivery in {med.deliveryEtaHours || 24} hours
+                About
               </Text>
-            </View>
-            <View style={styles.highlightRow}>
-              <View style={styles.highlightIcon}>
-                <ShieldCheck size={16} color={Colors.primary} />
-              </View>
-              <Text style={styles.highlightText}>100% authentic medicines</Text>
-            </View>
-            <View style={styles.highlightRow}>
-              <View style={styles.highlightIcon}>
-                <RefreshCcw size={16} color={Colors.primary} />
-              </View>
-              <Text style={styles.highlightText}>Easy 7-day returns</Text>
-            </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.tabBtn,
+                activeTab === "reviews" && styles.tabBtnActive,
+              ]}
+              onPress={() => setActiveTab("reviews")}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === "reviews" && styles.tabTextActive,
+                ]}
+              >
+                Reviews ({reviews.length})
+              </Text>
+            </TouchableOpacity>
           </View>
 
-          {/* Description */}
-          <View style={styles.descSection}>
-            <Text style={styles.descTitle}>About this Medicine</Text>
-            <Text style={styles.descText}>
-              {med.description ||
-                `${med.name} is commonly used for ${med.category?.toLowerCase() ?? "general care"}. Please use only under medical advice.`}
-            </Text>
+          {isAboutTab ? (
+            <View style={styles.tabContent}>
+              {/* Quantity */}
+              <View style={styles.qtyRow}>
+                <Text style={styles.qtyLabel}>Quantity</Text>
+                <View style={styles.qtyControl}>
+                  <TouchableOpacity
+                    onPress={() => setQty((q) => Math.max(1, q - 1))}
+                    style={styles.qBtn}
+                  >
+                    <Minus size={16} color={Colors.text} />
+                  </TouchableOpacity>
+                  <Text style={styles.qtyText}>{qty}</Text>
+                  <TouchableOpacity
+                    onPress={() => setQty((q) => q + 1)}
+                    style={styles.qBtn}
+                  >
+                    <Plus size={16} color={Colors.text} />
+                  </TouchableOpacity>
+                </View>
+              </View>
 
-            <View style={styles.metaList}>
-              {!!med.composition && (
-                <Text style={styles.metaItem}>
-                  Composition: {med.composition}
+              {/* Highlights */}
+              <View style={styles.highlights}>
+                <View style={styles.highlightRow}>
+                  <View style={styles.highlightIcon}>
+                    <Truck size={16} color={Colors.primary} />
+                  </View>
+                  <Text style={styles.highlightText}>
+                    Estimated delivery in {med.deliveryEtaHours || 24} hours
+                  </Text>
+                </View>
+                <View style={styles.highlightRow}>
+                  <View style={styles.highlightIcon}>
+                    <ShieldCheck size={16} color={Colors.primary} />
+                  </View>
+                  <Text style={styles.highlightText}>
+                    100% authentic medicines
+                  </Text>
+                </View>
+                <View style={styles.highlightRow}>
+                  <View style={styles.highlightIcon}>
+                    <RefreshCcw size={16} color={Colors.primary} />
+                  </View>
+                  <Text style={styles.highlightText}>Easy 7-day returns</Text>
+                </View>
+              </View>
+
+              {/* Description */}
+              <View style={styles.descSection}>
+                <Text style={styles.descTitle}>About this Medicine</Text>
+                <Text style={styles.descText}>
+                  {med.description ||
+                    `${med.name} is commonly used for ${med.category?.toLowerCase() ?? "general care"}. Please use only under medical advice.`}
                 </Text>
-              )}
-              {!!med.strength && (
-                <Text style={styles.metaItem}>Strength: {med.strength}</Text>
-              )}
-              {!!med.dosageForm && (
-                <Text style={styles.metaItem}>Form: {med.dosageForm}</Text>
-              )}
-              {!!med.manufacturer && (
-                <Text style={styles.metaItem}>
-                  Manufacturer: {med.manufacturer}
-                </Text>
-              )}
-              {!!med.usageInstructions && (
-                <Text style={styles.metaItem}>
-                  Usage: {med.usageInstructions}
-                </Text>
-              )}
-              {!!med.storageInstructions && (
-                <Text style={styles.metaItem}>
-                  Storage: {med.storageInstructions}
-                </Text>
-              )}
+
+                <View style={styles.metaList}>
+                  {!!med.composition && (
+                    <Text style={styles.metaItem}>
+                      Composition: {med.composition}
+                    </Text>
+                  )}
+                  {!!med.strength && (
+                    <Text style={styles.metaItem}>
+                      Strength: {med.strength}
+                    </Text>
+                  )}
+                  {!!med.dosageForm && (
+                    <Text style={styles.metaItem}>Form: {med.dosageForm}</Text>
+                  )}
+                  {!!med.manufacturer && (
+                    <Text style={styles.metaItem}>
+                      Manufacturer: {med.manufacturer}
+                    </Text>
+                  )}
+                  {!!med.usageInstructions && (
+                    <Text style={styles.metaItem}>
+                      Usage: {med.usageInstructions}
+                    </Text>
+                  )}
+                  {!!med.storageInstructions && (
+                    <Text style={styles.metaItem}>
+                      Storage: {med.storageInstructions}
+                    </Text>
+                  )}
+                </View>
+              </View>
             </View>
-          </View>
+          ) : (
+            <View style={styles.tabContent}>
+              {reviews.map((review) => (
+                <View key={review.id} style={styles.reviewCard}>
+                  <View style={styles.reviewHeader}>
+                    <Image
+                      source={{ uri: review.userImage }}
+                      style={styles.reviewAvatar}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.reviewUser}>{review.userName}</Text>
+                      <Text style={styles.reviewDate}>{review.date}</Text>
+                    </View>
+                    <View style={styles.reviewRating}>
+                      <Text style={styles.reviewStar}>★</Text>
+                      <Text style={styles.reviewRatingText}>
+                        {review.rating}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.reviewComment}>{review.comment}</Text>
+                </View>
+              ))}
+
+              <TouchableOpacity
+                style={styles.writeReviewBtn}
+                onPress={() =>
+                  router.push({
+                    pathname: "/(patient)/review",
+                    params: {
+                      reviewType: "medicine",
+                      entityId: medicineId,
+                      entityName: med.name || "Medicine",
+                      entitySubtitle: med.category || "Medicine",
+                      entityImage: med.image || "",
+                    },
+                  })
+                }
+              >
+                <Text style={styles.writeReviewText}>+ Write a Review</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -384,6 +490,24 @@ const styles = StyleSheet.create({
     textDecorationLine: "line-through",
     marginBottom: 2,
   },
+  tabs: {
+    marginBottom: 14,
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  tabBtnActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: Colors.primary,
+  },
+  tabText: { fontSize: 14, fontWeight: "600", color: Colors.textSecondary },
+  tabTextActive: { color: Colors.primary, fontWeight: "700" },
+  tabContent: { marginTop: 0 },
   qtyRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -449,6 +573,57 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.border,
   },
   metaItem: { fontSize: 12, color: Colors.text, marginBottom: 6 },
+  reviewCard: {
+    marginBottom: 12,
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 14,
+  },
+  reviewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  reviewAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+    backgroundColor: Colors.border,
+  },
+  reviewUser: { fontSize: 15, fontWeight: "700", color: Colors.text },
+  reviewDate: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  reviewRating: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEF3C7",
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  reviewStar: { fontSize: 12, color: "#D97706", marginRight: 4 },
+  reviewRatingText: { fontSize: 12, fontWeight: "700", color: "#D97706" },
+  reviewComment: {
+    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 21,
+    color: Colors.textSecondary,
+  },
+  writeReviewBtn: {
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+    backgroundColor: "#F1F5F9",
+  },
+  writeReviewText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.primary,
+  },
   bottomBar: {
     position: "absolute",
     bottom: 0,

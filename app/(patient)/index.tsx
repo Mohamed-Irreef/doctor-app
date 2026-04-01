@@ -7,6 +7,7 @@ import {
     ChevronRight,
     Clock,
     FileText,
+    FlaskConical,
     Heart,
     MapPin,
     Menu,
@@ -39,8 +40,8 @@ import { ListSkeleton } from "../../components/SkeletonLoader";
 import { Colors } from "../../constants/Colors";
 import { Typography } from "../../constants/Typography";
 import {
-    getArticles,
     getDoctors,
+    getFeaturedArticles,
     getLabTests,
     getMedicines,
     getPatientAppointments,
@@ -368,21 +369,37 @@ const MedCard = memo(
 );
 
 const ArticleHCard = memo(
-  ({ item, onPress }: { item: any; onPress: (id: string) => void }) => (
-    <AnimatedCard style={styles.articleCard} onPress={() => onPress(item.id)}>
+  ({ item, onPress }: { item: any; onPress: (slug: string) => void }) => (
+    <AnimatedCard
+      style={styles.articleCard}
+      onPress={() => onPress(item.slug || item.id)}
+    >
       <Image source={{ uri: item.image }} style={styles.articleImage} />
       <View style={styles.articleBody}>
+        <View style={styles.articleCategoryBadge}>
+          <Text style={styles.articleCategoryText}>{item.category}</Text>
+        </View>
         <Text style={styles.articleTitle} numberOfLines={2}>
           {item.title}
         </Text>
         <Text style={styles.articleDesc} numberOfLines={2}>
           {item.description}
         </Text>
-        <Text style={styles.articleTime}>{item.readTime}</Text>
+        <View style={styles.articleMetaRow}>
+          <Text style={styles.articleTime}>{item.readTime}</Text>
+          <Text style={styles.articleViews}>{item.views || 0} views</Text>
+        </View>
       </View>
     </AnimatedCard>
   ),
 );
+
+BannerSlide.displayName = "BannerSlide";
+SectionTitle.displayName = "SectionTitle";
+DoctorHCard.displayName = "DoctorHCard";
+LabCard.displayName = "LabCard";
+MedCard.displayName = "MedCard";
+ArticleHCard.displayName = "ArticleHCard";
 
 // ─── MAIN SCREEN ──────────────────────────────────────────────────────────────
 export default function PatientHomeScreen() {
@@ -404,13 +421,13 @@ export default function PatientHomeScreen() {
   const loadData = useCallback(async () => {
     const [dr, ar, lr, mr, pr] = await Promise.all([
       getDoctors(),
-      getArticles(),
+      getFeaturedArticles(8),
       getLabTests(),
       getMedicines(),
       getPatientAppointments(),
     ]);
     if (dr.data) setDoctors(dr.data);
-    if (ar.data) setArticles(ar.data);
+    if (ar.data) setArticles(ar.data as Article[]);
     if (lr.data) setLabs(lr.data);
     if (mr.data) setMedicines(mr.data);
     if (pr.data) setAppointments(pr.data);
@@ -419,7 +436,7 @@ export default function PatientHomeScreen() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -695,22 +712,31 @@ export default function PatientHomeScreen() {
 
         {/* ── 9. HEALTH ARTICLES ── */}
         <FadeInSection delay={700} style={[styles.pad, styles.section]}>
-          <SectionTitle title="Health Articles" onSeeAll={() => {}} />
+          <SectionTitle
+            title="Health Articles"
+            onSeeAll={() => router.push("/(patient)/article")}
+          />
           {loading ? (
             <ListSkeleton count={2} type="article" />
           ) : (
-            articles.map((a) => (
-              <ArticleHCard
-                key={a.id}
-                item={a}
-                onPress={(id) =>
-                  router.push({
-                    pathname: "/(patient)/article/[id]",
-                    params: { id },
-                  })
-                }
-              />
-            ))
+            <FlatList
+              data={articles}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingRight: 6 }}
+              keyExtractor={(item) => item.id || (item as any).slug}
+              renderItem={({ item }) => (
+                <ArticleHCard
+                  item={item}
+                  onPress={(slug) =>
+                    router.push({
+                      pathname: "/(patient)/article/[id]",
+                      params: { id: slug },
+                    })
+                  }
+                />
+              )}
+            />
           )}
         </FadeInSection>
 
@@ -768,9 +794,10 @@ export default function PatientHomeScreen() {
               onSeeAll={() => router.push("/(patient)/appointments")}
             />
             {appointments
-              .filter((appt) =>
-                ["upcoming", "pending"].includes(String(appt.status)),
-              )
+              .filter((appt) => {
+                const status = String(appt.status).toLowerCase();
+                return status === "upcoming" || status === "pending";
+              })
               .slice(0, 3)
               .map((appt) => (
                 <View key={appt.id} style={styles.apptCard}>
@@ -1248,16 +1275,30 @@ const styles = StyleSheet.create({
 
   // Articles
   articleCard: {
+    width: 290,
     flexDirection: "row",
     backgroundColor: Colors.surface,
     borderRadius: 16,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: Colors.border,
-    marginBottom: 12,
+    marginRight: 12,
   },
   articleImage: { width: 104, height: 100 },
   articleBody: { flex: 1, padding: 12, justifyContent: "space-between" },
+  articleCategoryBadge: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    backgroundColor: "#DBEAFE",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginBottom: 6,
+  },
+  articleCategoryText: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: Colors.primary,
+  },
   articleTitle: {
     fontSize: 13,
     fontWeight: "700",
@@ -1265,7 +1306,18 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   articleDesc: { fontSize: 11, color: Colors.textSecondary, lineHeight: 16 },
+  articleMetaRow: {
+    marginTop: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   articleTime: { fontSize: 10, fontWeight: "600", color: Colors.primary },
+  articleViews: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    fontWeight: "600",
+  },
 
   // Ads
   adBanner: {

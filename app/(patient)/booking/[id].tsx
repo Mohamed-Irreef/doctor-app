@@ -65,6 +65,10 @@ function toISODateOnly(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+function toLocalISODateOnly(value: string | Date) {
+  return toISODateOnly(new Date(value));
+}
+
 function parseCommaSeparatedList(value: string) {
   return value
     .split(",")
@@ -187,7 +191,7 @@ export default function BookingScreen() {
   const slotsByDate = useMemo(() => {
     const grouped: Record<string, any[]> = {};
     slots.forEach((slot: any) => {
-      const iso = String(slot.date).slice(0, 10);
+      const iso = toLocalISODateOnly(slot.date);
       if (!grouped[iso]) grouped[iso] = [];
       grouped[iso].push(slot);
     });

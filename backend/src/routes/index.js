@@ -13,6 +13,10 @@ const miscRoutes = require("./miscRoutes");
 const planRoutes = require("./planRoutes");
 const businessRoutes = require("./businessRoutes");
 const partnerRoutes = require("./partnerRoutes");
+const articleRoutes = require("../modules/articles/article.routes");
+const chatRoutes = require("../modules/chat/chat.routes");
+const labBookingRoutes = require("./labBookingRoutes");
+const orderManagementRoutes = require("./orderManagementRoutes");
 
 const router = express.Router();
 
@@ -30,5 +34,9 @@ router.use("/", partnerRoutes);
 router.use("/subscriptions", subscriptionRoutes);
 router.use("/plans", planRoutes);
 router.use("/", miscRoutes);
+router.use("/v1/articles", articleRoutes);
+router.use("/chat", chatRoutes);
+router.use("/v1/lab-bookings", labBookingRoutes);
+router.use("/v1/orders", orderManagementRoutes);
 
 module.exports = router;

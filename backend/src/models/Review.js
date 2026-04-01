@@ -17,8 +17,7 @@ const reviewSchema = new mongoose.Schema(
     appointment: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Appointment",
-      required: true,
-      unique: true,
+      default: null,
     },
     rating: { type: Number, required: true, min: 1, max: 5 },
     comment: { type: String, required: true },
@@ -32,5 +31,16 @@ const reviewSchema = new mongoose.Schema(
 );
 
 reviewSchema.index({ doctor: 1, createdAt: -1 });
+reviewSchema.index(
+  { appointment: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { appointment: { $type: "objectId" } },
+  },
+);
+reviewSchema.index(
+  { doctor: 1, patient: 1 },
+  { unique: true, partialFilterExpression: { appointment: null } },
+);
 
 module.exports = mongoose.model("Review", reviewSchema);

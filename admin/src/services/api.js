@@ -664,7 +664,7 @@ export async function deleteLabPartnerTest(id) {
 export async function getLabPartnerBookings(params) {
   try {
     const res = await API.get("/partner/lab/bookings", { params });
-    return ok(res.data?.data || []);
+    return ok(res.data?.data?.items || res.data?.data || []);
   } catch (error) {
     return fail(error);
   }
@@ -673,6 +673,47 @@ export async function getLabPartnerBookings(params) {
 export async function updateLabPartnerBookingStatus(id, payload) {
   try {
     const res = await API.put(`/partner/lab/bookings/${id}/status`, payload);
+    return ok(res.data?.data);
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function getLabBookingsV1(params) {
+  try {
+    const res = await API.get("/v1/lab-bookings", { params });
+    return ok(
+      res.data?.data || {
+        items: [],
+        pagination: { page: 1, limit: 10, total: 0, pages: 1 },
+      },
+    );
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function updateLabBookingStatusV1(id, payload) {
+  try {
+    const res = await API.put(`/v1/lab-bookings/${id}/status`, payload);
+    return ok(res.data?.data);
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function approveLabBookingV1(id) {
+  try {
+    const res = await API.put(`/v1/lab-bookings/${id}/approve`);
+    return ok(res.data?.data);
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function rejectLabBookingV1(id, payload = {}) {
+  try {
+    const res = await API.put(`/v1/lab-bookings/${id}/reject`, payload);
     return ok(res.data?.data);
   } catch (error) {
     return fail(error);
@@ -767,9 +808,104 @@ export async function updatePharmacyPartnerMedicine(id, payload) {
   }
 }
 
+export async function deletePharmacyPartnerMedicine(id) {
+  try {
+    const res = await API.delete(`/partner/pharmacy/medicines/${id}`);
+    return ok(res.data?.data);
+  } catch (error) {
+    return fail(error);
+  }
+}
+
 export async function updatePharmacyPartnerOrderStatus(id, payload) {
   try {
     const res = await API.put(`/partner/pharmacy/orders/${id}/status`, payload);
+    return ok(res.data?.data);
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function getPharmacyOrdersV1(params) {
+  try {
+    const res = await API.get("/v1/orders", { params });
+    return ok(
+      res.data?.data || {
+        items: [],
+        pagination: {
+          page: 1,
+          limit: 10,
+          totalItems: 0,
+          totalPages: 1,
+          hasNext: false,
+          hasPrev: false,
+        },
+      },
+    );
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function approvePharmacyOrderV1(id) {
+  try {
+    const res = await API.put(`/v1/orders/${id}/approve`);
+    return ok(res.data?.data);
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function rejectPharmacyOrderV1(id) {
+  try {
+    const res = await API.put(`/v1/orders/${id}/reject`);
+    return ok(res.data?.data);
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function updatePharmacyOrderV1Status(id, payload) {
+  try {
+    const res = await API.put(`/v1/orders/${id}/status`, payload);
+    return ok(res.data?.data);
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function getAdminArticles(params) {
+  try {
+    const res = await API.get("/v1/articles", {
+      params: { includeUnpublished: "true", ...params },
+    });
+    return ok(res.data?.data || { items: [], pagination: {} });
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function createAdminArticle(payload) {
+  try {
+    const res = await API.post("/v1/articles", payload);
+    return ok(res.data?.data);
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function updateAdminArticle(id, payload) {
+  try {
+    const res = await API.put(`/v1/articles/${id}`, payload);
+    return ok(res.data?.data);
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function deleteAdminArticle(id) {
+  try {
+    const res = await API.delete(`/v1/articles/${id}`);
     return ok(res.data?.data);
   } catch (error) {
     return fail(error);

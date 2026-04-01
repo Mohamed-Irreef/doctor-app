@@ -1,17 +1,26 @@
+import { useRouter } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
+import {
+    ArrowLeft,
+    Download,
+    Eye,
+    FileText,
+    FlaskConical,
+} from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Linking,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Linking,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../constants/Colors";
 import { Typography } from "../../constants/Typography";
-import { Download, FileText, FlaskConical } from "lucide-react-native";
 import { getMyLabBookings } from "../../services/api";
 
 type LabBooking = {
@@ -27,9 +36,39 @@ type LabBooking = {
 };
 
 export default function RecordsScreen() {
+  const router = useRouter();
   const [records, setRecords] = useState<LabBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const openRecord = async (
+    reportUrl: string | undefined,
+    mode: "view" | "download",
+  ) => {
+    if (!reportUrl) {
+      Alert.alert(
+        "Report unavailable",
+        "This record does not have a report yet.",
+      );
+      return;
+    }
+
+    const canOpen = await Linking.canOpenURL(reportUrl);
+    if (!canOpen) {
+      Alert.alert(
+        "Unable to open",
+        "This report link is invalid or unavailable.",
+      );
+      return;
+    }
+
+    if (mode === "view") {
+      await WebBrowser.openBrowserAsync(reportUrl);
+      return;
+    }
+
+    await Linking.openURL(reportUrl);
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -59,6 +98,13 @@ export default function RecordsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <ArrowLeft color={Colors.text} size={20} />
+        </TouchableOpacity>
         <Text style={Typography.h2}>Medical Records</Text>
       </View>
 
@@ -104,21 +150,34 @@ export default function RecordsScreen() {
                       : "Date unavailable"}
                   </Text>
                 </View>
-                <TouchableOpacity
-                  disabled={!hasReport}
-                  onPress={() => {
-                    if (item.reportUrl) Linking.openURL(item.reportUrl);
-                  }}
-                  style={[
-                    styles.downloadBtn,
-                    !hasReport && styles.downloadBtnDisabled,
-                  ]}
-                >
-                  <Download
-                    color={hasReport ? Colors.textSecondary : "#CBD5E1"}
-                    size={20}
-                  />
-                </TouchableOpacity>
+                <View style={styles.actionsCol}>
+                  <TouchableOpacity
+                    disabled={!hasReport}
+                    onPress={() => openRecord(item.reportUrl, "view")}
+                    style={[
+                      styles.actionBtn,
+                      !hasReport && styles.downloadBtnDisabled,
+                    ]}
+                  >
+                    <Eye
+                      color={hasReport ? Colors.textSecondary : "#CBD5E1"}
+                      size={19}
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    disabled={!hasReport}
+                    onPress={() => openRecord(item.reportUrl, "download")}
+                    style={[
+                      styles.actionBtn,
+                      !hasReport && styles.downloadBtnDisabled,
+                    ]}
+                  >
+                    <Download
+                      color={hasReport ? Colors.textSecondary : "#CBD5E1"}
+                      size={19}
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
             );
           }}
@@ -132,9 +191,22 @@ export default function RecordsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 18,
+    gap: 10,
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.surface,
   },
   listContent: { paddingHorizontal: 20, paddingBottom: 32, gap: 12 },
   card: {
@@ -165,8 +237,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textSecondary,
   },
-  downloadBtn: {
+  actionsCol: {
+    gap: 4,
+  },
+  actionBtn: {
     padding: 8,
+    alignItems: "center",
+    justifyContent: "center",
   },
   downloadBtnDisabled: {
     opacity: 0.6,

@@ -1,17 +1,19 @@
-import { useRouter } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
+import { useRouter } from "expo-router";
 import { ArrowLeft, Minus, Plus, Tag, Trash2 } from "lucide-react-native";
 import React from "react";
 import {
-  Alert,
-  FlatList,
-  Image,
-  Linking,
-  TextInput,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    FlatList,
+    Image,
+    KeyboardAvoidingView,
+    Linking,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ButtonPrimary from "../../components/ButtonPrimary";
@@ -20,6 +22,147 @@ import { Typography } from "../../constants/Typography";
 import { createOrder, uploadFile } from "../../services/api";
 import { processEntityPayment } from "../../services/payment";
 import { useCartStore } from "../../store/cartStore";
+
+type CartFooterProps = {
+  subtotal: number;
+  delivery: number;
+  total: number;
+  deliveryAddress: string;
+  onChangeDeliveryAddress: (value: string) => void;
+  contactName: string;
+  onChangeContactName: (value: string) => void;
+  contactPhone: string;
+  onChangeContactPhone: (value: string) => void;
+  prescriptionRequired: boolean;
+  uploadingPrescription: boolean;
+  prescription: { url: string; name: string; mimeType: string } | null;
+  onPickPrescription: () => void;
+  onRemovePrescription: () => void;
+  onPreviewPrescription: (url: string) => void;
+};
+
+const CartFooter = React.memo(function CartFooter({
+  subtotal,
+  delivery,
+  total,
+  deliveryAddress,
+  onChangeDeliveryAddress,
+  contactName,
+  onChangeContactName,
+  contactPhone,
+  onChangeContactPhone,
+  prescriptionRequired,
+  uploadingPrescription,
+  prescription,
+  onPickPrescription,
+  onRemovePrescription,
+  onPreviewPrescription,
+}: CartFooterProps) {
+  return (
+    <>
+      <TouchableOpacity style={styles.promoCard}>
+        <Tag color={Colors.primary} size={20} />
+        <Text
+          style={[
+            Typography.body1,
+            { flex: 1, marginLeft: 12, fontWeight: "500" },
+          ]}
+        >
+          Apply Promo Code
+        </Text>
+        <Text style={{ color: Colors.primary, fontWeight: "700" }}>ADD</Text>
+      </TouchableOpacity>
+
+      <View style={styles.billCard}>
+        <Text style={[Typography.h3, { marginBottom: 16 }]}>Bill Details</Text>
+        {[
+          { label: "Item Total", value: `Rs ${subtotal.toFixed(2)}` },
+          { label: "Delivery Fee", value: `Rs ${delivery.toFixed(2)}` },
+        ].map((row, i) => (
+          <View key={i} style={styles.billRow}>
+            <Text style={Typography.body2}>{row.label}</Text>
+            <Text style={Typography.body1}>{row.value}</Text>
+          </View>
+        ))}
+        <View style={[styles.billRow, styles.totalRow]}>
+          <Text style={[Typography.body1, { fontWeight: "700" }]}>To Pay</Text>
+          <Text style={[Typography.h2, { color: Colors.primary }]}>
+            Rs {total.toFixed(2)}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.checkoutCard}>
+        <Text style={styles.checkoutTitle}>Delivery Details</Text>
+        <TextInput
+          value={deliveryAddress}
+          onChangeText={onChangeDeliveryAddress}
+          style={styles.input}
+          placeholder="Delivery address"
+          placeholderTextColor={Colors.textSecondary}
+          multiline
+        />
+        <TextInput
+          value={contactName}
+          onChangeText={onChangeContactName}
+          style={styles.input}
+          placeholder="Contact name"
+          placeholderTextColor={Colors.textSecondary}
+        />
+        <TextInput
+          value={contactPhone}
+          onChangeText={onChangeContactPhone}
+          style={styles.input}
+          placeholder="Contact phone"
+          placeholderTextColor={Colors.textSecondary}
+          keyboardType="phone-pad"
+        />
+
+        {prescriptionRequired ? (
+          <>
+            <Text style={styles.prescriptionLabel}>
+              Prescription Upload (PDF/JPG/PNG)
+            </Text>
+            <TouchableOpacity
+              style={styles.uploadBtn}
+              onPress={onPickPrescription}
+              disabled={uploadingPrescription}
+            >
+              <Text style={styles.uploadBtnText}>
+                {uploadingPrescription
+                  ? "Uploading..."
+                  : prescription
+                    ? "Replace Prescription"
+                    : "Upload Prescription"}
+              </Text>
+            </TouchableOpacity>
+            {prescription ? (
+              <View style={styles.prescriptionCard}>
+                <Text style={styles.prescriptionName} numberOfLines={1}>
+                  {prescription.name}
+                </Text>
+                <View style={styles.prescriptionActions}>
+                  <TouchableOpacity
+                    onPress={() => onPreviewPrescription(prescription.url)}
+                  >
+                    <Text style={styles.prescriptionLink}>Preview</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={onRemovePrescription}>
+                    <Text style={styles.prescriptionRemove}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <Text style={styles.prescriptionHint}>
+                Upload is required for medicines marked prescription-only.
+              </Text>
+            )}
+          </>
+        ) : null}
+      </View>
+    </>
+  );
+});
 
 export default function CartScreen() {
   const router = useRouter();
@@ -188,200 +331,123 @@ export default function CartScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <ArrowLeft color={Colors.text} size={24} />
-        </TouchableOpacity>
-        <Text style={[Typography.h3, { flex: 1, textAlign: "center" }]}>
-          My Cart ({items.length})
-        </Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <KeyboardAvoidingView
+        style={styles.keyboardWrap}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backBtn}
+          >
+            <ArrowLeft color={Colors.text} size={24} />
+          </TouchableOpacity>
+          <Text style={[Typography.h3, { flex: 1, textAlign: "center" }]}>
+            My Cart ({items.length})
+          </Text>
+          <View style={{ width: 40 }} />
+        </View>
 
-      <FlatList
-        data={items}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        ListFooterComponent={() => (
-          <>
-            <TouchableOpacity style={styles.promoCard}>
-              <Tag color={Colors.primary} size={20} />
-              <Text
-                style={[
-                  Typography.body1,
-                  { flex: 1, marginLeft: 12, fontWeight: "500" },
-                ]}
-              >
-                Apply Promo Code
-              </Text>
-              <Text style={{ color: Colors.primary, fontWeight: "700" }}>
-                ADD
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.billCard}>
-              <Text style={[Typography.h3, { marginBottom: 16 }]}>
-                Bill Details
-              </Text>
-              {[
-                { label: "Item Total", value: `Rs ${subtotal.toFixed(2)}` },
-                { label: "Delivery Fee", value: `Rs ${delivery.toFixed(2)}` },
-              ].map((row, i) => (
-                <View key={i} style={styles.billRow}>
-                  <Text style={Typography.body2}>{row.label}</Text>
-                  <Text style={Typography.body1}>{row.value}</Text>
-                </View>
-              ))}
-              <View style={[styles.billRow, styles.totalRow]}>
-                <Text style={[Typography.body1, { fontWeight: "700" }]}>
-                  To Pay
+        <FlatList
+          data={items}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          ListFooterComponent={
+            <CartFooter
+              subtotal={subtotal}
+              delivery={delivery}
+              total={total}
+              deliveryAddress={deliveryAddress}
+              onChangeDeliveryAddress={setDeliveryAddress}
+              contactName={contactName}
+              onChangeContactName={setContactName}
+              contactPhone={contactPhone}
+              onChangeContactPhone={setContactPhone}
+              prescriptionRequired={prescriptionRequired}
+              uploadingPrescription={uploadingPrescription}
+              prescription={prescription}
+              onPickPrescription={pickPrescription}
+              onRemovePrescription={() => setPrescription(null)}
+              onPreviewPrescription={(url) => Linking.openURL(url)}
+            />
+          }
+          renderItem={({ item }) => (
+            <View style={styles.cartItem}>
+              <Image source={{ uri: item.image }} style={styles.itemImage} />
+              <View style={styles.itemInfo}>
+                <Text
+                  style={[Typography.body1, { fontWeight: "600" }]}
+                  numberOfLines={2}
+                >
+                  {item.name}
                 </Text>
-                <Text style={[Typography.h2, { color: Colors.primary }]}>
-                  Rs {total.toFixed(2)}
+                <Text
+                  style={[
+                    Typography.h3,
+                    { color: Colors.primary, marginTop: 4 },
+                  ]}
+                >
+                  Rs {item.price.toFixed(2)}
                 </Text>
               </View>
-            </View>
-
-            <View style={styles.checkoutCard}>
-              <Text style={styles.checkoutTitle}>Delivery Details</Text>
-              <TextInput
-                value={deliveryAddress}
-                onChangeText={setDeliveryAddress}
-                style={styles.input}
-                placeholder="Delivery address"
-                placeholderTextColor={Colors.textSecondary}
-                multiline
-              />
-              <TextInput
-                value={contactName}
-                onChangeText={setContactName}
-                style={styles.input}
-                placeholder="Contact name"
-                placeholderTextColor={Colors.textSecondary}
-              />
-              <TextInput
-                value={contactPhone}
-                onChangeText={setContactPhone}
-                style={styles.input}
-                placeholder="Contact phone"
-                placeholderTextColor={Colors.textSecondary}
-                keyboardType="phone-pad"
-              />
-
-              {prescriptionRequired ? (
-                <>
-                  <Text style={styles.prescriptionLabel}>
-                    Prescription Upload (PDF/JPG/PNG)
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.uploadBtn}
-                    onPress={pickPrescription}
-                    disabled={uploadingPrescription}
-                  >
-                    <Text style={styles.uploadBtnText}>
-                      {uploadingPrescription
-                        ? "Uploading..."
-                        : prescription
-                          ? "Replace Prescription"
-                          : "Upload Prescription"}
-                    </Text>
-                  </TouchableOpacity>
-                  {prescription ? (
-                    <View style={styles.prescriptionCard}>
-                      <Text style={styles.prescriptionName} numberOfLines={1}>
-                        {prescription.name}
-                      </Text>
-                      <View style={styles.prescriptionActions}>
-                        <TouchableOpacity
-                          onPress={() => Linking.openURL(prescription.url)}
-                        >
-                          <Text style={styles.prescriptionLink}>Preview</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => setPrescription(null)}>
-                          <Text style={styles.prescriptionRemove}>Remove</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ) : (
-                    <Text style={styles.prescriptionHint}>
-                      Upload is required for medicines marked prescription-only.
-                    </Text>
-                  )}
-                </>
-              ) : null}
-            </View>
-          </>
-        )}
-        renderItem={({ item }) => (
-          <View style={styles.cartItem}>
-            <Image source={{ uri: item.image }} style={styles.itemImage} />
-            <View style={styles.itemInfo}>
-              <Text
-                style={[Typography.body1, { fontWeight: "600" }]}
-                numberOfLines={2}
+              <TouchableOpacity
+                style={{ marginRight: 10 }}
+                onPress={() => removeItem(item.id)}
               >
-                {item.name}
-              </Text>
-              <Text
-                style={[Typography.h3, { color: Colors.primary, marginTop: 4 }]}
-              >
-                Rs {item.price.toFixed(2)}
+                <Trash2 size={18} color={Colors.error} />
+              </TouchableOpacity>
+              <View style={styles.quantityControl}>
+                <TouchableOpacity
+                  style={styles.qBtn}
+                  onPress={() => decrementQuantity(item.id)}
+                >
+                  <Minus size={16} color={Colors.text} />
+                </TouchableOpacity>
+                <Text style={styles.qText}>{item.quantity}</Text>
+                <TouchableOpacity
+                  style={styles.qBtn}
+                  onPress={() => incrementQuantity(item.id)}
+                >
+                  <Plus size={16} color={Colors.text} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+          keyExtractor={(item) => String(item.id)}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyTitle}>Your cart is empty</Text>
+              <Text style={styles.emptySub}>
+                Add medicines from pharmacy to place an order.
               </Text>
             </View>
-            <TouchableOpacity
-              style={{ marginRight: 10 }}
-              onPress={() => removeItem(item.id)}
-            >
-              <Trash2 size={18} color={Colors.error} />
-            </TouchableOpacity>
-            <View style={styles.quantityControl}>
-              <TouchableOpacity
-                style={styles.qBtn}
-                onPress={() => decrementQuantity(item.id)}
-              >
-                <Minus size={16} color={Colors.text} />
-              </TouchableOpacity>
-              <Text style={styles.qText}>{item.quantity}</Text>
-              <TouchableOpacity
-                style={styles.qBtn}
-                onPress={() => incrementQuantity(item.id)}
-              >
-                <Plus size={16} color={Colors.text} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-        keyExtractor={(item) => String(item.id)}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>Your cart is empty</Text>
-            <Text style={styles.emptySub}>
-              Add medicines from pharmacy to place an order.
-            </Text>
-          </View>
-        }
-      />
-
-      <View style={styles.bottomBar}>
-        <ButtonPrimary
-          title={
-            loading
-              ? "Processing Payment..."
-              : items.length
-                ? `Place Order · Rs ${total.toFixed(2)}`
-                : "Go to Pharmacy"
           }
-          onPress={handlePlaceOrder}
-          loading={loading}
-          style={{ width: "100%" }}
         />
-      </View>
+
+        <View style={styles.bottomBar}>
+          <ButtonPrimary
+            title={
+              loading
+                ? "Processing Payment..."
+                : items.length
+                  ? `Place Order · Rs ${total.toFixed(2)}`
+                  : "Go to Pharmacy"
+            }
+            onPress={handlePlaceOrder}
+            loading={loading}
+            style={{ width: "100%" }}
+          />
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  keyboardWrap: { flex: 1 },
   header: {
     flexDirection: "row",
     alignItems: "center",

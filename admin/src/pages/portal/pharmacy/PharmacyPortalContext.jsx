@@ -3,6 +3,7 @@
 import { createContext, useContext, useMemo, useState } from "react";
 import {
     createPharmacyPartnerMedicine,
+    deletePharmacyPartnerMedicine,
     getPharmacyPartnerDashboard,
     getPharmacyPartnerMedicines,
     getPharmacyPartnerOrders,
@@ -288,6 +289,17 @@ export function PharmacyPortalProvider({ children }) {
     return true;
   };
 
+  const removeMedicine = async (id) => {
+    const response = await deletePharmacyPartnerMedicine(id);
+    if (response.status === "error") {
+      setError(response.error || "Unable to delete medicine");
+      return false;
+    }
+
+    await load();
+    return true;
+  };
+
   const value = {
     dashboard,
     medicines,
@@ -309,6 +321,7 @@ export function PharmacyPortalProvider({ children }) {
     selectMedicine,
     resetForm,
     submitMedicine,
+    removeMedicine,
     updateOrder,
     orderFlow: ORDER_FLOW,
   };

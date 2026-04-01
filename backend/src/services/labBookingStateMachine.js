@@ -1,6 +1,17 @@
 const ApiError = require("../utils/ApiError");
 
 const STATUS_ALIASES = {
+  pending: "pending",
+  approved: "approved",
+  rejected: "rejected",
+  on_the_way: "on-the-way",
+  "on-the-way": "on-the-way",
+  reached: "reached",
+  arrived: "arrived",
+  report_submitted: "report-submitted",
+  "report-submitted": "report-submitted",
+  closed: "closed",
+
   booked: "booked",
   sample_collected: "sample-collected",
   "sample-collected": "sample-collected",
@@ -10,7 +21,7 @@ const STATUS_ALIASES = {
   cancelled: "cancelled",
 };
 
-const LAB_BOOKING_TRANSITIONS = {
+const LEGACY_LAB_BOOKING_TRANSITIONS = {
   booked: ["sample-collected", "cancelled"],
   "sample-collected": ["report-ready", "cancelled"],
   "report-ready": ["completed"],
@@ -18,17 +29,76 @@ const LAB_BOOKING_TRANSITIONS = {
   cancelled: [],
 };
 
+const HOME_COLLECTION_TRANSITIONS = {
+  pending: ["approved", "rejected", "on-the-way", "sample-collected", "closed"],
+  approved: [
+    "on-the-way",
+    "reached",
+    "sample-collected",
+    "report-submitted",
+    "closed",
+  ],
+  rejected: [],
+  "on-the-way": ["reached", "sample-collected", "report-submitted", "closed"],
+  reached: ["sample-collected", "report-submitted", "closed"],
+  "sample-collected": ["report-submitted", "closed"],
+  "report-submitted": ["closed"],
+  closed: [],
+};
+
+const LAB_VISIT_TRANSITIONS = {
+  pending: ["approved", "rejected", "arrived", "sample-collected", "closed"],
+  approved: ["arrived", "sample-collected", "report-submitted", "closed"],
+  rejected: [],
+  arrived: ["sample-collected", "report-submitted", "closed"],
+  "sample-collected": ["report-submitted", "closed"],
+  "report-submitted": ["closed"],
+  closed: [],
+};
+
+function resolveBookingWorkflow(status, bookingType) {
+  const type = String(bookingType || "").toLowerCase();
+  if (type === "home_collection") {
+    return HOME_COLLECTION_TRANSITIONS;
+  }
+  if (type === "lab_visit") {
+    return LAB_VISIT_TRANSITIONS;
+  }
+
+  if (
+    [
+      "pending",
+      "approved",
+      "rejected",
+      "on-the-way",
+      "reached",
+      "arrived",
+      "report-submitted",
+      "closed",
+    ].includes(status)
+  ) {
+    return HOME_COLLECTION_TRANSITIONS;
+  }
+
+  return LEGACY_LAB_BOOKING_TRANSITIONS;
+}
+
 function normalizeLabBookingStatus(status, fallback = "booked") {
   if (!status) return fallback;
   return STATUS_ALIASES[String(status).trim().toLowerCase()] || fallback;
 }
 
-function getAllowedLabBookingTransitions(status) {
+function getAllowedLabBookingTransitions(status, bookingType) {
   const normalized = normalizeLabBookingStatus(status);
-  return LAB_BOOKING_TRANSITIONS[normalized] || [];
+  const workflow = resolveBookingWorkflow(normalized, bookingType);
+  return workflow[normalized] || [];
 }
 
-function assertValidLabBookingTransition(currentStatus, nextStatus) {
+function assertValidLabBookingTransition(
+  currentStatus,
+  nextStatus,
+  bookingType,
+) {
   const current = normalizeLabBookingStatus(currentStatus);
   const next = normalizeLabBookingStatus(nextStatus, current);
 
@@ -36,7 +106,7 @@ function assertValidLabBookingTransition(currentStatus, nextStatus) {
     return { current, next, changed: false };
   }
 
-  const allowed = getAllowedLabBookingTransitions(current);
+  const allowed = getAllowedLabBookingTransitions(current, bookingType);
   if (!allowed.includes(next)) {
     throw new ApiError(
       400,
@@ -61,11 +131,8 @@ function transitionLabBooking({
   const { current, next, changed } = assertValidLabBookingTransition(
     booking.status,
     nextStatus,
+    booking.bookingType,
   );
-
-  if (next === "report-ready" && !reportUrl && !booking.reportUrl) {
-    throw new ApiError(400, "Report URL is required when marking report-ready");
-  }
 
   booking.status = next;
   if (reportUrl) {
@@ -88,7 +155,7 @@ function transitionLabBooking({
 }
 
 module.exports = {
-  LAB_BOOKING_TRANSITIONS,
+  LAB_BOOKING_TRANSITIONS: LEGACY_LAB_BOOKING_TRANSITIONS,
   normalizeLabBookingStatus,
   getAllowedLabBookingTransitions,
   assertValidLabBookingTransition,

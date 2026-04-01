@@ -1,31 +1,37 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import {
-    Calendar,
-    Check,
-    Clock,
-    MessageSquare,
-    Video,
-    X,
+  Calendar,
+  Check,
+  Clock,
+  MessageSquare,
+  Video,
+  X,
 } from "lucide-react-native";
 import React, { useCallback, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    Image,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../constants/Colors";
 import { Typography } from "../../constants/Typography";
-import { getDoctorAppointments } from "../../services/api";
+import { createChat, getDoctorAppointments } from "../../services/api";
 
 type AppointmentItem = {
   _id: string;
   id?: string;
-  patient?: { name?: string; image?: string; age?: number };
+  patient?: {
+    _id?: string;
+    id?: string;
+    name?: string;
+    image?: string;
+    age?: number;
+  };
   time?: string;
   date?: string;
   type?: "video" | "chat" | "in-person" | string;
@@ -46,6 +52,37 @@ export default function DoctorAppointmentsScreen() {
   const [appointments, setAppointments] = useState<AppointmentItem[]>([]);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  const openPatientChat = useCallback(
+    async (item: AppointmentItem) => {
+      const patientId = String(item.patient?._id || item.patient?.id || "");
+      if (!patientId) {
+        router.push("/(doctor)/chat");
+        return;
+      }
+
+      const response = await createChat({ patientId });
+      if (!response.data?._id) {
+        router.push("/(doctor)/chat");
+        return;
+      }
+
+      router.push({
+        pathname: "/(doctor)/chat/[chatId]",
+        params: {
+          chatId: String(response.data._id),
+          patientId,
+          patientName: item.patient?.name || "Patient",
+          patientImage: item.patient?.image || "",
+          isBlocked: String(Boolean(response.data.isBlocked)),
+          blockedBy: response.data.blockedBy
+            ? String(response.data.blockedBy)
+            : "",
+        },
+      });
+    },
+    [router],
+  );
 
   const loadAppointments = useCallback(async () => {
     setLoading(true);
@@ -207,10 +244,21 @@ export default function DoctorAppointmentsScreen() {
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
+                      style={styles.outlineBtn}
+                      onPress={() => openPatientChat(item)}
+                    >
+                      <MessageSquare color={Colors.primary} size={16} />
+                      <Text
+                        style={[styles.actionText, { color: Colors.primary }]}
+                      >
+                        Message
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
                       style={styles.acceptBtn}
                       onPress={() => {
                         if (!isVideo) {
-                          router.push("/(doctor)/consultation");
+                          openPatientChat(item);
                           return;
                         }
                         router.push({

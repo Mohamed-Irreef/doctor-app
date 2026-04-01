@@ -118,6 +118,16 @@ function withSignedLabTestMedia(item) {
   };
 }
 
+function withSignedMedicineMedia(item) {
+  if (!item) return item;
+
+  return {
+    ...item,
+    imageViewerUrl: item.image ? buildSignedViewerUrl(item.image) : "",
+    pdfViewerUrl: item.pdfUrl ? buildSignedViewerUrl(item.pdfUrl) : "",
+  };
+}
+
 async function resolvePartnerProfileById(id) {
   const lab = await LabPartnerProfile.findById(id);
   if (lab) return { profile: lab, type: "lab" };
@@ -595,11 +605,12 @@ const getPendingContentApprovals = catchAsync(async (_req, res) => {
   ]);
 
   const signedLabTests = labTests.map(withSignedLabTestMedia);
+  const signedMedicines = medicines.map(withSignedMedicineMedia);
 
   return res.status(200).json(
     new ApiResponse(200, "Pending content fetched", {
       labTests: signedLabTests,
-      medicines,
+      medicines: signedMedicines,
     }),
   );
 });

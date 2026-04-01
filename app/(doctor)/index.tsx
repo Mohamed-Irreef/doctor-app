@@ -21,7 +21,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import SectionHeader from "../../components/SectionHeader";
 import { Colors } from "../../constants/Colors";
 import { Typography } from "../../constants/Typography";
-import { getDoctorAppointments } from "../../services/api";
+import { createChat, getDoctorAppointments } from "../../services/api";
 import { useAuthStore } from "../../store/authStore";
 
 const QUICK_ACTIONS = [
@@ -42,7 +42,7 @@ const QUICK_ACTIONS = [
   {
     label: "Start Consult",
     icon: ArrowRight,
-    route: "/(doctor)/consultation" as const,
+    route: "/(doctor)/chat" as const,
     bg: "#FDF4FF",
     fg: "#9333EA",
   },
@@ -53,6 +53,37 @@ export default function DoctorDashboardScreen() {
   const router = useRouter();
   const [isOnline, setIsOnline] = useState(true);
   const [appointments, setAppointments] = useState<any[]>([]);
+
+  const openPatientChat = useCallback(
+    async (item: any) => {
+      const patientId = String(item?.patient?._id || item?.patient?.id || "");
+      if (!patientId) {
+        router.push("/(doctor)/chat");
+        return;
+      }
+
+      const response = await createChat({ patientId });
+      if (!response.data?._id) {
+        router.push("/(doctor)/chat");
+        return;
+      }
+
+      router.push({
+        pathname: "/(doctor)/chat/[chatId]",
+        params: {
+          chatId: String(response.data._id),
+          patientId,
+          patientName: item?.patient?.name || "Patient",
+          patientImage: item?.patient?.image || "",
+          isBlocked: String(Boolean(response.data.isBlocked)),
+          blockedBy: response.data.blockedBy
+            ? String(response.data.blockedBy)
+            : "",
+        },
+      });
+    },
+    [router],
+  );
 
   const loadAppointments = useCallback(async () => {
     const response = await getDoctorAppointments();
@@ -279,7 +310,7 @@ export default function DoctorDashboardScreen() {
                   style={styles.startBtn}
                   onPress={() => {
                     if (String(item.type || "").toLowerCase() !== "video") {
-                      router.push("/(doctor)/consultation");
+                      openPatientChat(item);
                       return;
                     }
                     router.push({

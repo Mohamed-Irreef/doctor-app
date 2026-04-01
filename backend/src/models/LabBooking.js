@@ -11,6 +11,11 @@ const statusTimelineSchema = new mongoose.Schema(
 
 const labBookingSchema = new mongoose.Schema(
   {
+    bookingType: {
+      type: String,
+      enum: ["home_collection", "lab_visit"],
+      index: true,
+    },
     patient: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -23,8 +28,15 @@ const labBookingSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    tests: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "LabTest",
+      },
+    ],
     bookingDate: { type: Date, required: true },
     scheduledDate: { type: Date },
+    timeSlot: { type: String },
     collectionTimeSlot: { type: String },
     collectionType: {
       type: String,
@@ -32,12 +44,30 @@ const labBookingSchema = new mongoose.Schema(
       default: "home",
       index: true,
     },
+    address: {
+      flat: { type: String, trim: true },
+      street: { type: String, trim: true },
+      landmark: { type: String, trim: true },
+      city: { type: String, trim: true },
+      pincode: { type: String, trim: true },
+    },
     homeCollectionAddress: { type: mongoose.Schema.Types.Mixed },
+    contactNumber: { type: String, trim: true },
+    labLocation: { type: String, trim: true },
     deliveryCost: { type: Number, default: 0 },
     distanceKm: { type: Number, default: 0 },
     status: {
       type: String,
       enum: [
+        "pending",
+        "approved",
+        "rejected",
+        "on-the-way",
+        "reached",
+        "arrived",
+        "sample-collected",
+        "report-submitted",
+        "closed",
         "booked",
         "sample-collected",
         "report-ready",
@@ -66,10 +96,46 @@ const labBookingSchema = new mongoose.Schema(
 );
 
 labBookingSchema.pre("validate", function ensureTimeline() {
+  if (!this.bookingType) {
+    this.bookingType =
+      this.collectionType === "lab" ? "lab_visit" : "home_collection";
+  }
+
+  if ((!Array.isArray(this.tests) || this.tests.length === 0) && this.labTest) {
+    this.tests = [this.labTest];
+  }
+
+  if (!this.timeSlot && this.collectionTimeSlot) {
+    this.timeSlot = this.collectionTimeSlot;
+  }
+
+  if (
+    (!this.address || !Object.keys(this.address).length) &&
+    this.homeCollectionAddress
+  ) {
+    this.address = {
+      flat:
+        this.homeCollectionAddress?.flat ||
+        this.homeCollectionAddress?.flatHouse ||
+        "",
+      street:
+        this.homeCollectionAddress?.street ||
+        this.homeCollectionAddress?.area ||
+        "",
+      landmark: this.homeCollectionAddress?.landmark || "",
+      city: this.homeCollectionAddress?.city || "",
+      pincode: this.homeCollectionAddress?.pincode || "",
+    };
+  }
+
+  if (!this.status) {
+    this.status = "pending";
+  }
+
   if (!Array.isArray(this.statusTimeline) || this.statusTimeline.length === 0) {
     this.statusTimeline = [
       {
-        status: this.status || "booked",
+        status: this.status || "pending",
         at: new Date(),
       },
     ];

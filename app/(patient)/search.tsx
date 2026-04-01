@@ -21,8 +21,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../constants/Colors";
 import { Typography } from "../../constants/Typography";
-import { getDoctors } from "../../services/api";
-import { useFavoritesStore } from "../../store/favoritesStore";
+import {
+    getDoctors,
+    getMyDoctorLikes,
+    toggleDoctorLike,
+} from "../../services/api";
 import type { Doctor } from "../../types";
 
 const SORT_OPTIONS = [
@@ -103,19 +106,28 @@ function DoctorRow({
 export default function SearchDoctorScreen() {
   const router = useRouter();
   const { specialty } = useLocalSearchParams<{ specialty?: string }>();
-  const { toggleFavorite, isFavorite } = useFavoritesStore();
 
   const [query, setQuery] = useState("");
   const [activeSpec, setActiveSpec] = useState(specialty ?? "All");
   const [activeSort, setActiveSort] = useState("Relevance");
   const [showSort, setShowSort] = useState(false);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [likedDoctorIds, setLikedDoctorIds] = useState<string[]>([]);
 
   useEffect(() => {
     const load = async () => {
       const response = await getDoctors();
       if (response.data) {
-        setDoctors(response.data as Doctor[]);
+        const list = response.data as Doctor[];
+        setDoctors(list);
+        const likes = await getMyDoctorLikes(
+          list.map((doctor) =>
+            String((doctor as any).id || (doctor as any)._id),
+          ),
+        );
+        if (Array.isArray(likes.data)) {
+          setLikedDoctorIds(likes.data);
+        }
       }
     };
     load();
@@ -308,8 +320,21 @@ export default function SearchDoctorScreen() {
                 params: { id: (item as any).id || (item as any)._id },
               })
             }
-            onFav={() => toggleFavorite(item)}
-            faved={isFavorite((item as any).id || (item as any)._id)}
+            onFav={async () => {
+              const doctorId = String((item as any).id || (item as any)._id);
+              const response = await toggleDoctorLike(doctorId);
+              if (!response.data) return;
+
+              setLikedDoctorIds((prev) => {
+                const set = new Set(prev);
+                if (response.data.liked) set.add(doctorId);
+                else set.delete(doctorId);
+                return Array.from(set);
+              });
+            }}
+            faved={likedDoctorIds.includes(
+              String((item as any).id || (item as any)._id),
+            )}
           />
         )}
       />

@@ -1,196 +1,474 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
     ArrowLeft,
-    BookmarkPlus,
+    Bookmark,
     Clock,
-    Share2
+    Eye,
+    Heart,
+    Share2,
+    Star,
 } from "lucide-react-native";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-    Dimensions,
     Image,
+    NativeScrollEvent,
+    NativeSyntheticEvent,
     ScrollView,
     Share,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
+import Markdown from "react-native-markdown-display";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../../constants/Colors";
-import { getArticles } from "../../../services/api";
+import {
+    addArticleReview,
+    getArticleBySlug,
+    getArticleLikeStatus,
+    getArticleReviews,
+    toggleArticleLike,
+} from "../../../services/api";
 
-const { width: W } = Dimensions.get("window");
+function formatDisplayDate(value?: string) {
+  if (!value) return "";
+  return new Date(value).toLocaleDateString("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  });
+}
 
-const FULL_CONTENT: Record<string, string> = {
-  a1: `Heart disease is the leading cause of death worldwide, but the good news is that most risk factors are within your control. Here are five science-backed habits that can dramatically improve your heart health:\n\n**1. Follow a Heart-Healthy Diet**\nFocus on whole grains, fresh fruits, vegetables, lean proteins and healthy fats like avocado and olive oil. Limit saturated fats, trans fats, sodium, and added sugar. The Mediterranean diet has proven repeatedly to reduce cardiac risk.\n\n**2. Exercise Regularly**\nAim for at least 150 minutes of moderate-intensity aerobic activity per week. Even brisk walking counts. Regular movement lowers blood pressure, reduces bad cholesterol, and keeps your weight in check.\n\n**3. Quit Smoking**\nSmoking is one of the biggest risk factors for heart disease. Within just one year of quitting, your risk of coronary heart disease drops by 50%. There are now many FDA-approved aids and support programs to help.\n\n**4. Manage Stress**\nChronic stress raises cortisol levels which contributes to inflammation and high blood pressure. Practice mindfulness, deep breathing, journaling, or talk to a therapist.\n\n**5. Get Regular Checkups**\nKnow your numbers — blood pressure, cholesterol, blood sugar, and BMI. Early detection through regular health checkups can prevent serious cardiac events.`,
-  a2: `Stress at work has reached epidemic levels. Studies show that chronic workplace stress increases the risk of depression by 80% and heart disease by 40%. Here's how to keep it manageable:\n\n**Identify Your Stressors**\nBefore you can address work stress, you need to understand what's causing it. Is it workload? A difficult colleague? Lack of control? Recognizing patterns is the first step.\n\n**Set Clear Boundaries**\nStop checking emails after 7pm. Block focus time on your calendar. Say no to non-essential meetings. Boundaries aren't selfish — they're necessary for sustainable performance.\n\n**Use the 2-Minute Rule**\nFor any task that takes 2 minutes or less, do it immediately. This clears mental clutter and prevents the anxiety of accumulating small tasks.\n\n**Take Real Breaks**\nStep away from your desk every 90 minutes. Even a 5-minute walk resets your nervous system. Lunch at your desk is not a break.\n\n**Talk About It**\nIf stress is overwhelming, speak to a manager or HR. Mental health support programs are increasingly common, and seeking help is a sign of strength, not weakness.`,
-  a3: `Sleep is not a luxury — it is a biological necessity. The National Sleep Foundation recommends 7–9 hours per night for adults, yet one in three people are chronically sleep deprived.\n\n**Why Sleep Matters**\nDuring deep sleep, your body repairs tissues, consolidates memories, and releases growth hormones. Your immune system produces infection-fighting proteins. Your brain flushes out toxins linked to Alzheimer's disease.\n\n**Signs You're Not Getting Enough**\n- Difficulty concentrating or remembering things\n- Mood swings and irritability\n- Increased appetite (especially for sugar)\n- Getting sick frequently\n\n**Tips for Better Sleep**\n1. Maintain a consistent sleep schedule — even on weekends\n2. Make your bedroom cool (65–68°F), dark, and quiet\n3. Avoid screens 60 minutes before bed — blue light suppresses melatonin\n4. Limit caffeine after 2pm\n5. Exercise regularly, but not right before bed\n\nIf you struggle with sleep despite good habits, consult a physician — conditions like sleep apnea are common and very treatable.`,
-  a4: `Healthy eating doesn't have to mean expensive superfoods or organic everything. With some simple strategies, you can eat nutritiously on a tight budget.\n\n**Buy Whole Grains in Bulk**\nOats, brown rice, lentils, and dried beans are incredibly nutritious and cost mere cents per serving. A 5lb bag of oats can fuel weeks of breakfasts.\n\n**Embrace Frozen Vegetables**\nFrozen vegetables are picked at peak ripeness and flash-frozen, preserving almost all nutrients. They're cheaper than fresh, last longer, and are just as healthy.\n\n**Plan Meals Weekly**\nDeciding what you'll eat before you shop eliminates impulse purchases and reduces food waste significantly — the average family wastes $1,800 in food annually.\n\n**Cook in Batches**\nSpend 2 hours on Sunday cooking grains, roasting vegetables, and prepping proteins. Assembly becomes fast all week, and you'll be far less tempted by expensive takeout.\n\n**Use Eggs as Protein**\nAt roughly $0.25 each, eggs are one of the most nutrient-dense, affordable protein sources available. A single egg has 6g of protein, plus vitamins B12, D, and choline.`,
-};
+function normalizeMarkdownContent(content = "") {
+  return String(content)
+    .replace(/\r\n?/g, "\n")
+    .replace(/<br\s*\/?>(\s*)/gi, "\n")
+    .replace(/<\/(p|h1|h2|h3|h4|h5|h6|li|blockquote)>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .split("\n")
+    .map((line) => line.replace(/^(#{1,6})\s*#+\s*/, "$1 "))
+    .filter((line) => !/^\s*--\s*$/.test(line))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 
 export default function ArticleDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [articles, setArticles] = useState<any[]>([]);
+  const slug = String(id || "");
+
+  const [article, setArticle] = useState<any | null>(null);
+  const [related, setRelated] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [summary, setSummary] = useState({ averageRating: 0, totalReviews: 0 });
+  const [reviewPage, setReviewPage] = useState(1);
+  const [reviewPages, setReviewPages] = useState(1);
+  const [sortBy, setSortBy] = useState<"latest" | "highest">("latest");
+  const [myRating, setMyRating] = useState(0);
+  const [comment, setComment] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  const [liked, setLiked] = useState(false);
+  const [bookmarked, setBookmarked] = useState(false);
+  const [readingProgress, setReadingProgress] = useState(0);
+
+  const contentMarkdown = useMemo(
+    () => normalizeMarkdownContent(article?.content || ""),
+    [article?.content],
+  );
+  const markdownSource = contentMarkdown || "Content will be available soon.";
+
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const { contentOffset, contentSize, layoutMeasurement } =
+        event.nativeEvent;
+      const scrollableHeight = Math.max(
+        1,
+        contentSize.height - layoutMeasurement.height,
+      );
+      const next = Math.max(0, Math.min(1, contentOffset.y / scrollableHeight));
+      setReadingProgress((prev) =>
+        Math.abs(prev - next) > 0.01 ? next : prev,
+      );
+    },
+    [],
+  );
+
+  const loadArticle = useCallback(async () => {
+    if (!slug) return;
+    const res = await getArticleBySlug(slug);
+    if (res.data?.article) {
+      setArticle(res.data.article);
+      setRelated(Array.isArray(res.data.related) ? res.data.related : []);
+    }
+  }, [slug]);
+
+  const loadReviews = useCallback(
+    async (page = 1, append = false) => {
+      if (!article?._id) return;
+      const res = await getArticleReviews(article._id, {
+        page,
+        limit: 6,
+        sortBy,
+      });
+      if (!res.data) return;
+
+      const items = res.data.items || [];
+      setReviews((prev) => (append ? [...prev, ...items] : items));
+      setSummary(
+        res.data.summary || {
+          averageRating: 0,
+          totalReviews: 0,
+        },
+      );
+      setReviewPage(res.data.pagination?.page || page);
+      setReviewPages(res.data.pagination?.pages || 1);
+    },
+    [article?._id, sortBy],
+  );
 
   useEffect(() => {
-    const load = async () => {
-      const response = await getArticles();
-      if (response.data) setArticles(response.data);
+    loadArticle();
+  }, [loadArticle]);
+
+  useEffect(() => {
+    if (!article?._id) return;
+    loadReviews(1, false);
+  }, [article?._id, sortBy, loadReviews]);
+
+  useEffect(() => {
+    const loadLikeState = async () => {
+      if (!article?._id) return;
+      const response = await getArticleLikeStatus(article._id);
+      if (!response.data) return;
+      setLiked(Boolean(response.data.liked));
+      setArticle((prev: any) =>
+        prev
+          ? {
+              ...prev,
+              likes: Number(response.data.likesCount || 0),
+            }
+          : prev,
+      );
     };
-    load();
-  }, []);
+    loadLikeState();
+  }, [article?._id]);
 
-  const article = useMemo(() => {
-    if (!articles.length) return null;
-    return (
-      articles.find((a) => String(a.id || a._id) === String(id)) || articles[0]
-    );
-  }, [articles, id]);
+  const handleSubmitReview = async () => {
+    if (!article?._id || !myRating || !comment.trim()) return;
+    setSubmittingReview(true);
+    const res = await addArticleReview(article._id, {
+      rating: myRating,
+      comment: comment.trim(),
+    });
+    setSubmittingReview(false);
 
-  const related = useMemo(() => {
-    if (!article) return [];
-    const articleId = String(article.id || article._id);
-    return articles
-      .filter((a) => String(a.id || a._id) !== articleId)
-      .slice(0, 2);
-  }, [articles, article]);
+    if (res.status === "success") {
+      setMyRating(0);
+      setComment("");
+      await loadReviews(1, false);
+    }
+  };
 
   if (!article) {
     return (
-      <SafeAreaView
-        style={[
-          styles.container,
-          { alignItems: "center", justifyContent: "center" },
-        ]}
-      >
-        <Text style={{ color: Colors.textSecondary }}>
-          Article not available.
-        </Text>
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.centerState}>
+          <Text style={styles.muted}>Loading article...</Text>
+        </View>
       </SafeAreaView>
     );
   }
 
-  const articleId = String(article.id || article._id || "a1");
-  const bodyContent =
-    article.content || FULL_CONTENT[articleId] || FULL_CONTENT.a1;
-
   return (
     <View style={styles.container}>
+      <SafeAreaView edges={["top"]} style={styles.progressWrap}>
+        <View style={styles.progressTrack}>
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${readingProgress * 100}%` },
+            ]}
+          />
+        </View>
+      </SafeAreaView>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
       >
-        {/* Hero Image */}
-        <View style={{ height: 280, position: "relative" }}>
-          <Image
-            source={{ uri: article.image }}
-            style={StyleSheet.absoluteFill}
-            resizeMode="cover"
-          />
+        <View style={styles.heroWrap}>
+          {article.coverImage ? (
+            <Image
+              source={{ uri: article.coverImage }}
+              style={styles.heroImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.heroFallback} />
+          )}
+
           <SafeAreaView edges={["top"]} style={styles.headerBtns}>
             <TouchableOpacity
               onPress={() => router.back()}
               style={styles.iconBtn}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <ArrowLeft color={Colors.text} size={22} />
+              <ArrowLeft color={Colors.text} size={20} />
             </TouchableOpacity>
-            <View style={{ flexDirection: "row", gap: 8 }}>
+            <View style={styles.headerRightBtns}>
               <TouchableOpacity
                 style={styles.iconBtn}
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                onPress={() => setBookmarked((v) => !v)}
               >
-                <BookmarkPlus color={Colors.text} size={22} />
+                <Bookmark
+                  color={bookmarked ? Colors.primary : Colors.text}
+                  size={19}
+                  fill={bookmarked ? Colors.primary : "none"}
+                />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.iconBtn}
-                onPress={() => Share.share({ message: article.title })}
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                onPress={() =>
+                  Share.share({
+                    message: `${article.title}\n\n${article.slug}`,
+                  })
+                }
               >
-                <Share2 color={Colors.text} size={22} />
+                <Share2 color={Colors.text} size={19} />
               </TouchableOpacity>
             </View>
           </SafeAreaView>
         </View>
 
-        {/* Content */}
-        <View style={styles.content}>
-          <View style={styles.metaRow}>
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryText}>Health & Wellness</Text>
-            </View>
-            <View style={styles.timeRow}>
-              <Clock size={12} color={Colors.textSecondary} />
-              <Text style={styles.readTime}>
-                {article.readTime || "5 min read"}
-              </Text>
-            </View>
-          </View>
-
+        <View style={styles.contentWrap}>
           <Text style={styles.title}>{article.title}</Text>
-          <Text style={styles.description}>
-            {article.description ||
-              "Read this health update and practical guidance from verified medical experts."}
-          </Text>
 
-          {/* Author */}
           <View style={styles.authorRow}>
-            <Image
-              source={{
-                uri: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=100",
-              }}
-              style={styles.authorAvatar}
-            />
-            <View>
-              <Text style={styles.authorName}>Dr. Sarah Jenkins</Text>
-              <Text style={styles.authorTitle}>
-                Cardiologist · Verified Author
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.divider} />
-
-          {/* Body Content */}
-          {bodyContent.split("\n\n").map((para: string, i: number) => {
-            const isBold = para.startsWith("**");
-            const clean = para.replace(/\*\*/g, "");
-            return (
-              <Text key={i} style={isBold ? styles.bodyBold : styles.bodyText}>
-                {clean}
-              </Text>
-            );
-          })}
-
-          <View style={styles.divider} />
-
-          {/* Related */}
-          <Text style={styles.relatedTitle}>Related Articles</Text>
-          {related.map((rel) => (
-            <TouchableOpacity
-              key={String(rel.id || rel._id)}
-              style={styles.relatedCard}
-              onPress={() =>
-                router.replace({
-                  pathname: "/(patient)/article/[id]",
-                  params: { id: rel.id || rel._id },
-                })
-              }
-              activeOpacity={0.85}
-            >
-              <Image source={{ uri: rel.image }} style={styles.relatedImage} />
-              <View style={{ flex: 1, padding: 12 }}>
-                <Text style={styles.relatedText} numberOfLines={2}>
-                  {rel.title}
-                </Text>
-                <Text style={styles.relatedTime}>
-                  {rel.readTime || "5 min read"}
+            {article.author?.avatar ? (
+              <Image
+                source={{ uri: article.author?.avatar }}
+                style={styles.authorAvatar}
+              />
+            ) : (
+              <View style={styles.authorAvatarFallback}>
+                <Text style={styles.authorAvatarFallbackText}>
+                  {(article.author?.name || "N").charAt(0).toUpperCase()}
                 </Text>
               </View>
+            )}
+            <View style={{ flex: 1 }}>
+              <Text style={styles.authorName}>
+                {article.author?.name || "NiviDoc Editorial"}
+              </Text>
+              <Text style={styles.authorSub}>
+                {article.author?.role || "Admin"}
+                {article.createdAt
+                  ? ` • ${formatDisplayDate(article.createdAt)}`
+                  : ""}
+              </Text>
+            </View>
+            <View style={styles.metaMiniRow}>
+              <Clock size={12} color={Colors.textSecondary} />
+              <Text style={styles.metaMiniText}>
+                {article.readTime || 1} min read
+              </Text>
+            </View>
+            <View style={styles.metaMiniRow}>
+              <Eye size={12} color={Colors.textSecondary} />
+              <Text style={styles.metaMiniText}>{article.views || 0}</Text>
+            </View>
+          </View>
+
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={async () => {
+                if (!article?._id) return;
+                const response = await toggleArticleLike(article._id);
+                if (!response.data) return;
+                setLiked(Boolean(response.data.liked));
+                setArticle((prev: any) =>
+                  prev
+                    ? {
+                        ...prev,
+                        likes: Number(response.data.likesCount || 0),
+                      }
+                    : prev,
+                );
+              }}
+            >
+              <Heart
+                color={liked ? Colors.error : Colors.textSecondary}
+                size={16}
+                fill={liked ? Colors.error : "none"}
+              />
+              <Text style={styles.actionText}>
+                {liked ? "❤️ Liked" : "❤️ Like"} ({article.likes || 0})
+              </Text>
             </TouchableOpacity>
-          ))}
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => Share.share({ message: article.title })}
+            >
+              <Share2 color={Colors.textSecondary} size={16} />
+              <Text style={styles.actionText}>🔗 Share</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.articleCard}>
+            <Markdown style={markdownStyles}>{markdownSource}</Markdown>
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.reviewHead}>
+              <Text style={styles.sectionTitle}>Reviews</Text>
+              <Text style={styles.reviewSummary}>
+                {summary.averageRating || 0} / 5 ({summary.totalReviews || 0})
+              </Text>
+            </View>
+
+            <View style={styles.sortRow}>
+              <TouchableOpacity
+                style={[
+                  styles.sortBtn,
+                  sortBy === "latest" && styles.sortBtnActive,
+                ]}
+                onPress={() => setSortBy("latest")}
+              >
+                <Text
+                  style={[
+                    styles.sortText,
+                    sortBy === "latest" && styles.sortTextActive,
+                  ]}
+                >
+                  Latest
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.sortBtn,
+                  sortBy === "highest" && styles.sortBtnActive,
+                ]}
+                onPress={() => setSortBy("highest")}
+              >
+                <Text
+                  style={[
+                    styles.sortText,
+                    sortBy === "highest" && styles.sortTextActive,
+                  ]}
+                >
+                  Highest
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.reviewInputWrap}>
+              <Text style={styles.inputLabel}>Rate this article</Text>
+              <View style={styles.starRow}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <TouchableOpacity
+                    key={star}
+                    onPress={() => setMyRating(star)}
+                  >
+                    <Star
+                      size={28}
+                      color="#F59E0B"
+                      fill={star <= myRating ? "#F59E0B" : "none"}
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TextInput
+                value={comment}
+                onChangeText={setComment}
+                placeholder="Share your experience reading this article..."
+                placeholderTextColor={Colors.textSecondary}
+                multiline
+                style={styles.commentInput}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.submitBtn,
+                  (!myRating || !comment.trim()) && styles.submitBtnDisabled,
+                ]}
+                onPress={handleSubmitReview}
+                disabled={!myRating || !comment.trim() || submittingReview}
+              >
+                <Text style={styles.submitText}>
+                  {submittingReview ? "Submitting..." : "Submit Review"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ gap: 10, marginTop: 8 }}>
+              {reviews.map((review) => (
+                <View key={String(review._id)} style={styles.reviewCard}>
+                  <View style={styles.reviewCardHead}>
+                    <View style={styles.reviewUserWrap}>
+                      <Image
+                        source={{ uri: review.userId?.image || "" }}
+                        style={styles.reviewAvatar}
+                      />
+                      <Text style={styles.reviewUser}>
+                        {review.userId?.name || "Patient"}
+                      </Text>
+                    </View>
+                    <Text style={styles.reviewDate}>
+                      {formatDisplayDate(review.createdAt)}
+                    </Text>
+                  </View>
+                  <Text style={styles.reviewStars}>
+                    {"★".repeat(review.rating)}
+                  </Text>
+                  <Text style={styles.reviewComment}>{review.comment}</Text>
+                </View>
+              ))}
+            </View>
+
+            {reviewPage < reviewPages ? (
+              <TouchableOpacity
+                style={styles.moreBtn}
+                onPress={() => loadReviews(reviewPage + 1, true)}
+              >
+                <Text style={styles.moreText}>Load More Reviews</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Related Articles</Text>
+            <View style={{ gap: 10 }}>
+              {related.slice(0, 5).map((item) => (
+                <TouchableOpacity
+                  key={String(item._id)}
+                  style={styles.relatedCard}
+                  onPress={() =>
+                    router.replace({
+                      pathname: "/(patient)/article/[id]",
+                      params: { id: item.slug },
+                    })
+                  }
+                >
+                  <Image
+                    source={{ uri: item.coverImage }}
+                    style={styles.relatedImage}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.relatedTitle} numberOfLines={2}>
+                      {item.title}
+                    </Text>
+                    <Text style={styles.relatedMeta}>
+                      {item.readTime || 1} min read
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -199,7 +477,35 @@ export default function ArticleDetailsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  scroll: { paddingBottom: 40 },
+  progressWrap: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 50,
+  },
+  progressTrack: {
+    height: 3,
+    backgroundColor: "rgba(15, 23, 42, 0.12)",
+  },
+  progressFill: {
+    height: "100%",
+    backgroundColor: Colors.primary,
+  },
+  centerState: { flex: 1, alignItems: "center", justifyContent: "center" },
+  muted: { color: Colors.textSecondary, fontSize: 14 },
+  scroll: { paddingBottom: 32 },
+  heroWrap: { height: 260 },
+  heroImage: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: Colors.lightGray,
+  },
+  heroFallback: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#DDE5EF",
+  },
   headerBtns: {
     position: "absolute",
     top: 0,
@@ -208,8 +514,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 6,
   },
+  headerRightBtns: { flexDirection: "row", gap: 8 },
   iconBtn: {
     width: 40,
     height: 40,
@@ -217,97 +524,282 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: Colors.black,
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
-  content: {
+  contentWrap: {
+    marginTop: -18,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
     backgroundColor: Colors.surface,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    marginTop: -28,
-    padding: 24,
+    padding: 16,
+    gap: 14,
   },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 14,
-  },
-  categoryBadge: {
-    backgroundColor: "#DBEAFE",
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 20,
-  },
-  categoryText: { fontSize: 11, fontWeight: "700", color: Colors.primary },
-  timeRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  readTime: { fontSize: 12, color: Colors.textSecondary },
   title: {
-    fontSize: 22,
-    fontWeight: "800",
+    fontSize: 24,
+    lineHeight: 32,
+    fontWeight: "900",
     color: Colors.text,
-    lineHeight: 30,
-    marginBottom: 10,
-  },
-  description: {
-    fontSize: 15,
-    color: Colors.textSecondary,
-    lineHeight: 24,
-    marginBottom: 20,
   },
   authorRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.background,
-    padding: 14,
-    borderRadius: 14,
-  },
-  authorAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    marginRight: 12,
-    backgroundColor: Colors.border,
-  },
-  authorName: { fontSize: 14, fontWeight: "700", color: Colors.text },
-  authorTitle: { fontSize: 11, color: Colors.primary },
-  divider: { height: 1, backgroundColor: Colors.border, marginVertical: 24 },
-  bodyText: {
-    fontSize: 15,
-    color: Colors.text,
-    lineHeight: 26,
-    marginBottom: 16,
-  },
-  bodyBold: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: Colors.text,
-    lineHeight: 24,
-    marginBottom: 8,
-  },
-  relatedTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: Colors.text,
-    marginBottom: 16,
-  },
-  relatedCard: {
-    flexDirection: "row",
-    borderRadius: 16,
-    overflow: "hidden",
+    gap: 8,
     borderWidth: 1,
     borderColor: Colors.border,
-    marginBottom: 12,
+    borderRadius: 14,
+    padding: 10,
+    backgroundColor: Colors.background,
+  },
+  authorAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.border,
+  },
+  authorAvatarFallback: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#E2E8F0",
+  },
+  authorAvatarFallbackText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#0F172A",
+  },
+  authorName: { fontSize: 13, fontWeight: "700", color: Colors.text },
+  authorSub: { fontSize: 11, color: Colors.textSecondary },
+  metaMiniRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  metaMiniText: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    fontWeight: "600",
+  },
+  actionRow: { flexDirection: "row", gap: 10 },
+  actionBtn: {
+    flexDirection: "row",
+    gap: 6,
+    alignItems: "center",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: Colors.background,
+  },
+  actionText: { fontSize: 12, color: Colors.textSecondary, fontWeight: "700" },
+  articleCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  section: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 14,
     backgroundColor: Colors.surface,
   },
-  relatedImage: { width: 100, height: 90 },
-  relatedText: {
-    fontSize: 13,
-    fontWeight: "600",
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "800",
     color: Colors.text,
-    lineHeight: 18,
+    marginBottom: 10,
   },
-  relatedTime: { fontSize: 11, color: Colors.primary, marginTop: 6 },
+  reviewHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  reviewSummary: { fontSize: 13, color: Colors.primary, fontWeight: "700" },
+  sortRow: { flexDirection: "row", gap: 8, marginBottom: 10 },
+  sortBtn: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  sortBtnActive: { borderColor: Colors.primary, backgroundColor: "#DBEAFE" },
+  sortText: { fontSize: 12, color: Colors.textSecondary, fontWeight: "600" },
+  sortTextActive: { color: Colors.primary, fontWeight: "700" },
+  reviewInputWrap: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 10,
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: Colors.text,
+    marginBottom: 6,
+  },
+  starRow: { flexDirection: "row", gap: 8, marginBottom: 8 },
+  commentInput: {
+    minHeight: 96,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    padding: 10,
+    textAlignVertical: "top",
+    color: Colors.text,
+    fontSize: 13,
+    marginBottom: 8,
+  },
+  submitBtn: {
+    backgroundColor: Colors.primary,
+    borderRadius: 10,
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  submitBtnDisabled: { opacity: 0.5 },
+  submitText: { color: Colors.surface, fontSize: 13, fontWeight: "700" },
+  reviewCard: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    padding: 10,
+    backgroundColor: Colors.background,
+  },
+  reviewCardHead: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  reviewUserWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  reviewAvatar: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: Colors.border,
+  },
+  reviewUser: { fontSize: 13, fontWeight: "700", color: Colors.text },
+  reviewDate: { fontSize: 11, color: Colors.textSecondary },
+  reviewStars: { color: "#D97706", fontSize: 12, marginBottom: 4 },
+  reviewComment: { fontSize: 13, lineHeight: 19, color: Colors.textSecondary },
+  moreBtn: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  moreText: { fontSize: 12, fontWeight: "700", color: Colors.primary },
+  relatedCard: {
+    flexDirection: "row",
+    gap: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    padding: 8,
+    backgroundColor: Colors.background,
+  },
+  relatedImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 10,
+    backgroundColor: Colors.lightGray,
+  },
+  relatedTitle: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: Colors.text,
+    fontWeight: "700",
+  },
+  relatedMeta: { marginTop: 6, fontSize: 11, color: Colors.textSecondary },
+});
+
+const markdownStyles = StyleSheet.create({
+  body: {
+    color: Colors.text,
+    fontSize: 15,
+    lineHeight: 24,
+  },
+  paragraph: {
+    marginTop: 0,
+    marginBottom: 14,
+    color: Colors.text,
+    fontSize: 15,
+    lineHeight: 24,
+  },
+  heading1: {
+    fontSize: 24,
+    lineHeight: 32,
+    fontWeight: "800",
+    color: Colors.text,
+    marginTop: 10,
+    marginBottom: 12,
+  },
+  heading2: {
+    fontSize: 19,
+    lineHeight: 27,
+    fontWeight: "700",
+    color: Colors.primary,
+    marginTop: 12,
+    marginBottom: 10,
+  },
+  heading3: {
+    fontSize: 17,
+    lineHeight: 25,
+    fontWeight: "700",
+    color: Colors.text,
+    marginTop: 10,
+    marginBottom: 8,
+  },
+  bullet_list: {
+    marginTop: 2,
+    marginBottom: 10,
+  },
+  ordered_list: {
+    marginTop: 2,
+    marginBottom: 10,
+  },
+  list_item: {
+    marginBottom: 7,
+    color: Colors.text,
+    lineHeight: 23,
+  },
+  hr: {
+    backgroundColor: "#E2E8F0",
+    height: 1,
+    marginTop: 10,
+    marginBottom: 14,
+  },
+  strong: {
+    fontWeight: "700",
+    color: Colors.text,
+  },
+  em: {
+    fontStyle: "italic",
+    color: Colors.text,
+  },
+  link: {
+    color: Colors.primary,
+    textDecorationLine: "underline",
+  },
+  blockquote: {
+    borderLeftWidth: 3,
+    borderLeftColor: "#93C5FD",
+    paddingLeft: 12,
+    marginVertical: 8,
+  },
 });

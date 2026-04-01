@@ -56,6 +56,18 @@ async function resolvePaymentTarget(type, relatedId, user) {
     if (!booking) throw new ApiError(404, "Lab booking not found");
     if (String(booking.patient) !== String(user._id) && user.role !== "admin")
       throw new ApiError(403, "Not allowed");
+
+    if (booking.status === "cancelled" || booking.status === "rejected") {
+      throw new ApiError(
+        400,
+        "Cannot pay for a cancelled/rejected lab booking",
+      );
+    }
+
+    if (booking.paymentStatus === "paid") {
+      throw new ApiError(400, "Lab booking already paid");
+    }
+
     return { amount: booking.amount, model: "LabBooking", doc: booking };
   }
 
@@ -64,6 +76,15 @@ async function resolvePaymentTarget(type, relatedId, user) {
     if (!order) throw new ApiError(404, "Order not found");
     if (String(order.user) !== String(user._id) && user.role !== "admin")
       throw new ApiError(403, "Not allowed");
+
+    if (order.status === "cancelled") {
+      throw new ApiError(400, "Cannot pay for a cancelled order");
+    }
+
+    if (order.paymentStatus === "paid") {
+      throw new ApiError(400, "Order already paid");
+    }
+
     return { amount: order.amount, model: "Order", doc: order };
   }
 
@@ -72,6 +93,11 @@ async function resolvePaymentTarget(type, relatedId, user) {
     if (!sub) throw new ApiError(404, "Subscription not found");
     if (String(sub.doctor) !== String(user._id) && user.role !== "admin")
       throw new ApiError(403, "Not allowed");
+
+    if (sub.status === "active") {
+      throw new ApiError(400, "Subscription is already active");
+    }
+
     return { amount: sub.price, model: "Subscription", doc: sub };
   }
 

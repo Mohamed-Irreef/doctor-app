@@ -5,6 +5,9 @@ const {
   doctorSignupRequest,
   getDoctors,
   getDoctorById,
+  getDoctorReviews,
+  toggleDoctorLike,
+  getMyDoctorLikes,
   updateDoctorProfile,
   getDoctorAppointments,
   getDoctorSubscription,
@@ -17,7 +20,10 @@ const {
 const router = express.Router();
 
 router.get("/", getDoctors);
+router.get("/likes/my", protectRoute, getMyDoctorLikes);
 router.get("/:id", getDoctorById);
+router.get("/:id/reviews", getDoctorReviews);
+router.post("/:id/like", protectRoute, toggleDoctorLike);
 router.post(
   "/signup-request",
   validate(doctorSignupRequestSchema),

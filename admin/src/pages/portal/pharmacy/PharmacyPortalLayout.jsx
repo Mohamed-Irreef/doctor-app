@@ -22,6 +22,11 @@ const NAV_ITEMS = [
   { to: "/portal/pharmacy/dashboard", label: "Dashboard", icon: BarChart3 },
   { to: "/portal/pharmacy/products", label: "Products", icon: Pill },
   { to: "/portal/pharmacy/orders", label: "Orders", icon: ClipboardList },
+  {
+    to: "/portal/pharmacy/orders/tracking",
+    label: "Order Tracking",
+    icon: ClipboardList,
+  },
   { to: "/portal/pharmacy/inventory", label: "Inventory", icon: Warehouse },
   { to: "/portal/pharmacy/earnings", label: "Earnings", icon: DollarSign },
   { to: "/portal/pharmacy/settings", label: "Settings", icon: Settings },

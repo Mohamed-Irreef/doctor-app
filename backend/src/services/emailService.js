@@ -79,6 +79,31 @@ async function sendLabReportUploadedEmail({
   });
 }
 
+async function sendLabBookingStatusEmail({
+  to,
+  patientName,
+  testName,
+  status,
+  dateTime,
+  labName,
+}) {
+  return sendEmail({
+    to,
+    subject: "Your Lab Test Status Updated",
+    html: `
+      <p>Hi ${patientName},</p>
+      <p>Your lab test booking status has been updated.</p>
+      <ul>
+        <li><strong>Test:</strong> ${testName || "Lab Test"}</li>
+        <li><strong>New Status:</strong> ${status}</li>
+        <li><strong>Date & Time:</strong> ${dateTime || "-"}</li>
+        <li><strong>Lab:</strong> ${labName || "NiviDoc Lab Partner"}</li>
+      </ul>
+      <p>Thank you for choosing NiviDoc.</p>
+    `,
+  });
+}
+
 async function sendPharmacyOrderPlacedEmail({
   to,
   patientName,
@@ -113,6 +138,7 @@ module.exports = {
   sendPartnerApprovalEmail,
   sendLabBookingConfirmationEmail,
   sendLabReportUploadedEmail,
+  sendLabBookingStatusEmail,
   sendPharmacyOrderPlacedEmail,
   sendPharmacyOrderStatusEmail,
 };

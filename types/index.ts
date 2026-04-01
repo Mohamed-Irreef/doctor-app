@@ -7,6 +7,7 @@ export interface Doctor {
   experience: string;
   rating: number;
   reviews: number;
+  likes?: number;
   fee: number;
   about: string;
   image: string;
@@ -19,10 +20,20 @@ export interface Doctor {
 
 export interface Article {
   id: string;
+  slug?: string;
   title: string;
   description: string;
   image: string;
   readTime: string;
+  category?: string;
+  views?: number;
+  likes?: number;
+  createdAt?: string;
+  author?: {
+    name?: string;
+    role?: string;
+    avatar?: string;
+  };
 }
 
 export interface LabTest {

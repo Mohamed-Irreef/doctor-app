@@ -5,6 +5,7 @@ import PublicLayout from "./components/public/PublicLayout";
 
 import AppointmentsPage from "./pages/AppointmentsPage";
 import ApprovalHubPage from "./pages/ApprovalHubPage";
+import CreateArticlePage from "./pages/articles/CreateArticle";
 import AuditLogsPage from "./pages/AuditLogsPage";
 import DashboardPage from "./pages/DashboardPage";
 import DoctorRequestsPage from "./pages/DoctorRequestsPage";
@@ -19,9 +20,6 @@ import PartnersManagementPage from "./pages/PartnersManagementPage";
 import PatientsPage from "./pages/PatientsPage";
 import PaymentsPage from "./pages/PaymentsPage";
 import PharmacyPage from "./pages/PharmacyPage";
-import ReviewsPage from "./pages/ReviewsPage";
-import SettingsPage from "./pages/SettingsPage";
-import SlotsPage from "./pages/SlotsPage";
 import LabPortalPage from "./pages/portal/LabPortalPage";
 import AboutPage from "./pages/public/AboutPage";
 import BusinessRegistrationPage from "./pages/public/BusinessRegistrationPage";
@@ -35,6 +33,9 @@ import PrivacyPage from "./pages/public/PrivacyPage";
 import RegistrationSuccessPage from "./pages/public/RegistrationSuccessPage";
 import ServicesPage from "./pages/public/ServicesPage";
 import TermsPage from "./pages/public/TermsPage";
+import ReviewsPage from "./pages/ReviewsPage";
+import SettingsPage from "./pages/SettingsPage";
+import SlotsPage from "./pages/SlotsPage";
 import { getPortalUser, isRoleAuthenticated } from "./services/api";
 
 const PharmacyPortalLayout = lazy(
@@ -48,6 +49,9 @@ const PharmacyProductsRoutePage = lazy(
 );
 const PharmacyOrdersRoutePage = lazy(
   () => import("./pages/portal/pharmacy/OrdersPage"),
+);
+const PharmacyOrderTrackingRoutePage = lazy(
+  () => import("./pages/portal/pharmacy/OrderTrackingPage"),
 );
 const PharmacyInventoryRoutePage = lazy(
   () => import("./pages/portal/pharmacy/InventoryPage"),
@@ -123,6 +127,22 @@ export default function App() {
           }
         />
         <Route
+          path="/portal/lab/bookings"
+          element={
+            <RoleRoute role="lab_admin">
+              <LabPortalPage />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="/portal/lab/orders-calendar"
+          element={
+            <RoleRoute role="lab_admin">
+              <LabPortalPage />
+            </RoleRoute>
+          }
+        />
+        <Route
           path="/portal/pharmacy"
           element={
             <RoleRoute role="pharmacy_admin">
@@ -154,6 +174,14 @@ export default function App() {
             element={
               <LazyRoute>
                 <PharmacyOrdersRoutePage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path="orders/tracking"
+            element={
+              <LazyRoute>
+                <PharmacyOrderTrackingRoutePage />
               </LazyRoute>
             }
           />
@@ -308,6 +336,14 @@ export default function App() {
           element={
             <AdminRoute>
               <ApprovalHubPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/articles"
+          element={
+            <AdminRoute>
+              <CreateArticlePage />
             </AdminRoute>
           }
         />

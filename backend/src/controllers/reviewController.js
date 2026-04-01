@@ -5,14 +5,33 @@ const ApiError = require("../utils/ApiError");
 const catchAsync = require("../utils/catchAsync");
 
 const createReview = catchAsync(async (req, res) => {
-  const exists = await Review.findOne({ appointment: req.body.appointmentId });
-  if (exists)
-    throw new ApiError(409, "Review already submitted for this appointment");
+  const doctorId = req.body.doctorId;
+  const appointmentId = req.body.appointmentId || null;
+
+  if (!doctorId) {
+    throw new ApiError(400, "Doctor id is required");
+  }
+
+  if (appointmentId) {
+    const exists = await Review.findOne({ appointment: appointmentId }).lean();
+    if (exists) {
+      throw new ApiError(409, "Review already submitted for this appointment");
+    }
+  } else {
+    const exists = await Review.findOne({
+      doctor: doctorId,
+      patient: req.user._id,
+      appointment: null,
+    }).lean();
+    if (exists) {
+      throw new ApiError(409, "You have already reviewed this doctor");
+    }
+  }
 
   const review = await Review.create({
-    doctor: req.body.doctorId,
+    doctor: doctorId,
     patient: req.user._id,
-    appointment: req.body.appointmentId,
+    appointment: appointmentId,
     rating: req.body.rating,
     comment: req.body.comment,
   });

@@ -35,6 +35,7 @@ const doctorProfileSchema = new mongoose.Schema(
     consultationFeeChat: { type: Number, default: 0 },
     dailySlotLimit: { type: Number, default: 20 },
     noticePeriodHours: { type: Number, default: 24 },
+    likesCount: { type: Number, default: 0 },
     rating: { type: Number, default: 0 },
     reviewsCount: { type: Number, default: 0 },
     featuredUntil: { type: Date },

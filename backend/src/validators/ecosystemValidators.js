@@ -216,6 +216,16 @@ const createPartnerMedicineSchema = z.object({
 });
 
 const LAB_STATUS_VALUES = [
+  "pending",
+  "approved",
+  "rejected",
+  "on-the-way",
+  "on_the_way",
+  "reached",
+  "arrived",
+  "report-submitted",
+  "report_submitted",
+  "closed",
   "booked",
   "sample-collected",
   "sample_collected",
@@ -251,6 +261,39 @@ const updateOrderStatusSchema = z.object({
   trackingId: z.string().max(80).optional(),
 });
 
+const listOrdersQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(20).default(10),
+  status: z
+    .enum([
+      "pending",
+      "approved",
+      "rejected",
+      "packing",
+      "shipping",
+      "delivered",
+      "placed",
+      "confirmed",
+      "packed",
+      "shipped",
+      "cancelled",
+    ])
+    .optional(),
+  trackingOnly: z.enum(["true", "false"]).optional().default("false"),
+});
+
+const updateOrderStatusV1Schema = z.object({
+  status: z.enum([
+    "pending",
+    "packing",
+    "shipping",
+    "delivered",
+    "approved",
+    "rejected",
+  ]),
+  note: z.string().max(300).optional(),
+});
+
 const updateLabSettingsSchema = z.object({
   labName: z.string().min(2).optional(),
   address: z.string().min(4).optional(),
@@ -272,5 +315,7 @@ module.exports = {
   createPartnerMedicineSchema,
   updateLabBookingStatusSchema,
   updateOrderStatusSchema,
+  listOrdersQuerySchema,
+  updateOrderStatusV1Schema,
   updateLabSettingsSchema,
 };

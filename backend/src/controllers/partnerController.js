@@ -11,6 +11,7 @@ const ApiResponse = require("../utils/ApiResponse");
 const catchAsync = require("../utils/catchAsync");
 const {
   sendLabReportUploadedEmail,
+  sendLabBookingStatusEmail,
   sendPharmacyOrderStatusEmail,
 } = require("../services/emailService");
 const {
@@ -45,6 +46,85 @@ function ensureRole(user, role) {
   if (user.role !== role) {
     throw new ApiError(403, "Forbidden");
   }
+}
+
+function normalizeBookingType(type, fallback = "home_collection") {
+  const value = String(type || "")
+    .trim()
+    .toLowerCase();
+  if (["home_collection", "home"].includes(value)) return "home_collection";
+  if (["lab_visit", "lab"].includes(value)) return "lab_visit";
+  return fallback;
+}
+
+function normalizeBookingForPortal(booking) {
+  const bookingType = normalizeBookingType(
+    booking.bookingType || booking.collectionType,
+  );
+  const tests =
+    Array.isArray(booking.tests) && booking.tests.length
+      ? booking.tests
+      : booking.labTest
+        ? [booking.labTest]
+        : [];
+
+  const address = booking.address || booking.homeCollectionAddress || {};
+  const dateValue =
+    booking.scheduledDate || booking.bookingDate || booking.createdAt;
+
+  return {
+    ...booking,
+    bookingType,
+    tests,
+    timeSlot: booking.timeSlot || booking.collectionTimeSlot || "",
+    address: {
+      flat: address.flat || address.flatHouse || "",
+      street: address.street || address.area || "",
+      landmark: address.landmark || "",
+      city: address.city || "",
+      pincode: address.pincode || "",
+    },
+    contactNumber:
+      booking.contactNumber ||
+      booking.patient?.phone ||
+      booking.homeCollectionAddress?.contactNumber ||
+      "",
+    date: dateValue,
+  };
+}
+
+function buildLabBookingsQuery(rawQuery = {}) {
+  const query = {};
+
+  if (rawQuery.status) {
+    query.status = normalizeLabBookingStatus(rawQuery.status, "pending");
+  }
+
+  if (rawQuery.type) {
+    const normalizedType = normalizeBookingType(rawQuery.type, "");
+    if (normalizedType) {
+      query.$or = [
+        { bookingType: normalizedType },
+        {
+          collectionType: normalizedType === "home_collection" ? "home" : "lab",
+        },
+      ];
+    }
+  }
+
+  if (rawQuery.date) {
+    const start = new Date(rawQuery.date);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(rawQuery.date);
+    end.setHours(23, 59, 59, 999);
+    query.scheduledDate = { $gte: start, $lte: end };
+  } else if (rawQuery.dateFrom || rawQuery.dateTo) {
+    query.bookingDate = {};
+    if (rawQuery.dateFrom) query.bookingDate.$gte = new Date(rawQuery.dateFrom);
+    if (rawQuery.dateTo) query.bookingDate.$lte = new Date(rawQuery.dateTo);
+  }
+
+  return query;
 }
 
 function createSlug(value = "") {
@@ -512,32 +592,51 @@ const updateLabTest = catchAsync(async (req, res) => {
 const getLabBookings = catchAsync(async (req, res) => {
   ensureRole(req.user, "lab_admin");
 
-  const query = {};
-  if (req.query.status) {
-    query.status = normalizeLabBookingStatus(req.query.status);
-  }
-  if (req.query.dateFrom || req.query.dateTo) {
-    query.bookingDate = {};
-    if (req.query.dateFrom)
-      query.bookingDate.$gte = new Date(req.query.dateFrom);
-    if (req.query.dateTo) query.bookingDate.$lte = new Date(req.query.dateTo);
-  }
+  const page = Math.max(1, Number(req.query.page || 1));
+  const limit = Math.min(20, Math.max(1, Number(req.query.limit || 10)));
+  const skip = (page - 1) * limit;
+  const query = buildLabBookingsQuery(req.query);
 
-  const bookings = await LabBooking.find(query)
-    .populate("patient", "name email phone")
-    .populate("labTest", "name owner category reportTime price")
-    .sort({ createdAt: -1 })
+  const ownedTests = await LabTest.find({ owner: req.user._id })
+    .select("_id")
     .lean();
+  const ownedTestIds = ownedTests.map((item) => item._id);
+  query.labTest = { $in: ownedTestIds };
 
-  const owned = bookings.filter(
-    (item) => String(item.labTest?.owner || "") === String(req.user._id),
+  const [bookings, total] = await Promise.all([
+    LabBooking.find(query)
+      .populate("patient", "name email phone")
+      .populate(
+        "labTest",
+        "name owner category reportTime price shortDescription fullDescription",
+      )
+      .populate(
+        "tests",
+        "name owner category reportTime price shortDescription fullDescription",
+      )
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    LabBooking.countDocuments(query),
+  ]);
+
+  const owned = bookings.map(normalizeBookingForPortal);
+
+  return res.status(200).json(
+    new ApiResponse(200, "Lab bookings fetched", {
+      items: owned,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.max(1, Math.ceil(total / limit)),
+      },
+    }),
   );
-  return res
-    .status(200)
-    .json(new ApiResponse(200, "Lab bookings fetched", owned));
 });
 
-const updateLabBookingStatus = catchAsync(async (req, res) => {
+async function processLabBookingStatusUpdate(req, nextStatusInput) {
   ensureRole(req.user, "lab_admin");
   const booking = await LabBooking.findById(req.params.id).populate(
     "labTest",
@@ -547,15 +646,25 @@ const updateLabBookingStatus = catchAsync(async (req, res) => {
   if (String(booking.labTest?.owner || "") !== String(req.user._id)) {
     throw new ApiError(403, "Not allowed to update this booking");
   }
+
   const previousStatus = booking.status;
+  const targetStatus = normalizeLabBookingStatus(
+    nextStatusInput,
+    booking.status,
+  );
 
   const { next: nextStatus } = transitionLabBooking({
     booking,
-    nextStatus: req.body.status,
+    nextStatus: targetStatus,
     reportUrl: req.body.reportUrl,
     note: req.body.note,
     actorLabel: "lab admin",
   });
+
+  if (!booking.bookingType) {
+    booking.bookingType = normalizeBookingType(booking.collectionType);
+  }
+
   await booking.save();
 
   emitToUser(req.user._id, "lab:booking-updated", {
@@ -633,9 +742,50 @@ const updateLabBookingStatus = catchAsync(async (req, res) => {
     }
   }
 
+  try {
+    const hydrated = await LabBooking.findById(booking._id)
+      .populate("patient", "name email")
+      .populate("labTest", "name");
+    if (hydrated?.patient?.email) {
+      await sendLabBookingStatusEmail({
+        to: hydrated.patient.email,
+        patientName: hydrated.patient.name || "Patient",
+        testName: hydrated.labTest?.name || "Lab Test",
+        status: nextStatus,
+        dateTime: new Date().toLocaleString(),
+        labName: req.user?.name || "NiviDoc Lab",
+      });
+    }
+  } catch (error) {
+    logError("lab_booking_status_email_failed", error, {
+      bookingId: booking._id,
+      status: nextStatus,
+    });
+  }
+
+  return { booking, nextStatus };
+}
+
+const updateLabBookingStatus = catchAsync(async (req, res) => {
+  const { booking } = await processLabBookingStatusUpdate(req, req.body.status);
+
   return res
     .status(200)
     .json(new ApiResponse(200, "Lab booking updated", booking));
+});
+
+const approveLabBooking = catchAsync(async (req, res) => {
+  const { booking } = await processLabBookingStatusUpdate(req, "approved");
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "Lab booking approved", booking));
+});
+
+const rejectLabBooking = catchAsync(async (req, res) => {
+  const { booking } = await processLabBookingStatusUpdate(req, "rejected");
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "Lab booking rejected", booking));
 });
 
 const deleteLabTest = catchAsync(async (req, res) => {
@@ -955,6 +1105,23 @@ const updatePartnerMedicine = catchAsync(async (req, res) => {
     .json(new ApiResponse(200, "Medicine re-submitted for approval", med));
 });
 
+const deletePartnerMedicine = catchAsync(async (req, res) => {
+  ensureRole(req.user, "pharmacy_admin");
+
+  const med = await Medicine.findOneAndDelete({
+    _id: req.params.id,
+    owner: req.user._id,
+  });
+
+  if (!med) throw new ApiError(404, "Medicine not found");
+
+  return res.status(200).json(
+    new ApiResponse(200, "Medicine deleted", {
+      id: req.params.id,
+    }),
+  );
+});
+
 const getPartnerOrders = catchAsync(async (req, res) => {
   ensureRole(req.user, "pharmacy_admin");
 
@@ -1086,6 +1253,8 @@ module.exports = {
   deleteLabTest,
   getLabBookings,
   updateLabBookingStatus,
+  approveLabBooking,
+  rejectLabBooking,
   getLabMasterData,
   addLabMasterDataItem,
   updateLabMasterDataItem,
@@ -1096,6 +1265,7 @@ module.exports = {
   createMedicineByPartner,
   getPartnerMedicines,
   updatePartnerMedicine,
+  deletePartnerMedicine,
   getPartnerOrders,
   updatePartnerOrderStatus,
 };

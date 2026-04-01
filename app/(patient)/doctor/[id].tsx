@@ -1,68 +1,81 @@
+import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  ArrowLeft,
-  Clock,
-  Heart,
-  MapPin,
-  Star,
-  Users,
+    ArrowLeft,
+    Clock,
+    Heart,
+    MapPin,
+    Star,
+    Users,
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ButtonPrimary from "../../../components/ButtonPrimary";
 import { DoctorCardSkeleton } from "../../../components/SkeletonLoader";
 import { Colors } from "../../../constants/Colors";
 import { Typography } from "../../../constants/Typography";
-import { getDoctorById } from "../../../services/api";
-import { useFavoritesStore } from "../../../store/favoritesStore";
-import type { Doctor, Review } from "../../../types";
+import {
+    getDoctorById, getDoctorReviews,
+    getMyDoctorLikes,
+    toggleDoctorLike
+} from "../../../services/api";
+import type { Doctor } from "../../../types";
 
-const MOCK_REVIEWS: Review[] = [
-  {
-    id: "r1",
-    userName: "Rahul T.",
-    userImage: "https://avatar.iran.liara.run/public/12",
-    rating: 5,
-    comment:
-      "Dr. Sharma is absolutely amazing. He listened patiently and gave a very thorough diagnosis.",
-    date: "Oct 10, 2026",
-  },
-  {
-    id: "r2",
-    userName: "Ananya S.",
-    userImage: "https://avatar.iran.liara.run/public/64",
-    rating: 4,
-    comment:
-      "Very professional and caring. I felt comfortable throughout the consultation.",
-    date: "Sep 22, 2026",
-  },
-];
+function formatDisplayDate(value?: string) {
+  if (!value) return "";
+  return new Date(value).toLocaleDateString("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  });
+}
 
 export default function DoctorProfileScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { toggleFavorite, isFavorite } = useFavoritesStore();
 
   const [doctor, setDoctor] = useState<Doctor | null>(null);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [liked, setLiked] = useState(false);
+  const [liking, setLiking] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"about" | "reviews">("about");
 
-  useEffect(() => {
+  const loadDoctorData = React.useCallback(async () => {
+    if (!id) return;
     (async () => {
       setLoading(true);
-      const res = await getDoctorById(id ?? "");
+      const [res, reviewsRes, likesRes] = await Promise.all([
+        getDoctorById(id ?? ""),
+        getDoctorReviews(id ?? ""),
+        getMyDoctorLikes([id]),
+      ]);
       if (res.data) setDoctor(res.data);
+      if (Array.isArray(reviewsRes.data)) setReviews(reviewsRes.data);
+      if (Array.isArray(likesRes.data)) {
+        setLiked(likesRes.data.includes(String(id)));
+      }
       setLoading(false);
     })();
   }, [id]);
+
+  useEffect(() => {
+    loadDoctorData();
+  }, [loadDoctorData]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadDoctorData();
+    }, [loadDoctorData]),
+  );
 
   if (loading) {
     return (
@@ -89,14 +102,13 @@ export default function DoctorProfileScreen() {
     );
   }
 
-  const favored = isFavorite(doctor.id);
   const stats = [
     {
       icon: Star,
       color: "#D97706",
       bg: "#FEF3C7",
       value: String(doctor.rating),
-      label: "Reviews",
+      label: `${doctor.reviews || 0} Reviews`,
     },
     {
       icon: Clock,
@@ -134,13 +146,29 @@ export default function DoctorProfileScreen() {
               <ArrowLeft color={Colors.text} size={22} />
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => toggleFavorite(doctor)}
+              onPress={async () => {
+                if (liking) return;
+                setLiking(true);
+                const response = await toggleDoctorLike(doctor.id);
+                setLiking(false);
+                if (response.data) {
+                  setLiked(Boolean(response.data.liked));
+                  setDoctor((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          likes: Number(response.data.likesCount || 0),
+                        }
+                      : prev,
+                  );
+                }
+              }}
               style={styles.iconBtn}
             >
               <Heart
                 size={20}
-                color={favored ? Colors.error : Colors.text}
-                fill={favored ? Colors.error : "none"}
+                color={liked ? Colors.error : Colors.text}
+                fill={liked ? Colors.error : "none"}
               />
             </TouchableOpacity>
           </SafeAreaView>
@@ -228,18 +256,20 @@ export default function DoctorProfileScreen() {
             </>
           ) : (
             <>
-              {MOCK_REVIEWS.map((review) => (
-                <View key={review.id} style={styles.reviewCard}>
+              {reviews.map((review) => (
+                <View key={String(review._id)} style={styles.reviewCard}>
                   <View style={styles.reviewHeader}>
                     <Image
-                      source={{ uri: review.userImage }}
+                      source={{ uri: review.patient?.image || "" }}
                       style={styles.reviewAvatar}
                     />
                     <View style={{ flex: 1 }}>
                       <Text style={[Typography.body1, { fontWeight: "600" }]}>
-                        {review.userName}
+                        {review.patient?.name || "Patient"}
                       </Text>
-                      <Text style={Typography.caption}>{review.date}</Text>
+                      <Text style={Typography.caption}>
+                        {formatDisplayDate(review.createdAt)}
+                      </Text>
                     </View>
                     <View style={styles.reviewRating}>
                       <Star size={12} color="#D97706" fill="#D97706" />
@@ -251,14 +281,14 @@ export default function DoctorProfileScreen() {
                           color: "#D97706",
                         }}
                       >
-                        {review.rating}
+                        {Number(review.rating || 0)}
                       </Text>
                     </View>
                   </View>
                   <Text
                     style={[Typography.body2, { lineHeight: 22, marginTop: 8 }]}
                   >
-                    {review.comment}
+                    {review.comment || ""}
                   </Text>
                 </View>
               ))}

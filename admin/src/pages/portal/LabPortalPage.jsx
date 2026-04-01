@@ -1,4 +1,14 @@
+import {
+    CalendarDays,
+    ClipboardList,
+    LayoutDashboard,
+    ListChecks,
+    Settings,
+    TestTube2,
+    Wallet,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
 import {
     createLabPartnerTestMultipart,
@@ -11,15 +21,18 @@ import {
     updateLabPartnerTest,
     uploadLabReportFile,
 } from "../../services/api";
+import AdminBookingsPage from "../admin/bookings";
+import OrdersCalendarPage from "../lab/OrdersCalendar";
 
 const menuItems = [
-  { key: "dashboard", label: "Dashboard" },
-  { key: "tests", label: "Test Management" },
-  { key: "test-list", label: "Test List" },
-  { key: "bookings", label: "Bookings" },
-  { key: "reports", label: "Reports" },
-  { key: "revenue", label: "Revenue" },
-  { key: "settings", label: "Settings" },
+  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { key: "tests", label: "Test Management", icon: TestTube2 },
+  { key: "test-list", label: "Test List", icon: ListChecks },
+  { key: "bookings", label: "Bookings", icon: ClipboardList },
+  { key: "orders-calendar", label: "Orders Calendar", icon: CalendarDays },
+  { key: "reports", label: "Reports", icon: ClipboardList },
+  { key: "revenue", label: "Revenue", icon: Wallet },
+  { key: "settings", label: "Settings", icon: Settings },
 ];
 
 const defaultTestForm = {
@@ -138,6 +151,7 @@ function Sidebar({ activeTab, setActiveTab }) {
 
       <nav className="mt-4 space-y-2">
         {menuItems.map((item) => {
+          const Icon = item.icon;
           const active = activeTab === item.key;
           return (
             <button
@@ -150,7 +164,10 @@ function Sidebar({ activeTab, setActiveTab }) {
                   : "text-slate-700 hover:bg-slate-100"
               }`}
             >
-              {item.label}
+              <span className="inline-flex items-center gap-2">
+                {Icon ? <Icon size={16} /> : null}
+                {item.label}
+              </span>
             </button>
           );
         })}
@@ -1634,52 +1651,6 @@ function TestListPage({ tests, onDeleteTest, onUpdateTest }) {
   );
 }
 
-function BookingsPage({ bookings }) {
-  return (
-    <div className={sectionCardClass}>
-      <h3 className="text-lg font-bold text-[#0F172A]">Bookings</h3>
-      <div className="mt-4 overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead>
-            <tr className="border-b border-[#E2E8F0] text-left text-slate-500">
-              <th className="py-2 pr-3">Booking ID</th>
-              <th className="py-2 pr-3">Patient</th>
-              <th className="py-2 pr-3">Status</th>
-              <th className="py-2 pr-3">Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {bookings.length ? (
-              bookings.map((item) => (
-                <tr key={item._id} className="border-b border-[#E2E8F0]">
-                  <td className="py-3 pr-3 font-semibold">
-                    {item._id?.slice(-8)}
-                  </td>
-                  <td className="py-3 pr-3">
-                    {item.patient?.name || "Patient"}
-                  </td>
-                  <td className="py-3 pr-3 capitalize">{item.status}</td>
-                  <td className="py-3 pr-3">
-                    {item.createdAt
-                      ? new Date(item.createdAt).toLocaleDateString()
-                      : "-"}
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={4} className="py-8 text-center text-slate-500">
-                  No bookings found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
 function ReportsPage({ bookings }) {
   const [uploading, setUploading] = useState(false);
 
@@ -1894,6 +1865,8 @@ function SettingsPage() {
 }
 
 export default function LabPortalPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [dashboard, setDashboard] = useState({});
   const [tests, setTests] = useState([]);
@@ -1932,6 +1905,32 @@ export default function LabPortalPage() {
   useEffect(() => {
     queueMicrotask(load);
   }, []);
+
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.endsWith("/orders-calendar")) {
+      setActiveTab("orders-calendar");
+      return;
+    }
+    if (path.endsWith("/bookings")) {
+      setActiveTab("bookings");
+      return;
+    }
+    setActiveTab("dashboard");
+  }, [location.pathname]);
+
+  const handleTabChange = (nextTab) => {
+    setActiveTab(nextTab);
+    if (nextTab === "orders-calendar") {
+      navigate("/portal/lab/orders-calendar");
+      return;
+    }
+    if (nextTab === "bookings") {
+      navigate("/portal/lab/bookings");
+      return;
+    }
+    navigate("/portal/lab");
+  };
 
   const submitTest = async (form, files) => {
     const cleanedParameters = (form.parameters || []).filter(
@@ -2038,7 +2037,7 @@ export default function LabPortalPage() {
 
   return (
     <div className="flex h-screen bg-[#F8FAFC]">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Sidebar activeTab={activeTab} setActiveTab={handleTabChange} />
 
       <main className="flex-1 overflow-y-auto p-6">
         <div className="space-y-6">
@@ -2051,7 +2050,8 @@ export default function LabPortalPage() {
               onUpdateTest={updateTest}
             />
           )}
-          {activeTab === "bookings" && <BookingsPage bookings={bookings} />}
+          {activeTab === "bookings" && <AdminBookingsPage />}
+          {activeTab === "orders-calendar" && <OrdersCalendarPage />}
           {activeTab === "reports" && <ReportsPage bookings={bookings} />}
           {activeTab === "revenue" && <RevenuePage stats={stats} />}
           {activeTab === "settings" && <SettingsPage />}

@@ -85,6 +85,8 @@ const labTestSchema = new mongoose.Schema(
     approvalNote: { type: String },
     approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     approvedAt: { type: Date },
+    rating: { type: Number, default: 0 },
+    reviewsCount: { type: Number, default: 0 },
     active: { type: Boolean, default: true },
     status: {
       type: String,

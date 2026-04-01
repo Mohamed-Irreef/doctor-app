@@ -10,6 +10,8 @@ const {
   deleteLabTest,
   getLabBookings,
   updateLabBookingStatus,
+  approveLabBooking,
+  rejectLabBooking,
   getLabMasterData,
   addLabMasterDataItem,
   updateLabMasterDataItem,
@@ -20,6 +22,7 @@ const {
   createMedicineByPartner,
   getPartnerMedicines,
   updatePartnerMedicine,
+  deletePartnerMedicine,
   getPartnerOrders,
   updatePartnerOrderStatus,
 } = require("../controllers/partnerController");
@@ -85,6 +88,18 @@ router.put(
   authorizeRoles("lab_admin"),
   validate(updateLabBookingStatusSchema),
   updateLabBookingStatus,
+);
+router.put(
+  "/partner/lab/bookings/:id/approve",
+  protectRoute,
+  authorizeRoles("lab_admin"),
+  approveLabBooking,
+);
+router.put(
+  "/partner/lab/bookings/:id/reject",
+  protectRoute,
+  authorizeRoles("lab_admin"),
+  rejectLabBooking,
 );
 router.get(
   "/partner/lab/master-data",
@@ -157,6 +172,12 @@ router.put(
   ]),
   validate(createPartnerMedicineSchema.partial()),
   updatePartnerMedicine,
+);
+router.delete(
+  "/partner/pharmacy/medicines/:id",
+  protectRoute,
+  authorizeRoles("pharmacy_admin"),
+  deletePartnerMedicine,
 );
 router.get(
   "/partner/pharmacy/orders",

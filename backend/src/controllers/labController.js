@@ -1,5 +1,7 @@
 const dayjs = require("dayjs");
+const mongoose = require("mongoose");
 const LabTest = require("../models/LabTest");
+const LabTestReview = require("../models/LabTestReview");
 const LabBooking = require("../models/LabBooking");
 const LabPartnerProfile = require("../models/LabPartnerProfile");
 const LabSlotHold = require("../models/LabSlotHold");
@@ -460,24 +462,45 @@ const bookLab = catchAsync(async (req, res) => {
   const labShare = Number((amount - adminShare).toFixed(2));
 
   const booking = await LabBooking.create({
+    bookingType: collectionType === "lab" ? "lab_visit" : "home_collection",
     patient: req.user._id,
     labTest: lab._id,
+    tests: [lab._id],
     bookingDate,
     scheduledDate,
     collectionType,
+    timeSlot: collectionTimeSlot,
     collectionTimeSlot,
+    address: req.body.homeCollectionAddress
+      ? {
+          flat:
+            req.body.homeCollectionAddress.flat ||
+            req.body.homeCollectionAddress.flatHouse ||
+            "",
+          street:
+            req.body.homeCollectionAddress.street ||
+            req.body.homeCollectionAddress.area ||
+            "",
+          landmark: req.body.homeCollectionAddress.landmark || "",
+          city: req.body.homeCollectionAddress.city || "",
+          pincode: req.body.homeCollectionAddress.pincode || "",
+        }
+      : undefined,
     homeCollectionAddress: req.body.homeCollectionAddress,
+    contactNumber:
+      req.body.homeCollectionAddress?.contactNumber || req.user.phone || "",
+    labLocation: collectionType === "lab" ? lab.labName || "Lab Visit" : "",
     deliveryCost,
     distanceKm,
     amount,
     adminShare,
     labShare,
     paymentStatus: "pending",
-    status: "booked",
+    status: "pending",
     statusTimeline: [
       {
-        status: "booked",
-        note: "Booking created. Complete payment to confirm.",
+        status: "pending",
+        note: "Booking created and awaiting lab confirmation.",
         at: new Date(),
       },
     ],
@@ -538,6 +561,118 @@ const getMyLabBookings = catchAsync(async (req, res) => {
     .json(new ApiResponse(200, "Lab bookings fetched", bookings));
 });
 
+const getLabReviews = catchAsync(async (req, res) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    throw new ApiError(400, "Invalid lab test id");
+  }
+
+  const page = Math.max(1, Number(req.query.page || 1));
+  const limit = Math.min(30, Math.max(1, Number(req.query.limit || 10)));
+  const skip = (page - 1) * limit;
+  const sort =
+    req.query.sortBy === "highest"
+      ? { rating: -1, createdAt: -1 }
+      : { createdAt: -1 };
+  const labTestId = new mongoose.Types.ObjectId(String(req.params.id));
+
+  const [items, total, summary] = await Promise.all([
+    LabTestReview.find({ labTest: req.params.id })
+      .populate("user", "name image")
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    LabTestReview.countDocuments({ labTest: req.params.id }),
+    LabTestReview.aggregate([
+      { $match: { labTest: labTestId } },
+      {
+        $group: {
+          _id: "$labTest",
+          averageRating: { $avg: "$rating" },
+          totalReviews: { $sum: 1 },
+        },
+      },
+    ]),
+  ]);
+
+  return res.status(200).json(
+    new ApiResponse(200, "Lab reviews fetched", {
+      items,
+      summary: {
+        averageRating: summary[0]?.averageRating
+          ? Number(summary[0].averageRating.toFixed(1))
+          : 0,
+        totalReviews: summary[0]?.totalReviews || 0,
+      },
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.max(1, Math.ceil(total / limit)),
+      },
+    }),
+  );
+});
+
+const addLabReview = catchAsync(async (req, res) => {
+  const rating = Number(req.body.rating);
+  const comment = String(req.body.comment || "").trim();
+  if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
+    throw new ApiError(400, "Rating must be between 1 and 5");
+  }
+  if (comment.length < 3 || comment.length > 800) {
+    throw new ApiError(400, "Comment must be between 3 and 800 characters");
+  }
+
+  const lab = await LabTest.findOne({
+    _id: req.params.id,
+    active: true,
+    approvalStatus: "approved",
+    isApproved: true,
+  })
+    .select("_id")
+    .lean();
+  if (!lab) throw new ApiError(404, "Lab test not found");
+
+  const existing = await LabTestReview.findOne({
+    labTest: req.params.id,
+    user: req.user._id,
+  }).lean();
+  if (existing) {
+    throw new ApiError(409, "You have already reviewed this lab test");
+  }
+
+  const review = await LabTestReview.create({
+    labTest: req.params.id,
+    user: req.user._id,
+    rating,
+    comment,
+  });
+
+  const stats = await LabTestReview.aggregate([
+    { $match: { labTest: lab._id } },
+    {
+      $group: {
+        _id: "$labTest",
+        averageRating: { $avg: "$rating" },
+        totalReviews: { $sum: 1 },
+      },
+    },
+  ]);
+
+  await LabTest.updateOne(
+    { _id: lab._id },
+    {
+      rating: stats[0]?.averageRating
+        ? Number(stats[0].averageRating.toFixed(1))
+        : 0,
+      reviewsCount: stats[0]?.totalReviews || 0,
+    },
+  );
+
+  return res.status(201).json(new ApiResponse(201, "Review added", review));
+});
+
 module.exports = {
   getLabs,
   getLabById,
@@ -547,4 +682,6 @@ module.exports = {
   getLabVisitQuote,
   bookLab,
   getMyLabBookings,
+  getLabReviews,
+  addLabReview,
 };

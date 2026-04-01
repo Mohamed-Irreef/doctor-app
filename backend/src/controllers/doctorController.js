@@ -1,5 +1,7 @@
 const User = require("../models/User");
 const DoctorProfile = require("../models/DoctorProfile");
+const DoctorLike = require("../models/DoctorLike");
+const Review = require("../models/Review");
 const Appointment = require("../models/Appointment");
 const Subscription = require("../models/Subscription");
 const Notification = require("../models/Notification");
@@ -17,6 +19,7 @@ const mapDoctorCard = (row) => ({
   experience: `${row.experienceYears} Years`,
   rating: row.rating,
   reviews: row.reviewsCount,
+  likes: row.likesCount || 0,
   fee: row.consultationFee,
   hospital: row.hospital,
   about: row.bio,
@@ -139,6 +142,72 @@ const getDoctorById = catchAsync(async (req, res) => {
     .json(new ApiResponse(200, "Doctor fetched", mapDoctorCard(profile)));
 });
 
+const getDoctorReviews = catchAsync(async (req, res) => {
+  const reviews = await Review.find({
+    doctor: req.params.id,
+    moderationStatus: "visible",
+  })
+    .populate("patient", "name image")
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "Doctor reviews fetched", reviews));
+});
+
+const toggleDoctorLike = catchAsync(async (req, res) => {
+  const profile = await DoctorProfile.findOne({ user: req.params.id })
+    .select("_id")
+    .lean();
+  if (!profile) throw new ApiError(404, "Doctor not found");
+
+  const existing = await DoctorLike.findOne({
+    doctor: req.params.id,
+    user: req.user._id,
+  }).lean();
+
+  let liked = false;
+  if (existing) {
+    await DoctorLike.deleteOne({ _id: existing._id });
+  } else {
+    await DoctorLike.create({ doctor: req.params.id, user: req.user._id });
+    liked = true;
+  }
+
+  const likesCount = await DoctorLike.countDocuments({ doctor: req.params.id });
+  await DoctorProfile.updateOne({ user: req.params.id }, { likesCount });
+
+  return res.status(200).json(
+    new ApiResponse(200, liked ? "Doctor liked" : "Doctor unliked", {
+      doctorId: req.params.id,
+      liked,
+      likesCount,
+    }),
+  );
+});
+
+const getMyDoctorLikes = catchAsync(async (req, res) => {
+  const ids = String(req.query.ids || "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+
+  const filter = { user: req.user._id };
+  if (ids.length) {
+    filter.doctor = { $in: ids };
+  }
+
+  const likes = await DoctorLike.find(filter).select("doctor -_id").lean();
+  const likedDoctorIds = likes.map((item) => String(item.doctor));
+
+  return res.status(200).json(
+    new ApiResponse(200, "Doctor likes fetched", {
+      likedDoctorIds,
+    }),
+  );
+});
+
 const updateDoctorProfile = catchAsync(async (req, res) => {
   const userUpdates = {};
   if (req.body.name !== undefined) userUpdates.name = req.body.name;
@@ -210,6 +279,9 @@ module.exports = {
   doctorSignupRequest,
   getDoctors,
   getDoctorById,
+  getDoctorReviews,
+  toggleDoctorLike,
+  getMyDoctorLikes,
   updateDoctorProfile,
   getDoctorAppointments,
   getDoctorSubscription,

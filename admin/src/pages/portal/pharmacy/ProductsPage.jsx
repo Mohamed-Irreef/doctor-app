@@ -1,5 +1,5 @@
 import { FileText, ImagePlus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePharmacyPortal } from "./PharmacyPortalContext";
 import { EmptyState, ErrorState, TableSkeleton } from "./UiKit";
 
@@ -34,6 +34,13 @@ export default function PharmacyProductsRoutePage() {
   const [activeSection, setActiveSection] = useState("catalogue");
   const [activeTab, setActiveTab] = useState("basic");
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    if (editingId) {
+      setActiveSection("builder");
+      setActiveTab("basic");
+    }
+  }, [editingId]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return medicines;

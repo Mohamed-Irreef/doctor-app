@@ -13,6 +13,10 @@ const {
   verifyAppointmentRevenue,
 } = require("../controllers/appointmentController");
 const {
+  getAppointmentMessages,
+  sendAppointmentMessage,
+} = require("../controllers/chatController");
+const {
   createAppointmentSchema,
   updateAppointmentStatusSchema,
   rescheduleAppointmentSchema,
@@ -62,6 +66,8 @@ router.post(
   releasePendingAppointment,
 );
 router.get("/:id/video-access", protectRoute, getConsultationAccess);
+router.get("/:id/chat/messages", protectRoute, getAppointmentMessages);
+router.post("/:id/chat/messages", protectRoute, sendAppointmentMessage);
 router.post(
   "/:id/prescription",
   protectRoute,

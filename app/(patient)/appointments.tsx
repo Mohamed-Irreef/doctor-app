@@ -1,27 +1,58 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import {
-    Calendar,
-    Clock,
-    MessageSquare,
-    Video,
-    XCircle,
+  Calendar,
+  Clock,
+  MessageSquare,
+  Video,
+  XCircle,
 } from "lucide-react-native";
 import React, { useCallback, useState } from "react";
 import {
-    FlatList,
-    Image,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../constants/Colors";
-import { getPatientAppointments } from "../../services/api";
+import { createChat, getPatientAppointments } from "../../services/api";
 
 export default function AppointmentsScreen() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const router = useRouter();
+
+  const openDoctorChat = useCallback(
+    async (item: any) => {
+      const doctorId = String(item?.doctor?._id || item?.doctor?.id || "");
+      if (!doctorId) {
+        router.push("/(patient)/chat");
+        return;
+      }
+
+      const response = await createChat({ doctorId });
+      if (!response.data?._id) {
+        router.push("/(patient)/chat");
+        return;
+      }
+
+      router.push({
+        pathname: "/(patient)/chat/[chatId]",
+        params: {
+          chatId: String(response.data._id),
+          doctorId,
+          doctorName: item?.doctor?.name || "Doctor",
+          doctorImage: item?.doctor?.image || "",
+          isBlocked: String(Boolean(response.data.isBlocked)),
+          blockedBy: response.data.blockedBy
+            ? String(response.data.blockedBy)
+            : "",
+        },
+      });
+    },
+    [router],
+  );
 
   const loadAppointments = useCallback(async () => {
     const response = await getPatientAppointments();
@@ -55,7 +86,15 @@ export default function AppointmentsScreen() {
         <View style={styles.detailsRow}>
           <View style={styles.detailItem}>
             <Calendar size={16} color={Colors.textSecondary} />
-            <Text style={styles.detailText}>{item.date}</Text>
+            <Text style={styles.detailText}>
+              {item.date
+                ? new Date(item.date).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "2-digit",
+                    year: "numeric",
+                  })
+                : "-"}
+            </Text>
           </View>
           <View style={styles.detailItem}>
             <Clock size={16} color={Colors.textSecondary} />
@@ -91,7 +130,7 @@ export default function AppointmentsScreen() {
           <TouchableOpacity
             style={[styles.actionBtn, styles.secondaryBtn]}
             activeOpacity={0.8}
-            onPress={() => router.push("/(patient)/consultation")}
+            onPress={() => openDoctorChat(item)}
           >
             <MessageSquare size={16} color={Colors.primary} />
             <Text style={[styles.actionBtnText, { color: Colors.primary }]}>

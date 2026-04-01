@@ -11,6 +11,7 @@ import {
     FlaskConical,
     LayoutDashboard,
     LogOut,
+    Newspaper,
     Pill,
     Settings,
     ShieldCheck,
@@ -64,6 +65,10 @@ const NAV_SECTIONS = [
       { to: "/admin/errors", icon: AlertTriangle, label: "Errors" },
       { to: "/admin/settings", icon: Settings, label: "Settings" },
     ],
+  },
+  {
+    label: "Content",
+    items: [{ to: "/admin/articles", icon: Newspaper, label: "Articles" }],
   },
 ];
 

@@ -16,13 +16,30 @@ import ActionModal from "../../components/ActionModal";
 import ButtonPrimary from "../../components/ButtonPrimary";
 import { Colors } from "../../constants/Colors";
 import { Typography } from "../../constants/Typography";
-import { createReview, getDoctorById } from "../../services/api";
+import {
+    addLabTestReview,
+    createReview,
+    getDoctorById,
+} from "../../services/api";
 
 export default function ReviewScreen() {
   const router = useRouter();
-  const { doctorId, appointmentId } = useLocalSearchParams<{
+  const {
+    doctorId,
+    appointmentId,
+    reviewType,
+    entityId,
+    entityName,
+    entitySubtitle,
+    entityImage,
+  } = useLocalSearchParams<{
     doctorId: string;
     appointmentId: string;
+    reviewType: "doctor" | "lab" | "medicine";
+    entityId: string;
+    entityName: string;
+    entitySubtitle: string;
+    entityImage: string;
   }>();
   const [doctor, setDoctor] = useState<any | null>(null);
 
@@ -31,27 +48,99 @@ export default function ReviewScreen() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const normalize = (value?: string | string[]) =>
+    Array.isArray(value) ? value[0] : value || "";
+
+  const currentReviewType = normalize(reviewType) || "doctor";
+  const isDoctorReview = currentReviewType === "doctor";
+
+  const titleByType =
+    currentReviewType === "lab"
+      ? "Write a Lab Test Review"
+      : currentReviewType === "medicine"
+        ? "Write a Medicine Review"
+        : "Write a Review";
+
+  const inputPlaceholder =
+    currentReviewType === "lab"
+      ? "Share your experience with this lab test..."
+      : currentReviewType === "medicine"
+        ? "Share your experience with this medicine..."
+        : "Share your experience with this doctor...";
+
+  const confirmLabelByType =
+    currentReviewType === "lab"
+      ? "Back to Lab Test"
+      : currentReviewType === "medicine"
+        ? "Back to Medicine"
+        : "Back to Profile";
+
+  const entity = isDoctorReview
+    ? {
+        name: doctor?.name || "Doctor",
+        subtitle: doctor?.specialization || "Specialist",
+        image: doctor?.image,
+      }
+    : {
+        name: normalize(entityName) || "Item",
+        subtitle:
+          normalize(entitySubtitle) ||
+          (currentReviewType === "lab" ? "Lab Test" : "Medicine"),
+        image: normalize(entityImage),
+      };
+
   React.useEffect(() => {
     const load = async () => {
-      if (!doctorId) return;
-      const response = await getDoctorById(doctorId);
+      if (!isDoctorReview || !normalize(doctorId)) return;
+      const response = await getDoctorById(normalize(doctorId));
       if (response.data) setDoctor(response.data);
     };
     load();
-  }, [doctorId]);
+  }, [doctorId, isDoctorReview]);
 
   const handleSubmit = async () => {
     if (rating === 0)
       return Alert.alert("Rating Required", "Please select a star rating.");
-    if (!appointmentId || !doctorId)
+    if (isDoctorReview && !normalize(doctorId)) {
       return Alert.alert(
         "Missing Context",
-        "Open this screen from a completed appointment to submit a review.",
+        "Doctor information is missing for this review.",
       );
+    }
+
+    if (currentReviewType === "lab") {
+      if (!normalize(entityId)) {
+        return Alert.alert(
+          "Missing Context",
+          "Lab test information is missing.",
+        );
+      }
+      setLoading(true);
+      const response = await addLabTestReview(normalize(entityId), {
+        rating,
+        comment,
+      });
+      setLoading(false);
+      if (response.status === "success") {
+        setSubmitted(true);
+        return;
+      }
+      Alert.alert("Review Failed", response.error || "Unable to submit review");
+      return;
+    }
+
+    if (currentReviewType === "medicine") {
+      Alert.alert(
+        "Coming Soon",
+        "Medicine review submission will be enabled in the next update.",
+      );
+      return;
+    }
+
     setLoading(true);
     const response = await createReview({
-      doctorId,
-      appointmentId,
+      doctorId: normalize(doctorId),
+      appointmentId: normalize(appointmentId) || undefined,
       rating,
       comment,
     });
@@ -78,8 +167,12 @@ export default function ReviewScreen() {
         visible={submitted}
         type="success"
         title="Review Submitted!"
-        message="Thank you for your feedback. It helps other patients make better decisions."
-        confirmLabel="Back to Profile"
+        message={
+          isDoctorReview
+            ? "Thank you for your feedback. It helps other patients make better decisions."
+            : "Thank you for your feedback. Your review will be published after moderation."
+        }
+        confirmLabel={confirmLabelByType}
         onConfirm={() => router.back()}
       />
 
@@ -88,7 +181,7 @@ export default function ReviewScreen() {
           <ArrowLeft color={Colors.text} size={24} />
         </TouchableOpacity>
         <Text style={[Typography.h3, { flex: 1, textAlign: "center" }]}>
-          Write a Review
+          {titleByType}
         </Text>
         <View style={{ width: 40 }} />
       </View>
@@ -99,13 +192,13 @@ export default function ReviewScreen() {
       >
         {/* Doctor Info */}
         <View style={styles.doctorCard}>
-          <Image source={{ uri: doctor?.image }} style={styles.docAvatar} />
+          <Image source={{ uri: entity.image }} style={styles.docAvatar} />
           <View>
             <Text style={[Typography.h3, { marginBottom: 4 }]}>
-              {doctor?.name || "Doctor"}
+              {entity.name}
             </Text>
             <Text style={[Typography.body2, { color: Colors.primary }]}>
-              {doctor?.specialization || "Specialist"}
+              {entity.subtitle}
             </Text>
           </View>
         </View>
@@ -148,7 +241,7 @@ export default function ReviewScreen() {
           <Text style={[Typography.h3, { marginBottom: 12 }]}>Add Details</Text>
           <TextInput
             style={styles.textArea}
-            placeholder="Share your experience with this doctor..."
+            placeholder={inputPlaceholder}
             placeholderTextColor={Colors.textSecondary}
             multiline
             numberOfLines={6}

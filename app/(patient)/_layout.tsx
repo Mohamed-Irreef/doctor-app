@@ -113,6 +113,8 @@ export default function PatientLayout() {
         <Tabs.Screen name="doctor/[id]" options={hiddenScreenOptions} />
         <Tabs.Screen name="booking/[id]" options={hiddenScreenOptions} />
         <Tabs.Screen name="consultation" options={hiddenScreenOptions} />
+        <Tabs.Screen name="chat/index" options={hiddenScreenOptions} />
+        <Tabs.Screen name="chat/[chatId]" options={hiddenScreenOptions} />
         <Tabs.Screen name="lab/[id]" options={hiddenScreenOptions} />
         <Tabs.Screen name="lab/home-booking" options={hiddenScreenOptions} />
         <Tabs.Screen name="lab/visit-booking" options={hiddenScreenOptions} />
@@ -120,6 +122,7 @@ export default function PatientLayout() {
         <Tabs.Screen name="lab/confirmation" options={hiddenScreenOptions} />
         <Tabs.Screen name="lab/sample-report" options={hiddenScreenOptions} />
         <Tabs.Screen name="medicine/[id]" options={hiddenScreenOptions} />
+        <Tabs.Screen name="article/index" options={hiddenScreenOptions} />
         <Tabs.Screen name="article/[id]" options={hiddenScreenOptions} />
         <Tabs.Screen name="appointment/[id]" options={hiddenScreenOptions} />
         <Tabs.Screen

@@ -28,11 +28,13 @@ const CATEGORIES = [
   "Lipid",
   "Full Body",
 ];
+const ROW_BATCH_SIZE = 4;
 
 export default function LabsScreen() {
   const router = useRouter();
   const [activeCategory, setActiveCategory] = useState("All");
   const [labTests, setLabTests] = useState<any[]>([]);
+  const [visibleRows, setVisibleRows] = useState(ROW_BATCH_SIZE);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -59,6 +61,15 @@ export default function LabsScreen() {
     );
   }, [labTests, activeCategory]);
 
+  const visibleTests = useMemo(
+    () => filteredTests.slice(0, visibleRows),
+    [filteredTests, visibleRows],
+  );
+
+  useEffect(() => {
+    setVisibleRows(ROW_BATCH_SIZE);
+  }, [activeCategory, labTests.length]);
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
@@ -74,7 +85,7 @@ export default function LabsScreen() {
       </View>
 
       <FlatList
-        data={filteredTests}
+        data={visibleTests}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={() => (
@@ -143,6 +154,17 @@ export default function LabsScreen() {
             </Text>
           </>
         )}
+        ListFooterComponent={() =>
+          visibleRows < filteredTests.length ? (
+            <TouchableOpacity
+              style={styles.loadMoreBtn}
+              onPress={() => setVisibleRows((count) => count + ROW_BATCH_SIZE)}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.loadMoreText}>Load More</Text>
+            </TouchableOpacity>
+          ) : null
+        }
         keyExtractor={(t) => String(t.id || t._id)}
         renderItem={({ item }) => {
           const originalPrice = Number(item.originalPrice || item.price || 0);
@@ -151,6 +173,7 @@ export default function LabsScreen() {
             originalPrice > 0
               ? Math.round(((originalPrice - offerPrice) / originalPrice) * 100)
               : 0;
+          const savings = Math.max(0, originalPrice - offerPrice);
           const imageUrl =
             item.testImage || item.imageUrl || item.testImageUrl || item.image;
           return (
@@ -207,7 +230,7 @@ export default function LabsScreen() {
                   </View>
                 </View>
               </View>
-              <View style={styles.testRight}>
+              <View style={styles.testRightPanel}>
                 {item.popular && (
                   <View style={styles.popularBadge}>
                     <Text style={styles.popularText}>Popular</Text>
@@ -215,12 +238,15 @@ export default function LabsScreen() {
                 )}
                 <Text style={styles.testPrice}>₹{offerPrice}</Text>
                 {originalPrice > offerPrice ? (
-                  <>
+                  <View style={styles.strikeWrap}>
                     <Text style={styles.testOriginal}>₹{originalPrice}</Text>
                     <View style={styles.offBadge}>
                       <Text style={styles.offText}>{disc}% OFF</Text>
                     </View>
-                  </>
+                  </View>
+                ) : null}
+                {savings > 0 ? (
+                  <Text style={styles.saveText}>Save ₹{savings}</Text>
                 ) : null}
                 <View style={styles.addBtn}>
                   <Text style={styles.addBtnText}>Add</Text>
@@ -262,6 +288,21 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   listContent: { paddingBottom: 40 },
+  loadMoreBtn: {
+    marginHorizontal: 16,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+    backgroundColor: Colors.surface,
+  },
+  loadMoreText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: Colors.primary,
+  },
   heroBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -322,27 +363,27 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     marginHorizontal: 16,
     marginBottom: 12,
-    borderRadius: 20,
-    padding: 16,
+    borderRadius: 18,
+    padding: 14,
     borderWidth: 1,
-    borderColor: "#E6EDF7",
+    borderColor: "#DAE5F3",
     shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
     elevation: 3,
   },
-  testLeft: { flex: 1, flexDirection: "row", marginRight: 12, gap: 12 },
+  testLeft: { flex: 1, flexDirection: "row", marginRight: 10, gap: 12 },
   testThumbImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 16,
+    width: 64,
+    height: 64,
+    borderRadius: 14,
     backgroundColor: Colors.border,
   },
   testThumbFallback: {
-    width: 60,
-    height: 60,
-    borderRadius: 16,
+    width: 64,
+    height: 64,
+    borderRadius: 14,
     backgroundColor: "#E0ECFF",
     alignItems: "center",
     justifyContent: "center",
@@ -386,8 +427,17 @@ const styles = StyleSheet.create({
   },
   timeText: { fontSize: 11, color: Colors.textSecondary },
   homeRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  homeText: { fontSize: 11, color: Colors.primary, fontWeight: "500" },
-  testRight: { alignItems: "flex-end", minWidth: 86 },
+  homeText: { fontSize: 11, color: Colors.primary, fontWeight: "600" },
+  testRightPanel: {
+    alignItems: "flex-end",
+    minWidth: 98,
+    backgroundColor: "#F8FBFF",
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "#DCE9F8",
+  },
   popularBadge: {
     backgroundColor: "#FFF3D6",
     paddingHorizontal: 8,
@@ -396,33 +446,50 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   popularText: { fontSize: 9, fontWeight: "700", color: "#B45309" },
-  testPrice: { fontSize: 19, fontWeight: "800", color: Colors.text },
+  testPrice: {
+    fontSize: 24,
+    lineHeight: 26,
+    fontWeight: "900",
+    color: "#0F172A",
+    marginTop: 2,
+  },
+  strikeWrap: {
+    alignItems: "flex-end",
+    marginTop: 2,
+    marginBottom: 4,
+  },
   testOriginal: {
     fontSize: 12,
     color: Colors.textSecondary,
     textDecorationLine: "line-through",
-    marginBottom: 4,
   },
   offBadge: {
-    backgroundColor: "#E8F7EE",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    backgroundColor: "#DCFCE7",
+    paddingHorizontal: 7,
+    paddingVertical: 2,
     borderRadius: 999,
-    marginBottom: 10,
+    marginTop: 4,
   },
-  offText: { fontSize: 10, fontWeight: "700", color: "#15803D" },
+  offText: { fontSize: 9, fontWeight: "800", color: "#15803D" },
+  saveText: {
+    fontSize: 10,
+    color: "#0F766E",
+    fontWeight: "700",
+    marginBottom: 8,
+  },
   addBtn: {
+    minWidth: 62,
     backgroundColor: Colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 12,
+    borderRadius: 10,
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 2,
   },
-  addBtnText: { color: Colors.surface, fontSize: 12, fontWeight: "700" },
+  addBtnText: { color: Colors.surface, fontSize: 12, fontWeight: "800" },
   emptyWrap: {
     paddingHorizontal: 20,
     paddingVertical: 24,
