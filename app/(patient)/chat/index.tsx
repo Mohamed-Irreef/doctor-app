@@ -15,6 +15,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../../constants/Colors";
 import { createChat, getDoctors, getUserChats } from "../../../services/api";
 
+function resolveId(value: any) {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "object") {
+    return String(value._id || value.id || "");
+  }
+  return String(value || "");
+}
+
 export default function PatientChatListScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -68,11 +77,12 @@ export default function PatientChatListScreen() {
 
   const openExistingChat = (chat: any) => {
     const doctor = chat.doctorId || {};
+    const doctorId = resolveId(doctor) || resolveId(chat.doctorId);
     router.push({
       pathname: "/(patient)/chat/[chatId]",
       params: {
         chatId: String(chat._id),
-        doctorId: String(doctor._id || ""),
+        doctorId,
         doctorName: doctor.name || "Doctor",
         doctorImage: doctor.image || "",
         isBlocked: String(Boolean(chat.isBlocked)),

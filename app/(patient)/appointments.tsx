@@ -17,11 +17,30 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../constants/Colors";
+import { useCall } from "../../context/CallContext";
 import { createChat, getPatientAppointments } from "../../services/api";
 
 export default function AppointmentsScreen() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const router = useRouter();
+  const { initiateVideoCall } = useCall();
+
+  const startVideoCall = useCallback(
+    async (item: any) => {
+      const doctorId = String(item?.doctor?._id || item?.doctor?.id || "");
+      const appointmentId = String(item?._id || item?.id || "");
+      if (!doctorId || !appointmentId) return;
+
+      const ok = await initiateVideoCall({
+        receiverId: doctorId,
+        peerName: item?.doctor?.name || "Doctor",
+        appointmentId,
+      });
+
+      if (!ok) return;
+    },
+    [initiateVideoCall],
+  );
 
   const openDoctorChat = useCallback(
     async (item: any) => {
@@ -106,12 +125,7 @@ export default function AppointmentsScreen() {
           <TouchableOpacity
             style={[styles.actionBtn, styles.primaryBtn]}
             activeOpacity={0.8}
-            onPress={() =>
-              router.push({
-                pathname: "/(patient)/appointment/video/[id]",
-                params: { id: String(item._id || item.id) },
-              })
-            }
+            onPress={() => startVideoCall(item)}
           >
             <Video size={16} color={Colors.surface} />
             <Text style={[styles.actionBtnText, { color: Colors.surface }]}>

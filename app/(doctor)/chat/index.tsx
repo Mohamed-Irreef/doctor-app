@@ -2,14 +2,14 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { ArrowLeft, Search } from "lucide-react-native";
 import React, { useCallback, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Image,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../../constants/Colors";
@@ -23,6 +23,15 @@ function formatTime(value?: string) {
   });
 }
 
+function resolveId(value: any) {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "object") {
+    return String(value._id || value.id || "");
+  }
+  return String(value || "");
+}
+
 export default function DoctorChatListScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -32,8 +41,17 @@ export default function DoctorChatListScreen() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [profileRes, chatsRes] = await Promise.all([getMyProfile(), getUserChats()]);
-    const id = String(profileRes.data?._id || profileRes.data?.id || "");
+    const [profileRes, chatsRes] = await Promise.all([
+      getMyProfile(),
+      getUserChats(),
+    ]);
+    const id = String(
+      profileRes.data?.user?._id ||
+        profileRes.data?.user?.id ||
+        profileRes.data?._id ||
+        profileRes.data?.id ||
+        "",
+    );
     setMyId(id);
     if (Array.isArray(chatsRes.data)) setChats(chatsRes.data);
     setLoading(false);
@@ -89,6 +107,7 @@ export default function DoctorChatListScreen() {
           ListEmptyComponent={<Text style={styles.empty}>No chats found.</Text>}
           renderItem={({ item }) => {
             const patient = item.patientId || {};
+            const patientId = resolveId(patient) || resolveId(item.patientId);
             const unreadForMe = String(item.unreadFor || "") === String(myId);
             return (
               <TouchableOpacity
@@ -98,7 +117,7 @@ export default function DoctorChatListScreen() {
                     pathname: "/(doctor)/chat/[chatId]",
                     params: {
                       chatId: String(item._id),
-                      patientId: String(patient._id || ""),
+                      patientId,
                       patientName: patient.name || "Patient",
                       patientImage: patient.image || "",
                       isBlocked: String(Boolean(item.isBlocked)),
@@ -107,7 +126,10 @@ export default function DoctorChatListScreen() {
                   })
                 }
               >
-                <Image source={{ uri: patient.image || "" }} style={styles.avatar} />
+                <Image
+                  source={{ uri: patient.image || "" }}
+                  style={styles.avatar}
+                />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.name}>{patient.name || "Patient"}</Text>
                   <Text style={styles.last} numberOfLines={1}>
@@ -115,7 +137,9 @@ export default function DoctorChatListScreen() {
                   </Text>
                 </View>
                 <View style={{ alignItems: "flex-end", gap: 4 }}>
-                  <Text style={styles.time}>{formatTime(item.lastMessageTime)}</Text>
+                  <Text style={styles.time}>
+                    {formatTime(item.lastMessageTime)}
+                  </Text>
                   {unreadForMe && item.unreadCount > 0 ? (
                     <View style={styles.unreadBadge}>
                       <Text style={styles.unreadText}>{item.unreadCount}</Text>

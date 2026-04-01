@@ -30,6 +30,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { io, Socket } from "socket.io-client";
 import { Colors } from "../../constants/Colors";
+import { useCall } from "../../context/CallContext";
 import {
     blockChat,
     getAuthToken,
@@ -90,6 +91,7 @@ export default function RealtimeChatScreen({
   initialBlockedBy = null,
 }: Props) {
   const router = useRouter();
+  const { initiateVideoCall } = useCall();
   const scrollRef = useRef<ScrollView | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -106,6 +108,22 @@ export default function RealtimeChatScreen({
 
   const canSend =
     !isBlocked || (blockedBy ? String(blockedBy) === String(myId) : true);
+
+  const effectivePeerId = useMemo(() => {
+    const direct = String(peerId || "");
+    if (direct && direct !== myId) return direct;
+
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      const item = messages[i];
+      const sender = getEntityId(item.senderId);
+      const receiver = getEntityId(item.receiverId);
+
+      if (sender === myId && receiver) return receiver;
+      if (receiver === myId && sender) return sender;
+    }
+
+    return "";
+  }, [messages, myId, peerId]);
 
   const loadMessages = useCallback(async () => {
     if (!chatId) return;
@@ -186,8 +204,8 @@ export default function RealtimeChatScreen({
       });
 
       socket.on("user_status", (payload: any) => {
-        if (!peerId) return;
-        if (String(payload?.userId || "") !== String(peerId)) return;
+        if (!effectivePeerId) return;
+        if (String(payload?.userId || "") !== String(effectivePeerId)) return;
         setPeerOnline(Boolean(payload?.online));
       });
     };
@@ -203,7 +221,7 @@ export default function RealtimeChatScreen({
       }
       socketRef.current = null;
     };
-  }, [chatId, myId, peerId]);
+  }, [chatId, myId, effectivePeerId]);
 
   useEffect(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 25);
@@ -319,7 +337,19 @@ export default function RealtimeChatScreen({
 
   const onVideoCallPress = () => {
     if (currentRole !== "doctor") return;
-    Alert.alert("Video Call", "Video call from chat will be available soon.");
+    if (!effectivePeerId || String(effectivePeerId) === String(myId)) {
+      Alert.alert("Video Call", "Patient id not found for this chat.");
+      return;
+    }
+
+    initiateVideoCall({
+      receiverId: String(effectivePeerId),
+      peerName: peerName || "Patient",
+    }).then((result) => {
+      if (!result) {
+        Alert.alert("Video Call", "Unable to start call.");
+      }
+    });
   };
 
   const renderedMessages = useMemo(() => messages, [messages]);

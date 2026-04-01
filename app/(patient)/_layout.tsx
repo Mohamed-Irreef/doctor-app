@@ -8,7 +8,8 @@ import {
     User,
 } from "lucide-react-native";
 import React from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import SideDrawer from "../../components/SideDrawer";
 import { Colors } from "../../constants/Colors";
 import { useDrawerStore } from "../../store/drawerStore";
@@ -35,9 +36,16 @@ function TabIcon({
 
 export default function PatientLayout() {
   const { openDrawer } = useDrawerStore();
+  const insets = useSafeAreaInsets();
   const hiddenScreenOptions = {
     href: null,
     tabBarStyle: { display: "none" },
+  } as const;
+
+  const tabBarStyle = {
+    ...styles.tabBar,
+    height: 58 + Math.max(insets.bottom, 8) + 6,
+    paddingBottom: Math.max(insets.bottom, 8) + 6,
   } as const;
 
   return (
@@ -47,7 +55,7 @@ export default function PatientLayout() {
           headerShown: false,
           tabBarActiveTintColor: Colors.primary,
           tabBarInactiveTintColor: Colors.textSecondary,
-          tabBarStyle: styles.tabBar,
+          tabBarStyle,
           tabBarLabelStyle: styles.tabLabel,
           tabBarIconStyle: { marginTop: 2 },
         }}
@@ -144,14 +152,14 @@ export default function PatientLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    height: Platform.OS === "ios" ? 84 : 64,
-    paddingBottom: Platform.OS === "ios" ? 20 : 8,
     paddingTop: 8,
     backgroundColor: Colors.surface,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
-    elevation: 0,
-    shadowOpacity: 0,
+    elevation: 8,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: -2 },
   },
   tabLabel: {
     fontSize: 11,
