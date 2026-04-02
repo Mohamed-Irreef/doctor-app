@@ -21,9 +21,9 @@ import Modal from "../components/Modal";
 import PageHeader from "../components/PageHeader";
 import Toast from "../components/Toast";
 import {
-  API_BASE_URL,
-  approveAdminDoctor,
-  getAdminDoctorRequests,
+    API_BASE_URL,
+    approveAdminDoctor,
+    getAdminDoctorRequests,
 } from "../services/api";
 
 const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
