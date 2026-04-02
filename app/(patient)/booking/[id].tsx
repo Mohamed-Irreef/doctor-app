@@ -1,4 +1,5 @@
 import * as DocumentPicker from "expo-document-picker";
+import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
     ArrowLeft,
@@ -19,7 +20,10 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import ActionModal from "../../../components/ActionModal";
 import ButtonPrimary from "../../../components/ButtonPrimary";
 import { Colors } from "../../../constants/Colors";
@@ -89,6 +93,7 @@ function parseTimeToMinutes(time: string) {
 
 export default function BookingScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [doctor, setDoctor] = useState<any | null>(null);
   const [slots, setSlots] = useState<any[]>([]);
@@ -357,19 +362,28 @@ export default function BookingScreen() {
 
   if (!doctor) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.header}>
+      <SafeAreaView
+        style={styles.container}
+        edges={["left", "right", "bottom"]}
+      >
+        <LinearGradient
+          colors={[Colors.primary, Colors.primaryPressed]}
+          style={[
+            styles.header,
+            { paddingTop: Math.max(insets.top, 8) + 8, paddingBottom: 12 },
+          ]}
+        >
           <TouchableOpacity
             onPress={() => router.back()}
             style={styles.backBtn}
           >
-            <ArrowLeft color={Colors.text} size={24} />
+            <ArrowLeft color={Colors.textInverse} size={24} />
           </TouchableOpacity>
-          <Text style={[Typography.h3, { flex: 1, textAlign: "center" }]}>
+          <Text style={[Typography.h3, styles.headerTitle]}>
             Book Appointment
           </Text>
           <View style={{ width: 40 }} />
-        </View>
+        </LinearGradient>
         <View
           style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
         >
@@ -382,7 +396,7 @@ export default function BookingScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
       {/* Confirmation Modal */}
       <ActionModal
         visible={confirmModal}
@@ -417,18 +431,27 @@ export default function BookingScreen() {
         onConfirm={() => setErrorModal(false)}
       />
 
-      <View style={styles.header}>
+      <LinearGradient
+        colors={[Colors.primary, Colors.primaryPressed]}
+        style={[
+          styles.header,
+          { paddingTop: Math.max(insets.top, 8) + 8, paddingBottom: 12 },
+        ]}
+      >
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <ArrowLeft color={Colors.text} size={24} />
+          <ArrowLeft color={Colors.textInverse} size={24} />
         </TouchableOpacity>
-        <Text style={[Typography.h3, { flex: 1, textAlign: "center" }]}>
+        <Text style={[Typography.h3, styles.headerTitle]}>
           Book Appointment
         </Text>
         <View style={{ width: 40 }} />
-      </View>
+      </LinearGradient>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: 130 + Math.max(insets.bottom, 12) },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Doctor Summary */}
@@ -892,7 +915,12 @@ export default function BookingScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.bottomBar}>
+      <View
+        style={[
+          styles.bottomBar,
+          { paddingBottom: 12 + Math.max(insets.bottom, 10) },
+        ]}
+      >
         <View>
           <Text style={Typography.body2}>Total</Text>
           <Text style={[Typography.h2, { color: Colors.primary }]}>
@@ -919,9 +947,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomWidth: 0,
+  },
+  headerTitle: {
+    flex: 1,
+    textAlign: "center",
+    color: Colors.textInverse,
   },
   backBtn: {
     width: 40,
@@ -930,9 +961,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: "rgba(255,255,255,0.24)",
+    backgroundColor: "rgba(255,255,255,0.16)",
   },
-  scrollContent: { padding: 20, paddingBottom: 120 },
+  scrollContent: { padding: 20, paddingBottom: 130 },
   doctorCard: {
     backgroundColor: Colors.surface,
     padding: 20,
@@ -1010,8 +1042,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
   },
   slotBtnBooked: {
-    backgroundColor: "#F8FAFC",
-    borderColor: "#CBD5E1",
+    backgroundColor: Colors.surfaceAlt,
+    borderColor: Colors.textTertiary,
   },
   slotText: { fontWeight: "600", color: Colors.text },
   slotTextActive: { color: Colors.surface },
@@ -1030,8 +1062,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#DBEAFE",
-    backgroundColor: "#EFF6FF",
+    borderColor: Colors.primaryLight,
+    backgroundColor: Colors.primaryLight,
   },
   loadMoreText: {
     color: Colors.primary,
@@ -1105,7 +1137,7 @@ const styles = StyleSheet.create({
   },
   chipActive: {
     borderColor: Colors.primary,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: Colors.primaryLight,
   },
   chipText: {
     color: Colors.textSecondary,
@@ -1124,9 +1156,9 @@ const styles = StyleSheet.create({
     gap: 8,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#EFF6FF",
+    backgroundColor: Colors.primaryLight,
     borderWidth: 1,
-    borderColor: "#DBEAFE",
+    borderColor: Colors.primaryLight,
   },
   uploadBtnText: {
     color: Colors.primary,
@@ -1169,7 +1201,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#DBEAFE",
+    backgroundColor: Colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 16,
@@ -1183,7 +1215,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingHorizontal: 24,
     paddingTop: 16,
-    paddingBottom: 32,
+    paddingBottom: 22,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
     alignItems: "center",

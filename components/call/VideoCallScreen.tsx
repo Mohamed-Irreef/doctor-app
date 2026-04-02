@@ -9,6 +9,7 @@ import {
 } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
     mediaDevices,
     RTCIceCandidate,
@@ -37,6 +38,7 @@ export default function VideoCallScreen({
   peerName,
 }: Props) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const socketRef = useRef<Socket | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<any>(null);
@@ -122,12 +124,7 @@ export default function VideoCallScreen({
       };
 
       socket.on("connect", () => {
-        socket.emit("call:join-room", { roomId }, async () => {
-          if (isInitiator) {
-            // If peer is already in room, this avoids waiting forever for peer-joined.
-            await sendOffer();
-          }
-        });
+        socket.emit("call:join-room", { roomId });
       });
 
       socket.on("call:peer-joined", async (payload: any) => {
@@ -176,11 +173,7 @@ export default function VideoCallScreen({
       });
 
       if (socket.connected) {
-        socket.emit("call:join-room", { roomId }, async () => {
-          if (isInitiator) {
-            await sendOffer();
-          }
-        });
+        socket.emit("call:join-room", { roomId });
       }
     };
 
@@ -255,15 +248,23 @@ export default function VideoCallScreen({
         />
       ) : null}
 
-      <View style={styles.controls}>
-        <Pressable style={styles.controlBtn} onPress={onToggleMic}>
+      <View
+        style={[styles.controls, { bottom: Math.max(insets.bottom, 16) + 12 }]}
+      >
+        <Pressable
+          style={[styles.controlBtn, micEnabled && styles.controlBtnActive]}
+          onPress={onToggleMic}
+        >
           {micEnabled ? (
             <Mic color="#fff" size={20} />
           ) : (
             <MicOff color="#fff" size={20} />
           )}
         </Pressable>
-        <Pressable style={styles.controlBtn} onPress={onToggleCamera}>
+        <Pressable
+          style={[styles.controlBtn, camEnabled && styles.controlBtnActive]}
+          onPress={onToggleCamera}
+        >
           {camEnabled ? (
             <Camera color="#fff" size={20} />
           ) : (
@@ -285,7 +286,7 @@ export default function VideoCallScreen({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#020617" },
+  container: { flex: 1, backgroundColor: "#000000" },
   remoteVideo: { flex: 1 },
   waitingWrap: {
     flex: 1,
@@ -323,6 +324,16 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(15, 23, 42, 0.75)",
     alignItems: "center",
     justifyContent: "center",
+  },
+  controlBtnActive: {
+    backgroundColor: "rgba(20, 184, 166, 0.2)",
+    borderWidth: 1,
+    borderColor: "#14B8A6",
+    shadowColor: "#06B6D4",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+    elevation: 8,
   },
   endBtn: {
     backgroundColor: "#DC2626",

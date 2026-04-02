@@ -1,4 +1,5 @@
 import * as DocumentPicker from "expo-document-picker";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import {
@@ -30,11 +31,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ActionModal from "../../components/ActionModal";
+import { Colors } from "../../constants/Colors";
 import * as api from "../../services/api";
 
-const PrimaryColor = "#2563EB";
-const SecondaryColor = "#14B8A6";
-const BgColor = "#F9FAFB";
+const PrimaryColor = Colors.primary;
+const SecondaryColor = Colors.secondary;
+const BgColor = Colors.primaryUltraLight;
 const AVAILABILITY_TYPES: ("online" | "offline" | "both")[] = [
   "online",
   "offline",
@@ -440,13 +442,16 @@ export default function DoctorSignupScreen() {
           />
         ) : null}
 
-        <View style={styles.header}>
+        <LinearGradient
+          colors={[Colors.primary, Colors.primaryPressed]}
+          style={styles.header}
+        >
           <TouchableOpacity onPress={prevStep} style={styles.backBtn}>
-            <ArrowLeft color="#111827" size={24} />
+            <ArrowLeft color={Colors.textInverse} size={24} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Doctor Registration</Text>
           <View style={{ width: 44 }} />
-        </View>
+        </LinearGradient>
 
         <View style={styles.progressContainer}>
           <View
@@ -728,11 +733,15 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: "center",
     justifyContent: "center",
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "rgba(255,255,255,0.12)",
   },
-  headerTitle: { fontSize: 18, fontWeight: "700", color: "#111827" },
+  headerTitle: { fontSize: 18, fontWeight: "700", color: Colors.textInverse },
   progressContainer: {
     height: 4,
-    backgroundColor: "#E5E7EB",
+    backgroundColor: Colors.border,
     marginHorizontal: 24,
     marginTop: 8,
     borderRadius: 2,
@@ -764,10 +773,10 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.surface,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: Colors.border,
     minHeight: 52,
   },
   inputIcon: { marginLeft: 16, marginRight: 12 },
@@ -778,7 +787,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#E5E7EB",
+    backgroundColor: Colors.borderLight,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 8,
@@ -795,11 +804,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.surface,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: Colors.border,
   },
-  chipActive: { backgroundColor: "#EFF6FF", borderColor: PrimaryColor },
+  chipActive: {
+    backgroundColor: Colors.primaryUltraLight,
+    borderColor: PrimaryColor,
+  },
   chipText: { fontSize: 13, fontWeight: "500", color: "#6B7280" },
   chipTextActive: { color: PrimaryColor, fontWeight: "600" },
 
@@ -807,10 +819,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: Colors.primaryUltraLight,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#BFDBFE",
+    borderColor: Colors.primaryLight,
     borderStyle: "dashed",
     marginTop: 8,
   },
@@ -822,10 +834,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 16,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: Colors.surface,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: Colors.border,
     borderStyle: "dashed",
   },
   mapText: {
@@ -865,9 +877,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   backActionBtn: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: Colors.surface,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: Colors.border,
   },
   backActionText: { fontSize: 16, fontWeight: "600", color: "#4B5563" },
   nextActionBtn: {

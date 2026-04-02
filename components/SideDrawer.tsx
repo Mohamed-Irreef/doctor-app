@@ -1,44 +1,51 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
-  Activity,
-  Bell,
-  CalendarHeart,
-  CreditCard,
-  FileText,
-  Heart,
-  HelpCircle,
-  LogOut,
-  PhoneCall,
-  Pill,
-  Settings,
-  ShoppingBag,
-  TestTube,
-  Video,
-  X,
+    Activity,
+    Bell,
+    CalendarHeart,
+    ChevronRight,
+    CreditCard,
+    FileText,
+    Heart,
+    HelpCircle,
+    LogOut,
+    PhoneCall,
+    Pill,
+    Settings,
+    ShoppingBag,
+    TestTube,
+    Video,
+    X,
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
-  Dimensions,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Dimensions,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import Animated, {
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
+    runOnJS,
+    useAnimatedStyle,
+    useSharedValue,
+    withTiming,
 } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Colors } from "../constants/Colors";
+import { Shadows } from "../constants/Shadows";
+import { Radius } from "../constants/Spacing";
 import { useAuthStore } from "../store/authStore";
 import { useDrawerStore } from "../store/drawerStore";
 
 const { width, height } = Dimensions.get("window");
-const DRAWER_WIDTH = width * 0.8;
+const DRAWER_WIDTH = width * 0.82;
 
 const DRAWER_GROUPS = [
   {
@@ -156,6 +163,7 @@ export default function SideDrawer() {
   const { isOpen, closeDrawer } = useDrawerStore();
   const { user, logout } = useAuthStore();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [mounted, setMounted] = useState(false);
 
   const translateX = useSharedValue(-DRAWER_WIDTH);
@@ -222,25 +230,49 @@ export default function SideDrawer() {
 
       {/* Drawer */}
       <Animated.View style={[styles.drawer, animatedDrawerStyle]}>
-        <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
-          {/* User Header */}
-          <View style={styles.header}>
-            <View style={styles.userInfo}>
-              <Image source={{ uri: user?.image }} style={styles.avatar} />
-              <View style={styles.userDetails}>
-                <Text style={styles.userName}>{user?.name}</Text>
-                <Text style={styles.userEmail}>{user?.email}</Text>
-              </View>
-            </View>
+        <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
+          <LinearGradient
+            colors={[Colors.gradientStart, Colors.gradientEnd]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.header, { paddingTop: Math.max(insets.top, 8) + 8 }]}
+          >
             <TouchableOpacity
               onPress={closeDrawer}
               hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+              style={styles.closeBtn}
             >
-              <X color={Colors.textSecondary} size={24} />
+              <X color={Colors.textInverse} size={22} />
             </TouchableOpacity>
-          </View>
 
-          {/* Links */}
+            <View style={styles.profileSection}>
+              <View style={styles.avatarRing}>
+                <Image source={{ uri: user?.image }} style={styles.avatar} />
+              </View>
+              <View style={styles.userDetails}>
+                <Text style={styles.userName} numberOfLines={1}>
+                  {user?.name}
+                </Text>
+                <Text style={styles.userEmail} numberOfLines={1}>
+                  {user?.email}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.viewProfileBtn}
+                onPress={() => handleNav("/(patient)/profile")}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.viewProfileText}>View Profile</Text>
+                <ChevronRight
+                  size={14}
+                  color={Colors.textInverse}
+                  strokeWidth={2.5}
+                />
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+
+          {/* ── Navigation Links ── */}
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
@@ -257,9 +289,18 @@ export default function SideDrawer() {
                       activeOpacity={0.7}
                     >
                       <View style={styles.itemIconBg}>
-                        <item.icon color={Colors.primary} size={20} />
+                        <item.icon
+                          color={Colors.primary}
+                          size={18}
+                          strokeWidth={1.8}
+                        />
                       </View>
                       <Text style={styles.itemLabel}>{item.label}</Text>
+                      <ChevronRight
+                        size={16}
+                        color={Colors.textTertiary}
+                        strokeWidth={1.5}
+                      />
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -272,7 +313,9 @@ export default function SideDrawer() {
               onPress={handleLogout}
               activeOpacity={0.7}
             >
-              <LogOut color={Colors.error} size={20} />
+              <View style={styles.logoutIconBg}>
+                <LogOut color={Colors.error} size={18} />
+              </View>
               <Text style={styles.logoutText}>Logout</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -285,7 +328,7 @@ export default function SideDrawer() {
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.45)",
     zIndex: 99,
   },
   drawer: {
@@ -296,72 +339,131 @@ const styles = StyleSheet.create({
     width: DRAWER_WIDTH,
     backgroundColor: Colors.surface,
     zIndex: 100,
-    borderTopRightRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 5, height: 0 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 15,
+    borderTopRightRadius: 20,
+    borderBottomRightRadius: 20,
+    ...Shadows.elevated,
   },
   safeArea: { flex: 1 },
+
+  // ── Practo-style Blue Gradient Header ──
   header: {
+    paddingTop: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  closeBtn: {
+    alignSelf: "flex-end",
+    marginBottom: 12,
+    width: 32,
+    height: 32,
+    borderRadius: Radius.full,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  profileSection: {
+    alignItems: "flex-start",
+  },
+  avatarRing: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 2.5,
+    borderColor: "rgba(255,255,255,0.4)",
+    overflow: "hidden",
+    marginBottom: 12,
+  },
+  avatar: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 30,
+    backgroundColor: "rgba(255,255,255,0.2)",
+  },
+  userDetails: {
+    marginBottom: 12,
+  },
+  userName: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: Colors.textInverse,
+    marginBottom: 2,
+  },
+  userEmail: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.7)",
+  },
+  viewProfileBtn: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: Radius.full,
+    gap: 4,
   },
-  userInfo: { flexDirection: "row", alignItems: "center", flex: 1 },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.lightGray,
-    marginRight: 12,
+  viewProfileText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: Colors.textInverse,
   },
-  userDetails: { flex: 1 },
-  userName: { fontSize: 16, fontWeight: "700", color: Colors.text },
-  userEmail: { fontSize: 13, color: Colors.textSecondary },
+
+  // ── Navigation ──
   scrollContent: { padding: 20, paddingBottom: 60 },
-  group: { marginBottom: 24 },
+  group: { marginBottom: 20 },
   groupTitle: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "700",
-    color: Colors.textSecondary,
-    marginBottom: 12,
-    letterSpacing: 0.5,
+    color: Colors.textTertiary,
+    marginBottom: 8,
+    letterSpacing: 0.8,
     textTransform: "uppercase",
   },
-  groupItems: { gap: 8 },
+  groupItems: { gap: 2 },
   drawerItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
+    paddingVertical: 11,
+    paddingHorizontal: 4,
+    borderRadius: Radius.md,
   },
   itemIconBg: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    backgroundColor: "#EFF6FF",
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 14,
   },
-  itemLabel: { fontSize: 15, fontWeight: "500", color: Colors.text },
+  itemLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "500",
+    color: Colors.text,
+  },
   logoutBtn: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 14,
-    marginTop: 10,
+    paddingHorizontal: 4,
+    marginTop: 8,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
   },
+  logoutIconBg: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.errorLight,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
+  },
   logoutText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "600",
     color: Colors.error,
-    marginLeft: 14,
   },
 });

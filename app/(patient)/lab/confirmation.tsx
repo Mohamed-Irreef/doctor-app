@@ -42,7 +42,7 @@ export default function LabBookingConfirmationScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.card}>
-        <CheckCircle2 size={56} color="#16A34A" />
+        <CheckCircle2 size={56} color={Colors.successPressed} />
         <Text style={styles.title}>Booking Confirmed</Text>
         <Text style={styles.subtitle}>{statusLabel}</Text>
 
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
   infoCard: {
     marginTop: 12,
     borderRadius: 12,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: Colors.primaryLight,
     paddingHorizontal: 16,
     paddingVertical: 10,
     alignItems: "center",
@@ -154,8 +154,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#BFDBFE",
-    backgroundColor: "#EFF6FF",
+    borderColor: Colors.primaryLight,
+    backgroundColor: Colors.primaryLight,
   },
   invoiceText: { fontSize: 12, fontWeight: "700", color: Colors.primary },
   bottomBar: {

@@ -1,30 +1,38 @@
 import { Tabs } from "expo-router";
 import {
-    CalendarCheck,
-    Clock,
-    DollarSign,
-    LayoutDashboard,
-    User,
+  CalendarCheck,
+  Clock,
+  DollarSign,
+  LayoutDashboard,
+  User,
 } from "lucide-react-native";
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "../../constants/Colors";
+import { Spacing, Radius } from "../../constants/Spacing";
+import { Shadows } from "../../constants/Shadows";
+
+const TAB_ITEMS = [
+  { name: "index", title: "Dashboard", icon: LayoutDashboard },
+  { name: "appointments", title: "Appts", icon: CalendarCheck },
+  { name: "availability", title: "Slots", icon: Clock },
+  { name: "earnings", title: "Earnings", icon: DollarSign },
+  { name: "profile", title: "Profile", icon: User },
+];
 
 function TabIcon({
   icon: Icon,
-  color,
   focused,
 }: {
   icon: any;
-  color: string;
   focused: boolean;
 }) {
   return (
-    <View style={[styles.iconWrap, focused && styles.iconActive]}>
+    <View style={[styles.iconPill, focused && styles.iconPillActive]}>
       <Icon
-        color={focused ? Colors.primary : Colors.textSecondary}
-        size={22}
+        color={focused ? Colors.primary : Colors.textTertiary}
+        size={21}
         strokeWidth={focused ? 2.5 : 1.8}
       />
     </View>
@@ -33,10 +41,11 @@ function TabIcon({
 
 export default function DoctorLayout() {
   const insets = useSafeAreaInsets();
+
   const tabBarStyle = {
     ...styles.tabBar,
-    height: 58 + Math.max(insets.bottom, 8) + 6,
-    paddingBottom: Math.max(insets.bottom, 8) + 6,
+    height: 58 + Math.max(insets.bottom, Spacing.sm) + 4,
+    paddingBottom: Math.max(insets.bottom, Spacing.sm) + 4,
   } as const;
 
   return (
@@ -44,57 +53,33 @@ export default function DoctorLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textSecondary,
+        tabBarInactiveTintColor: Colors.textTertiary,
         tabBarStyle,
-        tabBarLabelStyle: styles.tabLabel,
         tabBarIconStyle: { marginTop: 2 },
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Dashboard",
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon icon={LayoutDashboard} color={color} focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="appointments"
-        options={{
-          title: "Appts",
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon icon={CalendarCheck} color={color} focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="availability"
-        options={{
-          title: "Slots",
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon icon={Clock} color={color} focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="earnings"
-        options={{
-          title: "Earnings",
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon icon={DollarSign} color={color} focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile",
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon icon={User} color={color} focused={focused} />
-          ),
-        }}
-      />
+      {TAB_ITEMS.map(({ name, title, icon }) => (
+        <Tabs.Screen
+          key={name}
+          name={name}
+          options={{
+            title,
+            tabBarIcon: ({ focused }) => (
+              <TabIcon icon={icon} focused={focused} />
+            ),
+            tabBarLabel: ({ focused }) => (
+              <Text
+                style={[
+                  styles.tabLabel,
+                  { color: focused ? Colors.primary : Colors.textTertiary },
+                ]}
+              >
+                {title}
+              </Text>
+            ),
+          }}
+        />
+      ))}
 
       {/* Hidden stack screens */}
       <Tabs.Screen name="appointment/[id]" options={{ href: null }} />
@@ -108,22 +93,26 @@ export default function DoctorLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    paddingTop: 8,
+    paddingTop: Spacing.sm,
     backgroundColor: Colors.surface,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    elevation: 8,
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: -2 },
+    borderTopColor: Colors.borderLight,
+    ...Shadows.tabBar,
   },
-  tabLabel: { fontSize: 11, fontWeight: "600", marginTop: 2 },
-  iconWrap: {
-    width: 40,
-    height: 32,
+  iconPill: {
+    width: 44,
+    height: 30,
+    borderRadius: Radius.md,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 12,
   },
-  iconActive: { backgroundColor: "#EFF6FF" },
+  iconPillActive: {
+    backgroundColor: Colors.primaryLight,
+  },
+  tabLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    letterSpacing: 0.2,
+    marginTop: 1,
+  },
 });

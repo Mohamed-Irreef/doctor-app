@@ -1,15 +1,15 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
     Activity,
     ArrowRight,
     Bell,
-    Check,
     ChevronRight,
     Clock,
     FileText,
     FlaskConical,
+    Hand,
     Heart,
-    MapPin,
     Menu,
     Pill,
     Plus,
@@ -18,7 +18,6 @@ import {
     ShoppingCart,
     Star,
     Stethoscope,
-    Video,
 } from "lucide-react-native";
 import React, { memo, useCallback, useEffect, useState } from "react";
 import {
@@ -34,10 +33,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AnimatedCard from "../../components/AnimatedCard";
+import Badge, { getStatusVariant } from "../../components/Badge";
 import BannerCarousel from "../../components/BannerCarousel";
 import FadeInSection from "../../components/FadeInSection";
 import { ListSkeleton } from "../../components/SkeletonLoader";
 import { Colors } from "../../constants/Colors";
+import { Shadows } from "../../constants/Shadows";
+import { Radius, Spacing } from "../../constants/Spacing";
 import { Typography } from "../../constants/Typography";
 import {
     getDoctors,
@@ -53,8 +55,15 @@ import { useFavoritesStore } from "../../store/favoritesStore";
 import type { Article, Doctor } from "../../types";
 
 const { width: W } = Dimensions.get("window");
+const CARD_GAP = Spacing.md;
+const ITEM_W = (W - 56) / 3;
+const FEATURED_CARD_WIDTH = (W - Spacing.screenH * 2 - Spacing.sm) / 2;
+const OFFERS_TOP_CARD_WIDTH = W * 0.82;
+const OFFERS_BOTTOM_CARD_WIDTH = W * 0.86;
+const DEFAULT_BANNER_WIDTH = W - Spacing.screenH * 2;
+const DEFAULT_BANNER_HEIGHT = DEFAULT_BANNER_WIDTH / 3.11;
 
-// ─── HERO BANNERS ─────────────────────────────────────────────────────────────
+// ─── DATA ─────────────────────────────────────────────────────────────────────
 const BANNERS = [
   {
     id: "1",
@@ -63,7 +72,7 @@ const BANNERS = [
     image:
       "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&q=80&w=800",
     cta: "Book Now",
-    color: "#1D4ED8",
+    color: Colors.primary,
   },
   {
     id: "2",
@@ -72,7 +81,7 @@ const BANNERS = [
     image:
       "https://images.unsplash.com/photo-1581594693702-fbdc51b2763b?auto=format&fit=crop&q=80&w=800",
     cta: "Explore",
-    color: "#0D9488",
+    color: Colors.secondary,
   },
   {
     id: "3",
@@ -81,69 +90,141 @@ const BANNERS = [
     image:
       "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&q=80&w=800",
     cta: "Join Free",
-    color: "#7C3AED",
+    color: Colors.primaryPressed,
   },
 ];
 
-// ─── QUICK ACTIONS ─────────────────────────────────────────────────────────────
 const QUICK_ACTIONS = [
   {
     id: "1",
     label: "Book Doctor",
-    icon: Stethoscope,
-    bg: "#DBEAFE",
-    fg: "#2563EB",
+    image: require("../../assets/images/book_doctor.png"),
     route: "/(patient)/search",
   },
   {
     id: "2",
     label: "Video Consult",
-    icon: Video,
-    bg: "#DCFCE7",
-    fg: "#16A34A",
+    image: require("../../assets/images/video_consult.png"),
     route: "/(patient)/consultation",
   },
   {
     id: "3",
     label: "Lab Tests",
-    icon: Activity,
-    bg: "#FEF3C7",
-    fg: "#D97706",
+    image: require("../../assets/images/lab_tests.png"),
     route: "/(patient)/labs",
   },
   {
     id: "4",
     label: "Medicines",
-    icon: Pill,
-    bg: "#F3E8FF",
-    fg: "#7C3AED",
+    image: require("../../assets/images/medicines.png"),
     route: "/(patient)/pharmacy",
   },
   {
     id: "5",
     label: "Records",
-    icon: FileText,
-    bg: "#FEE2E2",
-    fg: "#EF4444",
+    image: require("../../assets/images/records.png"),
     route: "/(patient)/records",
   },
   {
     id: "6",
     label: "Favorites",
-    icon: Heart,
-    bg: "#FCE7F3",
-    fg: "#DB2777",
+    image: require("../../assets/images/favourites.png"),
     route: "/(patient)/favorites",
   },
 ];
 
+const OFFERS_TOP_ROW = [
+  {
+    id: "ot1",
+    image: require("../../assets/images/offers-banner1.png"),
+  },
+  {
+    id: "ot2",
+    image: require("../../assets/images/offers-banner2.png"),
+  },
+];
+
+const FEATURED_SERVICES = [
+  {
+    id: "fs1",
+    image: require("../../assets/images/feature-banner1.png"),
+  },
+  {
+    id: "fs2",
+    image: require("../../assets/images/feature-banner2.png"),
+  },
+  {
+    id: "fs3",
+    image: require("../../assets/images/feature-banner3.png"),
+  },
+];
+
+const OFFERS_BOTTOM_ROW = [
+  {
+    id: "ob1",
+    image: require("../../assets/images/banner1.png"),
+  },
+  {
+    id: "ob2",
+    image: require("../../assets/images/banner2.png"),
+  },
+  {
+    id: "ob3",
+    image: require("../../assets/images/banner3.png"),
+  },
+  {
+    id: "ob4",
+    image: require("../../assets/images/banner4.png"),
+  },
+  {
+    id: "ob5",
+    image: require("../../assets/images/banner5.png"),
+  },
+];
+
 const CATEGORIES = [
-  { id: "1", name: "Cardiologist", color: "#FEE2E2", iconColor: "#EF4444" },
-  { id: "2", name: "Dentist", color: "#E0F2FE", iconColor: "#0EA5E9" },
-  { id: "3", name: "Dermatologist", color: "#FEF3C7", iconColor: "#F59E0B" },
-  { id: "4", name: "Neurologist", color: "#F3E8FF", iconColor: "#A855F7" },
-  { id: "5", name: "Pediatrics", color: "#DCFCE7", iconColor: "#16A34A" },
-  { id: "6", name: "Orthopedic", color: "#FEF9C3", iconColor: "#CA8A04" },
+  {
+    id: "1",
+    name: "Cardiologist",
+    color: Colors.errorLight,
+    iconColor: Colors.error,
+    icon: Heart,
+  },
+  {
+    id: "2",
+    name: "Dentist",
+    color: Colors.secondaryLight,
+    iconColor: Colors.secondaryPressed,
+    icon: Stethoscope,
+  },
+  {
+    id: "3",
+    name: "Dermatologist",
+    color: Colors.warningLight,
+    iconColor: Colors.warningPressed,
+    icon: Activity,
+  },
+  {
+    id: "4",
+    name: "Neurologist",
+    color: Colors.primaryLight,
+    iconColor: Colors.primary,
+    icon: FileText,
+  },
+  {
+    id: "5",
+    name: "Pediatrics",
+    color: Colors.successLight,
+    iconColor: Colors.successPressed,
+    icon: ShieldCheck,
+  },
+  {
+    id: "6",
+    name: "Orthopedic",
+    color: "#FEF9C3",
+    iconColor: "#CA8A04",
+    icon: Pill,
+  },
 ];
 
 const AD_BANNERS = [
@@ -168,77 +249,57 @@ const TRUST_HIGHLIGHTS = [
     id: "1",
     value: "1000+",
     label: "Verified Doctors",
-    iconColor: "#2563EB",
-    color: "#DBEAFE",
+    iconColor: Colors.primary,
+    color: Colors.primaryLight,
   },
   {
     id: "2",
     value: "24/7",
     label: "Support Available",
-    iconColor: "#16A34A",
-    color: "#DCFCE7",
+    iconColor: Colors.successPressed,
+    color: Colors.successLight,
   },
   {
     id: "3",
     value: "50K+",
     label: "Happy Patients",
-    iconColor: "#D97706",
-    color: "#FEF3C7",
+    iconColor: Colors.warningPressed,
+    color: Colors.warningLight,
   },
 ];
 
-const HEALTH_REMINDERS = [
-  { id: "r1", title: "Take Vitamin C", time: "08:00 AM", done: false },
-  { id: "r2", title: "Annual Checkup Due", time: "Nov 5, 2026", done: false },
-];
+// ─── SUB-COMPONENTS ───────────────────────────────────────────────────────────
 
-const RECENT_ACTIVITY = [
-  {
-    id: "ra1",
-    title: "Consultation completed",
-    subtitle: "Prescription issued",
-  },
-  {
-    id: "ra2",
-    title: "Medical report uploaded",
-    subtitle: "PDF file available",
-  },
-];
-
-// ─── Memoized sub-components ──────────────────────────────────────────────────
-
-const BannerSlide = memo(
-  ({ item, router }: { item: (typeof BANNERS)[0]; router: any }) => (
-    <AnimatedCard style={styles.bannerCard} onPress={() => {}}>
-      <Image
-        source={{ uri: item.image }}
-        style={StyleSheet.absoluteFill}
-        resizeMode="cover"
-      />
-      <View
-        style={[styles.bannerOverlay, { backgroundColor: item.color + "99" }]}
-      >
-        <Text style={styles.bannerTitle}>{item.title}</Text>
-        <Text style={styles.bannerSub}>{item.subtitle}</Text>
-        <TouchableOpacity
-          style={[styles.bannerCta, { backgroundColor: item.color }]}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.bannerCtaText}>{item.cta}</Text>
-        </TouchableOpacity>
+const BannerSlide = memo(({ item }: { item: (typeof BANNERS)[0] }) => (
+  <AnimatedCard style={styles.bannerCard} onPress={() => {}}>
+    <Image
+      source={{ uri: item.image }}
+      style={StyleSheet.absoluteFill}
+      resizeMode="cover"
+    />
+    <View style={styles.bannerGradient}>
+      <Text style={styles.bannerTitle}>{item.title}</Text>
+      <Text style={styles.bannerSub}>{item.subtitle}</Text>
+      <View style={styles.bannerCta}>
+        <Text style={styles.bannerCtaText}>{item.cta}</Text>
+        <ArrowRight size={13} color={Colors.textInverse} strokeWidth={2.5} />
       </View>
-    </AnimatedCard>
-  ),
-);
+    </View>
+  </AnimatedCard>
+));
 
 const SectionTitle = memo(
   ({ title, onSeeAll }: { title: string; onSeeAll?: () => void }) => (
     <View style={styles.sectionTitle}>
-      <Text style={Typography.h3}>{title}</Text>
+      <Text style={styles.sectionTitleText}>{title}</Text>
       {onSeeAll && (
-        <TouchableOpacity onPress={onSeeAll} style={styles.seeAll}>
+        <TouchableOpacity
+          onPress={onSeeAll}
+          style={styles.seeAll}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
           <Text style={styles.seeAllText}>See All</Text>
-          <ChevronRight size={16} color={Colors.primary} />
+          <ChevronRight size={14} color={Colors.primary} strokeWidth={2.5} />
         </TouchableOpacity>
       )}
     </View>
@@ -246,17 +307,29 @@ const SectionTitle = memo(
 );
 
 const DoctorHCard = memo(({ item, onPress, onFav, faved }: any) => (
-  <AnimatedCard style={styles.docCard} onPress={onPress}>
+  <AnimatedCard style={styles.docCard} onPress={onPress} withShadow>
     <Image source={{ uri: item.image }} style={styles.docImage} />
+    {/* Online dot */}
+    <View
+      style={[
+        styles.onlineDot,
+        {
+          backgroundColor: item.isOnline ? Colors.success : Colors.textDisabled,
+        },
+      ]}
+    />
     <TouchableOpacity
       style={styles.heartBtn}
-      onPress={onFav}
+      onPress={(e) => {
+        (e as any).stopPropagation?.();
+        onFav();
+      }}
       activeOpacity={0.8}
       hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
     >
       <Heart
-        size={14}
-        color={faved ? Colors.error : "#999"}
+        size={13}
+        color={faved ? Colors.error : Colors.textDisabled}
         fill={faved ? Colors.error : "none"}
       />
     </TouchableOpacity>
@@ -264,17 +337,24 @@ const DoctorHCard = memo(({ item, onPress, onFav, faved }: any) => (
       <Text style={styles.docName} numberOfLines={1}>
         {item.name}
       </Text>
-      <Text style={styles.docSpec}>{item.specialization}</Text>
+      <Text style={styles.docSpec} numberOfLines={1}>
+        {item.specialization}
+      </Text>
       <View style={styles.docRow}>
-        <Star size={11} color="#F59E0B" fill="#F59E0B" />
+        <Star size={10} color={Colors.ratingGold} fill={Colors.ratingGold} />
         <Text style={styles.docRating}>{item.rating}</Text>
         <Text style={styles.docExp}> · {item.experience}</Text>
       </View>
       <View style={styles.docBottom}>
         <Text style={styles.docFee}>₹{item.fee}</Text>
-        <View style={styles.availTag}>
-          <Text style={styles.availText}>Available</Text>
-        </View>
+        <LinearGradient
+          colors={[Colors.gradientStart, Colors.gradientEnd]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.bookBtn}
+        >
+          <Text style={styles.bookBtnText}>Book</Text>
+        </LinearGradient>
       </View>
     </View>
   </AnimatedCard>
@@ -292,7 +372,11 @@ const LabCard = memo(
     const imageUrl =
       item.testImage || item.imageUrl || item.testImageUrl || item.image || "";
     return (
-      <AnimatedCard style={styles.labCard} onPress={() => onPress(id)}>
+      <AnimatedCard
+        style={styles.labCard}
+        onPress={() => onPress(id)}
+        withShadow
+      >
         {imageUrl ? (
           <Image
             source={{ uri: imageUrl }}
@@ -301,7 +385,7 @@ const LabCard = memo(
           />
         ) : (
           <View style={styles.labImageFallback}>
-            <FlaskConical color={Colors.primary} size={26} />
+            <FlaskConical color={Colors.secondary} size={26} />
           </View>
         )}
         {item.popular && (
@@ -314,22 +398,31 @@ const LabCard = memo(
             {item.name}
           </Text>
           <Text style={styles.labTime}>
-            ⏱ {item.reportTime || item.turnaround || "24 hrs"}
+            {item.reportTime || item.turnaround || "24 hrs"}
           </Text>
           <View style={styles.labPriceRow}>
             <Text style={styles.labPrice}>₹{offerPrice}</Text>
             <Text style={styles.labOriginal}>₹{originalPrice}</Text>
-            <View style={styles.discBadge}>
-              <Text style={styles.discText}>{disc}% off</Text>
-            </View>
+            {disc > 0 && (
+              <View style={styles.discBadge}>
+                <Text style={styles.discText}>{disc}% off</Text>
+              </View>
+            )}
           </View>
-          <TouchableOpacity
+          <LinearGradient
+            colors={[Colors.gradientStart, Colors.gradientEnd]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
             style={styles.labAddBtn}
-            onPress={() => onPress(id)}
           >
-            <Plus size={14} color={Colors.surface} />
-            <Text style={styles.labAddText}>Add</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => onPress(id)}
+              style={styles.labAddBtnInner}
+            >
+              <Plus size={13} color={Colors.textInverse} />
+              <Text style={styles.labAddText}>Add</Text>
+            </TouchableOpacity>
+          </LinearGradient>
         </View>
       </AnimatedCard>
     );
@@ -341,6 +434,7 @@ const MedCard = memo(
     <AnimatedCard
       style={styles.medCard}
       onPress={() => onPress(item.id || item._id)}
+      withShadow
     >
       <Image source={{ uri: item.image }} style={styles.medImage} />
       <Text style={styles.medName} numberOfLines={2}>
@@ -356,9 +450,9 @@ const MedCard = memo(
           disabled={!item.inStock}
         >
           {item.inStock ? (
-            <Plus size={14} color={Colors.surface} />
+            <Plus size={13} color={Colors.textInverse} />
           ) : (
-            <Text style={{ fontSize: 9, color: Colors.textSecondary }}>
+            <Text style={{ fontSize: 8, color: Colors.textSecondary }}>
               Out
             </Text>
           )}
@@ -373,6 +467,7 @@ const ArticleHCard = memo(
     <AnimatedCard
       style={styles.articleCard}
       onPress={() => onPress(item.slug || item.id)}
+      withShadow
     >
       <Image source={{ uri: item.image }} style={styles.articleImage} />
       <View style={styles.articleBody}>
@@ -382,14 +477,34 @@ const ArticleHCard = memo(
         <Text style={styles.articleTitle} numberOfLines={2}>
           {item.title}
         </Text>
-        <Text style={styles.articleDesc} numberOfLines={2}>
-          {item.description}
-        </Text>
-        <View style={styles.articleMetaRow}>
+        <View style={styles.articleMeta}>
+          <Clock size={10} color={Colors.primary} />
           <Text style={styles.articleTime}>{item.readTime}</Text>
-          <Text style={styles.articleViews}>{item.views || 0} views</Text>
         </View>
       </View>
+    </AnimatedCard>
+  ),
+);
+
+const OfferBannerCard = memo(
+  ({
+    item,
+    width,
+    height,
+  }: {
+    item: { id: string; image: any };
+    width: number;
+    height: number;
+  }) => (
+    <AnimatedCard
+      style={[styles.offerBannerCard, { width, height }]}
+      activeOpacity={0.92}
+    >
+      <Image
+        source={item.image}
+        style={styles.offerBannerImage}
+        resizeMode="cover"
+      />
     </AnimatedCard>
   ),
 );
@@ -400,6 +515,7 @@ DoctorHCard.displayName = "DoctorHCard";
 LabCard.displayName = "LabCard";
 MedCard.displayName = "MedCard";
 ArticleHCard.displayName = "ArticleHCard";
+OfferBannerCard.displayName = "OfferBannerCard";
 
 // ─── MAIN SCREEN ──────────────────────────────────────────────────────────────
 export default function PatientHomeScreen() {
@@ -415,6 +531,9 @@ export default function PatientHomeScreen() {
   const [labs, setLabs] = useState<any[]>([]);
   const [medicines, setMedicines] = useState<any[]>([]);
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [featuredIndex, setFeaturedIndex] = useState(0);
+  const [offersTopIndex, setOffersTopIndex] = useState(0);
+  const [offersBottomIndex, setOffersBottomIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -449,813 +568,1315 @@ export default function PatientHomeScreen() {
     return h < 12 ? "Good Morning" : h < 17 ? "Good Afternoon" : "Good Evening";
   };
 
+  const getDoctorId = useCallback((doctor: any) => {
+    return String(doctor?.id ?? doctor?._id ?? "");
+  }, []);
+
+  const handleToggleFavorite = useCallback(
+    (doctor: any) => {
+      const doctorId = getDoctorId(doctor);
+      if (!doctorId) return;
+      toggleFavorite({ ...(doctor as Doctor), id: doctorId });
+    },
+    [getDoctorId, toggleFavorite],
+  );
+
+  const getDoctorsBySpecialization = (keyword: string) => {
+    const needle = keyword.toLowerCase();
+    return doctors.filter((d) =>
+      String(d.specialization || "")
+        .toLowerCase()
+        .includes(needle),
+    );
+  };
+
+  const dermatologistDoctors = getDoctorsBySpecialization("dermat");
+  const cardiologistDoctors = getDoctorsBySpecialization("cardio");
+  const neurologistDoctors = getDoctorsBySpecialization("neuro");
+
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* ── 1. STICKY HEADER ── */}
-      <View style={styles.header}>
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <TouchableOpacity
-            onPress={openDrawer}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            style={{ marginRight: 12 }}
-          >
-            <Menu color={Colors.text} size={24} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.headerLeft}
-            activeOpacity={0.8}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Image source={{ uri: user?.image }} style={styles.avatar} />
-            <View>
-              <Text style={styles.greeting}>{greeting()},</Text>
-              <Text style={styles.userName}>
-                {user?.name?.split(" ")[0] ?? "User"} 👋
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            style={styles.locBtn}
-            activeOpacity={0.8}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <MapPin size={12} color={Colors.primary} />
-            <Text style={styles.locText}>New York</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.notifBtn}
-            onPress={() => router.push("/(patient)/notifications")}
-            activeOpacity={0.8}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Bell color={Colors.text} size={20} />
-            <View style={styles.notifDot} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.notifBtn, { marginLeft: 10 }]}
-            onPress={() => router.push("/(patient)/cart")}
-            activeOpacity={0.8}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <ShoppingCart color={Colors.text} size={20} />
-            {cartCount > 0 && (
-              <View
-                style={{
-                  position: "absolute",
-                  top: 6,
-                  right: 6,
-                  backgroundColor: Colors.error,
-                  width: 14,
-                  height: 14,
-                  borderRadius: 7,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Text style={{ color: "#fff", fontSize: 9, fontWeight: "700" }}>
-                  {cartCount}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={Colors.primary}
-          />
-        }
-      >
-        {/* ── 2. SEARCH BAR ── */}
-        <TouchableOpacity
-          style={styles.searchBox}
-          onPress={() => router.push("/(patient)/search")}
-          activeOpacity={0.85}
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <View style={styles.container}>
+        {/* ── STICKY HEADER (Practo Dark Blue) ── */}
+        <LinearGradient
+          colors={[Colors.primary, Colors.primaryPressed]}
+          style={styles.header}
         >
-          <Search color={Colors.textSecondary} size={18} />
-          <Text style={styles.searchPlaceholder}>
-            Search doctors, specialties, clinics…
-          </Text>
-        </TouchableOpacity>
-
-        {/* ── 3. HERO BANNER CAROUSEL ── */}
-        <FadeInSection delay={100} style={[styles.pad, { marginBottom: 24 }]}>
-          <BannerCarousel
-            data={BANNERS}
-            renderItem={(item) => <BannerSlide item={item} router={router} />}
-          />
-        </FadeInSection>
-
-        {/* ── 4. QUICK ACTION GRID ── */}
-        <FadeInSection delay={200} style={styles.pad}>
-          <View style={styles.qaGrid}>
-            {QUICK_ACTIONS.map((a) => (
-              <AnimatedCard
-                key={a.id}
-                style={styles.qaItem}
-                onPress={() => router.push(a.route as any)}
-              >
-                <View style={[styles.qaIcon, { backgroundColor: a.bg }]}>
-                  <a.icon color={a.fg} size={24} />
-                </View>
-                <Text style={styles.qaLabel}>{a.label}</Text>
-              </AnimatedCard>
-            ))}
-          </View>
-        </FadeInSection>
-
-        {/* ── 5. TOP DOCTORS ── */}
-        <FadeInSection delay={300} style={[styles.pad, styles.section]}>
-          <SectionTitle
-            title="Top Doctors"
-            onSeeAll={() => router.push("/(patient)/search")}
-          />
-          {loading ? (
-            <View style={{ flexDirection: "row" }}>
-              <ListSkeleton count={2} type="doctor" />
-            </View>
-          ) : (
-            <FlatList
-              data={doctors}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(d) => String(d.id || d._id)}
-              renderItem={({ item }) => (
-                <DoctorHCard
-                  item={item}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/(patient)/doctor/[id]",
-                      params: { id: item.id || item._id },
-                    })
-                  }
-                  onFav={() => toggleFavorite(item)}
-                  faved={isFavorite(item.id || item._id)}
-                />
-              )}
-            />
-          )}
-        </FadeInSection>
-
-        {/* ── 6. SPECIALITIES GRID ── */}
-        <FadeInSection delay={400} style={[styles.pad, styles.section]}>
-          <SectionTitle
-            title="Top Specialities"
-            onSeeAll={() => router.push("/(patient)/search")}
-          />
-          <View style={styles.specGrid}>
-            {CATEGORIES.slice(0, 6).map((cat) => (
-              <AnimatedCard
-                key={cat.id}
-                style={[styles.specItem, { backgroundColor: cat.color }]}
-                onPress={() => router.push("/(patient)/search")}
-              >
-                <Stethoscope color={cat.iconColor} size={22} />
-                <Text
-                  style={[styles.specLabel, { color: cat.iconColor }]}
-                  numberOfLines={1}
-                >
-                  {cat.name}
-                </Text>
-              </AnimatedCard>
-            ))}
-          </View>
-        </FadeInSection>
-
-        {/* ── 7. LAB TESTS ── */}
-        <FadeInSection delay={500} style={[styles.section]}>
-          <View style={styles.pad}>
-            <SectionTitle
-              title="Lab Tests"
-              onSeeAll={() => router.push("/(patient)/labs")}
-            />
-            <View style={styles.labBanner}>
-              <Activity color={Colors.primary} size={20} />
-              <Text style={styles.labBannerText}>
-                Free home sample collection · Results in 24–72 hrs
-              </Text>
-            </View>
-          </View>
-          {loading ? (
-            <View style={[{ flexDirection: "row" }, styles.pad]}>
-              <ListSkeleton count={2} type="doctor" />
-            </View>
-          ) : (
-            <FlatList
-              data={labs}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 20 }}
-              keyExtractor={(t) => String(t.id || t._id)}
-              renderItem={({ item }) => (
-                <LabCard
-                  item={item}
-                  onPress={(id) =>
-                    router.push({
-                      pathname: "/(patient)/lab/[id]",
-                      params: { id },
-                    })
-                  }
-                />
-              )}
-            />
-          )}
-        </FadeInSection>
-
-        {/* ── 8. PHARMACY ── */}
-        <FadeInSection delay={600} style={[styles.section]}>
-          <View style={styles.pad}>
-            <SectionTitle
-              title="Medicines"
-              onSeeAll={() => router.push("/(patient)/pharmacy")}
-            />
-            <View style={styles.pharmBanner}>
-              <Pill color="#7C3AED" size={18} />
-              <Text style={styles.pharmText}>
-                Up to 30% off on all medicines
-              </Text>
-            </View>
-          </View>
-          {loading ? (
-            <View style={[{ flexDirection: "row" }, styles.pad]}>
-              <ListSkeleton count={3} type="article" />
-            </View>
-          ) : (
-            <FlatList
-              data={medicines}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 20 }}
-              keyExtractor={(m) => String(m.id || m._id)}
-              renderItem={({ item }) => (
-                <MedCard
-                  item={item}
-                  onPress={(id) =>
-                    router.push({
-                      pathname: "/(patient)/medicine/[id]",
-                      params: { id },
-                    })
-                  }
-                />
-              )}
-            />
-          )}
-        </FadeInSection>
-
-        {/* ── 9. HEALTH ARTICLES ── */}
-        <FadeInSection delay={700} style={[styles.pad, styles.section]}>
-          <SectionTitle
-            title="Health Articles"
-            onSeeAll={() => router.push("/(patient)/article")}
-          />
-          {loading ? (
-            <ListSkeleton count={2} type="article" />
-          ) : (
-            <FlatList
-              data={articles}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingRight: 6 }}
-              keyExtractor={(item) => item.id || (item as any).slug}
-              renderItem={({ item }) => (
-                <ArticleHCard
-                  item={item}
-                  onPress={(slug) =>
-                    router.push({
-                      pathname: "/(patient)/article/[id]",
-                      params: { id: slug },
-                    })
-                  }
-                />
-              )}
-            />
-          )}
-        </FadeInSection>
-
-        {/* ── 10. ADVERTISEMENT BANNERS ── */}
-        <View style={[styles.section]}>
-          <View style={styles.pad}>
-            <SectionTitle title="Featured" />
-          </View>
-          {AD_BANNERS.map((ad) => (
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
             <TouchableOpacity
-              key={ad.id}
-              style={styles.adBanner}
-              activeOpacity={0.85}
+              onPress={openDrawer}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={{ marginRight: Spacing.sm + 4 }}
             >
+              <Menu color={Colors.textInverse} size={22} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.headerLeft} activeOpacity={0.8}>
+              <View style={styles.avatarWrap}>
+                <Image source={{ uri: user?.image }} style={styles.avatar} />
+                <View style={styles.avatarOnline} />
+              </View>
+              <View>
+                <Text style={styles.greeting}>{greeting()}</Text>
+                <View style={styles.nameRow}>
+                  <Text style={styles.userName}>
+                    {user?.name?.split(" ")[0] ?? "User"}
+                  </Text>
+                  <Hand
+                    size={16}
+                    color="#FBBF24"
+                    strokeWidth={1.8}
+                    style={{ marginLeft: 4 }}
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={() => router.push("/(patient)/notifications")}
+              activeOpacity={0.8}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Bell color={Colors.textInverse} size={19} />
+              <View style={styles.notifDot} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={() => router.push("/(patient)/cart")}
+              activeOpacity={0.8}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <ShoppingCart color={Colors.textInverse} size={19} />
+              {cartCount > 0 && (
+                <View style={styles.cartBadge}>
+                  <Text style={styles.cartBadgeText}>{cartCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scroll}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={Colors.primary}
+            />
+          }
+        >
+          {/* ── SEARCH BAR ── */}
+          <TouchableOpacity
+            style={styles.searchBox}
+            onPress={() => router.push("/(patient)/search")}
+            activeOpacity={0.85}
+          >
+            <View style={styles.searchInner}>
+              <Search color={Colors.textTertiary} size={17} />
+              <Text style={styles.searchPlaceholder}>
+                Search doctors, labs, medicines…
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* ── AI NiviDoc BANNER (Premium Gradient) ── */}
+          <FadeInSection delay={50} style={styles.pad}>
+            <AnimatedCard
+              onPress={() => router.push("/(patient)/consultation")}
+              scaleValue={0.97}
+            >
+              <LinearGradient
+                colors={[Colors.gradientStart, Colors.gradientEnd]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.aiBanner}
+              >
+                <View style={styles.aiBannerContent}>
+                  <View style={styles.aiIconWrap}>
+                    <Activity
+                      color={Colors.gradientEnd}
+                      size={18}
+                      strokeWidth={2.5}
+                    />
+                  </View>
+                  <View style={styles.aiBannerTexts}>
+                    <Text style={styles.aiBannerTitle}>
+                      Nivi AI Symptom Checker
+                    </Text>
+                    <Text style={styles.aiBannerSub}>
+                      Analyze your symptoms & find exactly which doctor to
+                      consult.
+                    </Text>
+                  </View>
+                </View>
+                <ChevronRight color={Colors.textInverse} size={20} />
+              </LinearGradient>
+            </AnimatedCard>
+          </FadeInSection>
+
+          {/* ── HERO BANNER CAROUSEL ── */}
+          <FadeInSection
+            delay={100}
+            style={[
+              styles.pad,
+              { marginBottom: Spacing.section, marginTop: Spacing.md },
+            ]}
+          >
+            <BannerCarousel
+              data={BANNERS}
+              renderItem={(item) => <BannerSlide item={item} />}
+            />
+          </FadeInSection>
+
+          {/* ── QUICK ACTIONS GRID ── */}
+          <FadeInSection delay={200} style={styles.pad}>
+            <View style={styles.qaGrid}>
+              {QUICK_ACTIONS.map((a) => (
+                <AnimatedCard
+                  key={a.id}
+                  style={styles.qaItem}
+                  onPress={() => router.push(a.route as any)}
+                  scaleValue={0.94}
+                >
+                  <Text style={styles.qaLabel}>{a.label}</Text>
+                  <Image
+                    source={a.image}
+                    style={styles.qaImage}
+                    resizeMode="contain"
+                  />
+                </AnimatedCard>
+              ))}
+            </View>
+          </FadeInSection>
+
+          {/* ── GENERAL BANNER ── */}
+          <FadeInSection delay={250} style={styles.pad}>
+            <AnimatedCard style={styles.generalBannerCard} activeOpacity={0.9}>
               <Image
-                source={{ uri: ad.image }}
-                style={StyleSheet.absoluteFill}
+                source={require("../../assets/images/general-banner.png")}
+                style={styles.generalBannerImage}
                 resizeMode="cover"
               />
-              <View style={styles.adOverlay}>
-                <View style={styles.adBadge}>
-                  <Text style={styles.adBadgeText}>{ad.badge}</Text>
-                </View>
-                <Text style={styles.adTitle}>{ad.title}</Text>
-                <Text style={styles.adSub}>{ad.subtitle}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
+            </AnimatedCard>
+          </FadeInSection>
 
-        {/* ── 11. TRUST SECTION ── */}
-        <View style={[styles.pad, styles.section]}>
-          <SectionTitle title="Why MediBook?" />
-          <View style={styles.trustRow}>
-            {TRUST_HIGHLIGHTS.map((t) => (
-              <View
-                key={t.id}
-                style={[styles.trustCard, { backgroundColor: t.color }]}
-              >
-                <ShieldCheck color={t.iconColor} size={24} />
-                <Text style={[styles.trustValue, { color: t.iconColor }]}>
-                  {t.value}
-                </Text>
-                <Text style={styles.trustLabel}>{t.label}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* ── 12. UPCOMING APPOINTMENTS ── */}
-        {appointments.length > 0 && (
-          <View style={[styles.pad, styles.section]}>
-            <SectionTitle
-              title="Upcoming Appointments"
-              onSeeAll={() => router.push("/(patient)/appointments")}
+          {/* ── FEATURED SERVICES ── */}
+          <FadeInSection delay={270} style={[styles.pad, styles.section]}>
+            <SectionTitle title="Featured services" />
+            <FlatList
+              data={FEATURED_SERVICES}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingRight: Spacing.sm }}
+              ItemSeparatorComponent={() => (
+                <View style={{ width: Spacing.sm }} />
+              )}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <OfferBannerCard
+                  item={item}
+                  width={FEATURED_CARD_WIDTH}
+                  height={240}
+                />
+              )}
+              onScroll={(event) => {
+                const x = event.nativeEvent.contentOffset.x;
+                const fullWidth = FEATURED_CARD_WIDTH + Spacing.sm;
+                const maxOffset = Math.max(
+                  fullWidth * (FEATURED_SERVICES.length - 2),
+                  1,
+                );
+                const progress = Math.max(0, Math.min(1, x / maxOffset));
+                const idx = Math.round(
+                  progress * (FEATURED_SERVICES.length - 1),
+                );
+                setFeaturedIndex(idx);
+              }}
+              scrollEventThrottle={16}
             />
-            {appointments
-              .filter((appt) => {
-                const status = String(appt.status).toLowerCase();
-                return status === "upcoming" || status === "pending";
-              })
-              .slice(0, 3)
-              .map((appt) => (
-                <View key={appt.id} style={styles.apptCard}>
-                  <Image
-                    source={{ uri: appt.doctor?.image }}
-                    style={styles.apptAvatar}
-                  />
-                  <View style={styles.apptInfo}>
-                    <Text style={styles.apptDoc}>{appt.doctor?.name}</Text>
-                    <Text style={styles.apptSub}>{appt.type}</Text>
-                    <View style={styles.apptTimeRow}>
-                      <Clock size={12} color={Colors.textSecondary} />
-                      <Text style={styles.apptTime}>
-                        {appt.date} · {appt.time}
-                      </Text>
-                    </View>
-                  </View>
-                  <TouchableOpacity
-                    style={[
-                      styles.joinBtn,
-                      appt.status === "Pending" && {
-                        backgroundColor: Colors.border,
-                      },
-                    ]}
-                    onPress={() =>
-                      router.push({
-                        pathname: "/(patient)/appointment/[id]",
-                        params: { id: appt.id },
-                      })
-                    }
-                  >
-                    <Text
-                      style={[
-                        styles.joinText,
-                        String(appt.status).toLowerCase() === "pending" && {
-                          color: Colors.textSecondary,
-                        },
-                      ]}
-                    >
-                      {String(appt.status).toLowerCase() === "upcoming"
-                        ? "Join"
-                        : "View"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+            <View style={styles.featuredDotsRow}>
+              {FEATURED_SERVICES.map((item, idx) => (
+                <View
+                  key={item.id}
+                  style={[
+                    styles.featuredDot,
+                    idx === featuredIndex && styles.featuredDotActive,
+                  ]}
+                />
               ))}
-          </View>
-        )}
+            </View>
+          </FadeInSection>
 
-        {/* ── 13. HEALTH REMINDERS ── */}
-        <View style={[styles.pad, styles.section]}>
-          <SectionTitle title="Health Reminders" />
-          {HEALTH_REMINDERS.map((r) => (
-            <View key={r.id} style={styles.reminderRow}>
-              <View style={styles.reminderIcon}>
-                <Check size={14} color={Colors.success} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.reminderTitle}>{r.title}</Text>
-                <Text style={styles.reminderTime}>{r.time}</Text>
-              </View>
-              <View
-                style={[
-                  styles.reminderBadge,
-                  { backgroundColor: r.done ? "#DCFCE7" : "#FEF3C7" },
-                ]}
-              >
-                <Text
-                  style={{
-                    fontSize: 11,
-                    fontWeight: "600",
-                    color: r.done ? Colors.success : "#D97706",
-                  }}
-                >
-                  {r.done ? "Done" : "Pending"}
+          {/* ── PRACTO OFFERS SECTION ── */}
+          <FadeInSection delay={280} style={styles.section}>
+            <View style={styles.practoSection}>
+              <View style={styles.practoInner}>
+                <View style={styles.practoTitleRow}>
+                  <View style={styles.practoBadge}>
+                    <Text style={styles.practoBadgeText}>%</Text>
+                  </View>
+                  <Text style={styles.practoTitle}>Best Offers</Text>
+                </View>
+                <Text style={styles.practoSubtitle}>
+                  Explore deals, offers, health updates and more
                 </Text>
+              </View>
+
+              <FlatList
+                data={OFFERS_TOP_ROW}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => item.id}
+                decelerationRate="fast"
+                snapToInterval={OFFERS_TOP_CARD_WIDTH + Spacing.sm}
+                snapToAlignment="start"
+                contentContainerStyle={styles.practoRowContainer}
+                ItemSeparatorComponent={() => <View style={styles.offerGap} />}
+                renderItem={({ item }) => (
+                  <OfferBannerCard
+                    item={item}
+                    width={OFFERS_TOP_CARD_WIDTH}
+                    height={188}
+                  />
+                )}
+                onMomentumScrollEnd={(event) => {
+                  const x = event.nativeEvent.contentOffset.x;
+                  const idx = Math.round(
+                    x / (OFFERS_TOP_CARD_WIDTH + Spacing.sm),
+                  );
+                  const clamped = Math.max(
+                    0,
+                    Math.min(OFFERS_TOP_ROW.length - 1, idx),
+                  );
+                  setOffersTopIndex(clamped);
+                }}
+              />
+
+              <View style={styles.practoDotsRow}>
+                {OFFERS_TOP_ROW.map((item, idx) => (
+                  <View
+                    key={item.id}
+                    style={[
+                      styles.practoDot,
+                      idx === offersTopIndex && styles.practoDotActive,
+                    ]}
+                  />
+                ))}
+              </View>
+
+              <View style={styles.practoInnerBottom}>
+                <Text style={styles.practoTitle2}>
+                  Safe and Secure surgeries
+                </Text>
+                <Text style={styles.practoSubtitle2}>
+                  Get your first consultation FREE
+                </Text>
+              </View>
+
+              <FlatList
+                data={OFFERS_BOTTOM_ROW}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => item.id}
+                decelerationRate="fast"
+                snapToInterval={OFFERS_BOTTOM_CARD_WIDTH + Spacing.sm}
+                snapToAlignment="start"
+                contentContainerStyle={styles.practoRowContainer}
+                ItemSeparatorComponent={() => <View style={styles.offerGap} />}
+                renderItem={({ item }) => (
+                  <OfferBannerCard
+                    item={item}
+                    width={OFFERS_BOTTOM_CARD_WIDTH}
+                    height={220}
+                  />
+                )}
+                onMomentumScrollEnd={(event) => {
+                  const x = event.nativeEvent.contentOffset.x;
+                  const idx = Math.round(
+                    x / (OFFERS_BOTTOM_CARD_WIDTH + Spacing.sm),
+                  );
+                  const clamped = Math.max(
+                    0,
+                    Math.min(OFFERS_BOTTOM_ROW.length - 1, idx),
+                  );
+                  setOffersBottomIndex(clamped);
+                }}
+              />
+
+              <View style={[styles.practoDotsRow, styles.practoBottomDots]}>
+                {OFFERS_BOTTOM_ROW.map((item, idx) => (
+                  <View
+                    key={item.id}
+                    style={[
+                      styles.practoDot,
+                      idx === offersBottomIndex && styles.practoDotActive,
+                    ]}
+                  />
+                ))}
               </View>
             </View>
-          ))}
-        </View>
+          </FadeInSection>
 
-        {/* ── 14. RECENT ACTIVITY ── */}
-        <View style={[styles.pad, { ...styles.section, marginBottom: 32 }]}>
-          <SectionTitle title="Recent Activity" />
-          {RECENT_ACTIVITY.map((ra) => (
-            <TouchableOpacity
-              key={ra.id}
-              style={styles.activityRow}
-              activeOpacity={0.8}
-            >
-              <View style={styles.activityIcon}>
-                <Stethoscope size={18} color={Colors.primary} />
+          {/* ── TOP DOCTORS ── */}
+          <FadeInSection delay={300} style={[styles.pad, styles.section]}>
+            <SectionTitle
+              title="Top Doctors"
+              onSeeAll={() => router.push("/(patient)/search")}
+            />
+            {loading ? (
+              <View style={{ flexDirection: "row" }}>
+                <ListSkeleton count={2} type="doctor" />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.activityTitle} numberOfLines={1}>
-                  {ra.title}
-                </Text>
-                <Text style={styles.activitySub}>{ra.subtitle}</Text>
+            ) : (
+              <FlatList
+                data={doctors}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(d) => getDoctorId(d)}
+                renderItem={({ item }) => (
+                  <DoctorHCard
+                    item={item}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/(patient)/doctor/[id]",
+                        params: { id: getDoctorId(item) },
+                      })
+                    }
+                    onFav={() => handleToggleFavorite(item)}
+                    faved={isFavorite(getDoctorId(item))}
+                  />
+                )}
+              />
+            )}
+          </FadeInSection>
+
+          <FadeInSection delay={320} style={[styles.pad, styles.section]}>
+            <SectionTitle
+              title="Top Dermatologist"
+              onSeeAll={() => router.push("/(patient)/search")}
+            />
+            {loading ? (
+              <View style={{ flexDirection: "row" }}>
+                <ListSkeleton count={2} type="doctor" />
               </View>
-              <ArrowRight size={16} color={Colors.border} />
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
+            ) : (
+              <FlatList
+                data={dermatologistDoctors}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(d) => getDoctorId(d)}
+                ListEmptyComponent={
+                  <Text style={styles.emptySpecialityText}>
+                    No dermatologist found
+                  </Text>
+                }
+                renderItem={({ item }) => (
+                  <DoctorHCard
+                    item={item}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/(patient)/doctor/[id]",
+                        params: { id: getDoctorId(item) },
+                      })
+                    }
+                    onFav={() => handleToggleFavorite(item)}
+                    faved={isFavorite(getDoctorId(item))}
+                  />
+                )}
+              />
+            )}
+          </FadeInSection>
+
+          <FadeInSection delay={340} style={[styles.pad, styles.section]}>
+            <SectionTitle
+              title="Top Cardiologist"
+              onSeeAll={() => router.push("/(patient)/search")}
+            />
+            {loading ? (
+              <View style={{ flexDirection: "row" }}>
+                <ListSkeleton count={2} type="doctor" />
+              </View>
+            ) : (
+              <FlatList
+                data={cardiologistDoctors}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(d) => getDoctorId(d)}
+                ListEmptyComponent={
+                  <Text style={styles.emptySpecialityText}>
+                    No cardiologist found
+                  </Text>
+                }
+                renderItem={({ item }) => (
+                  <DoctorHCard
+                    item={item}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/(patient)/doctor/[id]",
+                        params: { id: getDoctorId(item) },
+                      })
+                    }
+                    onFav={() => handleToggleFavorite(item)}
+                    faved={isFavorite(getDoctorId(item))}
+                  />
+                )}
+              />
+            )}
+          </FadeInSection>
+
+          <FadeInSection delay={360} style={[styles.pad, styles.section]}>
+            <SectionTitle
+              title="Top Neurologist"
+              onSeeAll={() => router.push("/(patient)/search")}
+            />
+            {loading ? (
+              <View style={{ flexDirection: "row" }}>
+                <ListSkeleton count={2} type="doctor" />
+              </View>
+            ) : (
+              <FlatList
+                data={neurologistDoctors}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(d) => getDoctorId(d)}
+                ListEmptyComponent={
+                  <Text style={styles.emptySpecialityText}>
+                    No neurologist found
+                  </Text>
+                }
+                renderItem={({ item }) => (
+                  <DoctorHCard
+                    item={item}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/(patient)/doctor/[id]",
+                        params: { id: getDoctorId(item) },
+                      })
+                    }
+                    onFav={() => handleToggleFavorite(item)}
+                    faved={isFavorite(getDoctorId(item))}
+                  />
+                )}
+              />
+            )}
+          </FadeInSection>
+
+          {/* ── DEFAULT BANNER ── */}
+          <FadeInSection
+            delay={350}
+            style={[styles.pad, styles.defaultBannerSection]}
+          >
+            <Image
+              source={require("../../assets/images/default.png")}
+              style={styles.defaultBannerImage}
+              resizeMode="contain"
+            />
+          </FadeInSection>
+
+          {/* ── SPECIALITIES ── */}
+          <FadeInSection delay={400} style={[styles.pad, styles.section]}>
+            <SectionTitle
+              title="Top Specialities"
+              onSeeAll={() => router.push("/(patient)/search")}
+            />
+            <View style={styles.specGrid}>
+              {CATEGORIES.slice(0, 6).map((cat) => (
+                <AnimatedCard
+                  key={cat.id}
+                  style={styles.specItem}
+                  onPress={() => router.push("/(patient)/search")}
+                  scaleValue={0.94}
+                >
+                  <cat.icon
+                    color={Colors.textInverse}
+                    size={22}
+                    strokeWidth={1.8}
+                  />
+                  <Text style={styles.specLabel} numberOfLines={1}>
+                    {cat.name}
+                  </Text>
+                </AnimatedCard>
+              ))}
+            </View>
+          </FadeInSection>
+
+          {/* ── LAB TESTS ── */}
+          <FadeInSection delay={500} style={styles.section}>
+            <View style={styles.pad}>
+              <SectionTitle
+                title="Lab Tests"
+                onSeeAll={() => router.push("/(patient)/labs")}
+              />
+            </View>
+            {loading ? (
+              <View style={[{ flexDirection: "row" }, styles.pad]}>
+                <ListSkeleton count={2} type="doctor" />
+              </View>
+            ) : (
+              <FlatList
+                data={labs}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: Spacing.screenH }}
+                keyExtractor={(t) => String(t.id || t._id)}
+                renderItem={({ item }) => (
+                  <LabCard
+                    item={item}
+                    onPress={(id) =>
+                      router.push({
+                        pathname: "/(patient)/lab/[id]",
+                        params: { id },
+                      })
+                    }
+                  />
+                )}
+              />
+            )}
+          </FadeInSection>
+
+          {/* ── PHARMACY ── */}
+          <FadeInSection delay={600} style={styles.section}>
+            <View style={styles.pad}>
+              <SectionTitle
+                title="Medicines"
+                onSeeAll={() => router.push("/(patient)/pharmacy")}
+              />
+            </View>
+            {loading ? (
+              <View style={[{ flexDirection: "row" }, styles.pad]}>
+                <ListSkeleton count={3} type="article" />
+              </View>
+            ) : (
+              <FlatList
+                data={medicines}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: Spacing.screenH }}
+                keyExtractor={(m) => String(m.id || m._id)}
+                renderItem={({ item }) => (
+                  <MedCard
+                    item={item}
+                    onPress={(id) =>
+                      router.push({
+                        pathname: "/(patient)/medicine/[id]",
+                        params: { id },
+                      })
+                    }
+                  />
+                )}
+              />
+            )}
+          </FadeInSection>
+
+          {/* ── HEALTH ARTICLES ── */}
+          <FadeInSection delay={700} style={[styles.pad, styles.section]}>
+            <SectionTitle
+              title="Health Articles"
+              onSeeAll={() => router.push("/(patient)/article")}
+            />
+            {loading ? (
+              <ListSkeleton count={2} type="article" />
+            ) : (
+              <FlatList
+                data={articles}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingRight: 6 }}
+                keyExtractor={(item) => item.id || (item as any).slug}
+                renderItem={({ item }) => (
+                  <ArticleHCard
+                    item={item}
+                    onPress={(slug) =>
+                      router.push({
+                        pathname: "/(patient)/article/[id]",
+                        params: { id: slug },
+                      })
+                    }
+                  />
+                )}
+              />
+            )}
+          </FadeInSection>
+
+          {/* ── AD BANNERS ── */}
+          <View style={styles.section}>
+            <View style={styles.pad}>
+              <SectionTitle title="Featured" />
+            </View>
+            {AD_BANNERS.map((ad) => (
+              <TouchableOpacity
+                key={ad.id}
+                style={styles.adBanner}
+                activeOpacity={0.85}
+              >
+                <Image
+                  source={{ uri: ad.image }}
+                  style={StyleSheet.absoluteFill}
+                  resizeMode="cover"
+                />
+                <View style={styles.adOverlay}>
+                  <View style={styles.adBadge}>
+                    <Text style={styles.adBadgeText}>{ad.badge}</Text>
+                  </View>
+                  <Text style={styles.adTitle}>{ad.title}</Text>
+                  <Text style={styles.adSub}>{ad.subtitle}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* ── TRUST SECTION ── */}
+          <View style={[styles.pad, styles.section]}>
+            <SectionTitle title="Why NiviDoc?" />
+            <View style={styles.trustRow}>
+              {TRUST_HIGHLIGHTS.map((t) => (
+                <View
+                  key={t.id}
+                  style={[
+                    styles.trustCard,
+                    { borderColor: t.color, backgroundColor: Colors.surface },
+                  ]}
+                >
+                  <View style={styles.trustIcon}>
+                    <ShieldCheck
+                      color={Colors.textInverse}
+                      size={20}
+                      strokeWidth={2}
+                    />
+                  </View>
+                  <Text style={styles.trustValue}>{t.value}</Text>
+                  <Text style={styles.trustLabel}>{t.label}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* ── UPCOMING APPOINTMENTS ── */}
+          {appointments.length > 0 && (
+            <View style={[styles.pad, styles.section]}>
+              <SectionTitle
+                title="Upcoming Appointments"
+                onSeeAll={() => router.push("/(patient)/appointments")}
+              />
+              {appointments
+                .filter((appt) => {
+                  const status = String(appt.status).toLowerCase();
+                  return status === "upcoming" || status === "pending";
+                })
+                .slice(0, 3)
+                .map((appt) => (
+                  <View key={appt.id} style={styles.apptCard}>
+                    <View
+                      style={[
+                        styles.apptAccent,
+                        { backgroundColor: Colors.primary },
+                      ]}
+                    />
+                    <Image
+                      source={{ uri: appt.doctor?.image }}
+                      style={styles.apptAvatar}
+                    />
+                    <View style={styles.apptInfo}>
+                      <Text style={styles.apptDoc}>{appt.doctor?.name}</Text>
+                      <Text style={styles.apptSub}>{appt.type}</Text>
+                      <View style={styles.apptTimeRow}>
+                        <Clock size={11} color={Colors.textTertiary} />
+                        <Text style={styles.apptTime}>
+                          {appt.date} · {appt.time}
+                        </Text>
+                      </View>
+                    </View>
+                    <Badge
+                      label={
+                        String(appt.status).toLowerCase() === "upcoming"
+                          ? "Upcoming"
+                          : "Pending"
+                      }
+                      variant={getStatusVariant(appt.status)}
+                      size="sm"
+                    />
+                    <TouchableOpacity
+                      style={styles.joinBtn}
+                      onPress={() =>
+                        router.push({
+                          pathname: "/(patient)/appointment/[id]",
+                          params: { id: appt.id },
+                        })
+                      }
+                    >
+                      <ArrowRight size={14} color={Colors.textInverse} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+            </View>
+          )}
+
+          {/* ── NIVIDOC FOOTER ── */}
+          <View style={styles.homeFooter}>
+            <Text style={styles.homeFooterBrand}>NiviDoc</Text>
+            <Text style={styles.homeFooterBody}>
+              Our vision is to make quality healthcare accessible, affordable
+              and convenient for everyone.
+            </Text>
+            <Text style={styles.homeFooterMeta}>Made with 💙 in Chennai</Text>
+          </View>
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: Colors.primary },
   container: { flex: 1, backgroundColor: Colors.background },
-  scroll: { paddingBottom: 24 },
+  scroll: { paddingBottom: 0 },
 
-  // Header
+  // Header — Practo Dark Blue
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    paddingHorizontal: Spacing.screenH,
+    paddingTop: 10,
+    paddingBottom: 14,
   },
   headerLeft: { flexDirection: "row", alignItems: "center" },
+  avatarWrap: { position: "relative", marginRight: Spacing.sm + 2 },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    marginRight: 12,
+    width: 38,
+    height: 38,
+    borderRadius: Radius.full,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.22)",
     backgroundColor: Colors.border,
   },
-  greeting: { fontSize: 12, color: Colors.textSecondary },
-  userName: { fontSize: 16, fontWeight: "700", color: Colors.text },
-  headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
-  locBtn: {
+  avatarOnline: {
+    position: "absolute",
+    bottom: 1,
+    right: 1,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: Colors.success,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+  },
+  greeting: {
+    ...Typography.caption,
+    color: "rgba(255,255,255,0.65)",
+    marginBottom: 1,
+  },
+  nameRow: { flexDirection: "row", alignItems: "center" },
+  userName: {
+    ...Typography.subheading,
+    fontSize: 16,
+    fontWeight: "700",
+    color: Colors.textInverse,
+  },
+  headerRight: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    backgroundColor: "#EFF6FF",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 20,
+    gap: Spacing.sm - 2,
   },
-  locText: { fontSize: 11, fontWeight: "600", color: Colors.primary },
-  notifBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.background,
+  iconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: Radius.full,
+    backgroundColor: "rgba(255,255,255,0.12)",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   notifDot: {
     position: "absolute",
-    top: 9,
-    right: 9,
+    top: 8,
+    right: 8,
     width: 7,
     height: 7,
-    borderRadius: 4,
+    borderRadius: Radius.full,
     backgroundColor: Colors.error,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
   },
+  cartBadge: {
+    position: "absolute",
+    top: 5,
+    right: 5,
+    backgroundColor: Colors.error,
+    width: 16,
+    height: 16,
+    borderRadius: Radius.full,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+  },
+  cartBadgeText: { color: Colors.textInverse, fontSize: 9, fontWeight: "800" },
 
-  // Utils
-  pad: { paddingHorizontal: 20 },
-  section: { marginTop: 28 },
+  // Utility
+  pad: { paddingHorizontal: Spacing.screenH },
+  section: { marginTop: Spacing.section + Spacing.xs },
   sectionTitle: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 16,
+    marginBottom: Spacing.md,
   },
-  seeAll: { flexDirection: "row", alignItems: "center" },
-  seeAllText: { color: Colors.primary, fontWeight: "600", fontSize: 13 },
+  sectionTitleText: { ...Typography.h3, fontSize: 18 },
+  seeAll: { flexDirection: "row", alignItems: "center", gap: 2 },
+  seeAllText: { ...Typography.label, color: Colors.primary },
 
   // Search
   searchBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
+    marginHorizontal: Spacing.screenH,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.lg,
+    backgroundColor: Colors.surfaceAlt,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.border,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginHorizontal: 20,
-    marginTop: 16,
-    marginBottom: 24,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    ...Shadows.soft,
   },
-  searchPlaceholder: { color: Colors.textSecondary, fontSize: 14 },
+  searchInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm + 2,
+    paddingHorizontal: Spacing.md + 4,
+    paddingVertical: 13,
+  },
+  searchPlaceholder: { ...Typography.body2, color: Colors.textTertiary },
 
   // Banner
-  bannerCard: { height: 176, borderRadius: 20, overflow: "hidden" },
-  bannerOverlay: {
+  bannerCard: { height: 180, borderRadius: Radius.lg, overflow: "hidden" },
+  bannerGradient: {
     ...StyleSheet.absoluteFillObject,
-    padding: 20,
-    justifyContent: "center",
+    justifyContent: "flex-end",
+    padding: Spacing.md,
+    backgroundColor: "rgba(0,0,0,0.35)",
   },
   bannerTitle: {
-    color: "#fff",
+    color: Colors.textInverse,
     fontSize: 20,
     fontWeight: "800",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   bannerSub: {
     color: "rgba(255,255,255,0.85)",
     fontSize: 13,
-    marginBottom: 16,
+    marginBottom: Spacing.sm + 4,
   },
   bannerCta: {
-    paddingHorizontal: 18,
-    paddingVertical: 9,
-    borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
     alignSelf: "flex-start",
   },
-  bannerCtaText: { color: "#fff", fontWeight: "700", fontSize: 13 },
+  bannerCtaText: { color: Colors.textInverse, fontWeight: "700", fontSize: 13 },
 
   // Quick Actions
-  qaGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  qaItem: { width: (W - 56) / 3, alignItems: "center", marginBottom: 16 },
-  qaIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
+  qaGrid: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.sm },
+  qaItem: {
+    width: ITEM_W,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 10,
+    paddingTop: 10,
+    paddingBottom: 8,
+    marginBottom: Spacing.md,
+    ...Shadows.card,
   },
   qaLabel: {
-    fontSize: 11,
-    fontWeight: "600",
+    ...Typography.label,
     color: Colors.text,
-    textAlign: "center",
+    fontSize: 12,
+    fontWeight: "700",
+    marginBottom: 8,
+    textAlign: "left",
+  },
+  qaImage: {
+    width: "100%",
+    height: 64,
+  },
+
+  generalBannerCard: {
+    borderRadius: 18,
+    overflow: "hidden",
+    marginTop: Spacing.sm,
+  },
+  generalBannerImage: {
+    width: "100%",
+    height: 210,
+  },
+
+  defaultBannerSection: {
+    marginTop: Spacing.xl,
+    marginBottom: 0,
+  },
+  defaultBannerImage: {
+    width: DEFAULT_BANNER_WIDTH,
+    height: DEFAULT_BANNER_HEIGHT,
+    alignSelf: "center",
+    borderRadius: 18,
+  },
+
+  featuredDotsRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 10,
+  },
+  featuredDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#D4D4D8",
+  },
+  featuredDotActive: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.primary,
+  },
+
+  practoSection: {
+    backgroundColor: "#121D73",
+    paddingVertical: Spacing.lg,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  practoInner: {
+    paddingHorizontal: Spacing.screenH,
+  },
+  practoInnerBottom: {
+    paddingHorizontal: Spacing.screenH,
+    marginTop: Spacing.md,
+  },
+  practoTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  practoBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.95)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  practoBadgeText: {
+    color: "#121D73",
+    fontSize: 13,
+    fontWeight: "900",
+    lineHeight: 16,
+  },
+  practoTitle: {
+    color: Colors.textInverse,
+    fontSize: 19,
+    fontWeight: "800",
+  },
+  practoSubtitle: {
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 13,
+    marginTop: 6,
+    marginBottom: Spacing.md,
+  },
+  practoTitle2: {
+    color: Colors.textInverse,
+    fontSize: 19,
+    fontWeight: "800",
+  },
+  practoSubtitle2: {
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 13,
+    marginTop: 6,
+    marginBottom: Spacing.md,
+  },
+  practoRowContainer: {
+    paddingHorizontal: Spacing.screenH,
+    paddingRight: Spacing.screenH + Spacing.sm,
+  },
+  offerGap: {
+    width: Spacing.sm,
+  },
+  offerBannerCard: {
+    borderRadius: 14,
+    overflow: "hidden",
+  },
+  offerBannerImage: {
+    width: "100%",
+    height: "100%",
+  },
+  practoDotsRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 12,
+  },
+  practoBottomDots: {
+    marginTop: 14,
+  },
+  practoDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(255,255,255,0.35)",
+  },
+  practoDotActive: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.textInverse,
   },
 
   // Doctor Card
   docCard: {
-    width: 170,
+    width: 180,
     backgroundColor: Colors.surface,
-    borderRadius: 18,
+    borderRadius: Radius.lg,
     overflow: "hidden",
-    marginRight: 14,
+    marginRight: CARD_GAP,
     borderWidth: 1,
     borderColor: Colors.border,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
   },
-  docImage: { width: "100%", height: 120 },
+  docImage: { width: "100%", height: 125 },
+  onlineDot: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: Colors.surface,
+  },
   heartBtn: {
     position: "absolute",
     top: 8,
     right: 8,
     width: 28,
     height: 28,
-    borderRadius: 14,
+    borderRadius: Radius.full,
     backgroundColor: Colors.surface,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: Colors.black,
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
-    elevation: 2,
+    ...Shadows.soft,
   },
-  docInfo: { padding: 10 },
+  docInfo: { padding: Spacing.sm + 2 },
   docName: {
+    ...Typography.label,
     fontSize: 13,
     fontWeight: "700",
     color: Colors.text,
     marginBottom: 2,
   },
   docSpec: {
-    fontSize: 11,
+    ...Typography.caption,
     color: Colors.primary,
-    fontWeight: "500",
-    marginBottom: 4,
+    fontWeight: "600",
+    marginBottom: 5,
   },
-  docRow: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
+  docRow: { flexDirection: "row", alignItems: "center", marginBottom: 6 },
   docRating: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
-    color: "#D97706",
+    color: Colors.warningPressed,
     marginLeft: 3,
   },
-  docExp: { fontSize: 11, color: Colors.textSecondary },
+  docExp: { ...Typography.caption, color: Colors.textTertiary, fontSize: 10 },
   docBottom: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  docFee: { fontSize: 14, fontWeight: "800", color: Colors.primary },
+  docFee: { fontSize: 14, fontWeight: "800", color: Colors.text },
+  emptySpecialityText: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+    paddingVertical: Spacing.sm,
+  },
   availTag: {
-    backgroundColor: "#DCFCE7",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: Colors.successLight,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: Radius.full,
   },
-  availText: { fontSize: 9, fontWeight: "600", color: "#16A34A" },
+  availDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: Colors.success,
+  },
+  availText: { fontSize: 9, fontWeight: "700", color: Colors.successPressed },
+  bookBtn: {
+    borderRadius: Radius.full,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    overflow: "hidden",
+  },
+  bookBtnText: {
+    color: Colors.textInverse,
+    fontSize: 11,
+    fontWeight: "700",
+  },
 
   // Specialities
-  specGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
+  specGrid: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.sm },
   specItem: {
-    width: (W - 56) / 3,
+    width: ITEM_W,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 14,
-    borderRadius: 16,
-    marginBottom: 12,
+    backgroundColor: "#1E2F96",
+    paddingVertical: Spacing.sm + 3,
+    borderRadius: Radius.lg,
+    minHeight: 92,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+    ...Shadows.card,
   },
   specLabel: {
     fontSize: 10,
     fontWeight: "700",
-    marginTop: 6,
+    marginTop: 5,
     textAlign: "center",
+    color: Colors.textInverse,
   },
 
-  // Lab Tests
-  labBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "#EFF6FF",
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 14,
-  },
-  labBannerText: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: Colors.primary,
-    flex: 1,
-  },
+  // Labs
   labCard: {
-    width: 170,
+    width: 175,
     backgroundColor: Colors.surface,
-    borderRadius: 16,
-    marginRight: 14,
+    borderRadius: Radius.lg,
+    marginRight: CARD_GAP,
     borderWidth: 1,
     borderColor: Colors.border,
-    position: "relative",
     overflow: "hidden",
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
   },
   labImage: { width: "100%", height: 110, backgroundColor: Colors.border },
   labImageFallback: {
     width: "100%",
     height: 110,
-    backgroundColor: "#EEF2FF",
+    backgroundColor: Colors.secondaryUltraLight,
     alignItems: "center",
     justifyContent: "center",
   },
-  labContent: { padding: 14 },
+  labContent: { padding: Spacing.sm + 4 },
   popularBadge: {
     position: "absolute",
-    top: 10,
-    right: 10,
-    backgroundColor: "#FEF3C7",
+    top: Spacing.sm,
+    right: Spacing.sm,
+    backgroundColor: Colors.warningLight,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: Radius.full,
     zIndex: 1,
   },
-  popularText: { fontSize: 9, fontWeight: "700", color: "#D97706" },
+  popularText: { fontSize: 9, fontWeight: "700", color: Colors.warningPressed },
   labName: {
+    ...Typography.label,
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "700",
     color: Colors.text,
     marginBottom: 4,
-    marginTop: 2,
-    lineHeight: 18,
+    lineHeight: 17,
   },
-  labTime: { fontSize: 11, color: Colors.textSecondary, marginBottom: 8 },
+  labTime: {
+    ...Typography.caption,
+    color: Colors.textTertiary,
+    marginBottom: 6,
+  },
   labPriceRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    marginBottom: 10,
+    marginBottom: Spacing.sm,
   },
-  labPrice: { fontSize: 16, fontWeight: "800", color: Colors.text },
-  labOriginal: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    textDecorationLine: "line-through",
-  },
+  labPrice: { fontSize: 15, fontWeight: "800", color: Colors.text },
+  labOriginal: { ...Typography.caption, textDecorationLine: "line-through" },
   discBadge: {
-    backgroundColor: "#DCFCE7",
-    paddingHorizontal: 6,
+    backgroundColor: Colors.successLight,
+    paddingHorizontal: 5,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: Radius.full,
     marginLeft: "auto",
   },
-  discText: { fontSize: 9, fontWeight: "700", color: "#16A34A" },
+  discText: { fontSize: 9, fontWeight: "700", color: Colors.successPressed },
   labAddBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
-    backgroundColor: Colors.primary,
-    borderRadius: 10,
-    paddingVertical: 8,
+    backgroundColor: Colors.secondary,
+    borderRadius: Radius.sm,
+    paddingVertical: 7,
   },
-  labAddText: { color: Colors.surface, fontSize: 12, fontWeight: "700" },
+  labAddText: { color: Colors.textInverse, fontSize: 12, fontWeight: "700" },
+  labAddBtnInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
 
   // Pharmacy
   pharmBanner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    backgroundColor: "#F3E8FF",
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 14,
+    gap: Spacing.sm,
+    backgroundColor: Colors.secondaryLight,
+    borderWidth: 1,
+    borderColor: Colors.secondaryLight,
+    padding: Spacing.sm + 4,
+    borderRadius: Radius.md,
+    marginBottom: Spacing.sm + 6,
   },
-  pharmText: { fontSize: 12, fontWeight: "600", color: "#7C3AED" },
+  pharmText: {
+    ...Typography.caption,
+    color: Colors.secondaryPressed,
+    fontWeight: "600",
+  },
   medCard: {
-    width: 130,
+    width: 136,
     backgroundColor: Colors.surface,
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     overflow: "hidden",
-    marginRight: 12,
+    marginRight: Spacing.sm + 4,
     borderWidth: 1,
     borderColor: Colors.border,
-    padding: 10,
+    padding: Spacing.sm + 2,
   },
   medImage: {
     width: "100%",
-    height: 80,
-    borderRadius: 10,
+    height: 82,
+    borderRadius: Radius.sm,
     backgroundColor: Colors.lightGray,
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   medName: {
-    fontSize: 12,
-    fontWeight: "600",
+    ...Typography.caption,
+    fontWeight: "700",
+    fontSize: 13,
     color: Colors.text,
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
     lineHeight: 16,
   },
   medBottom: {
@@ -1267,7 +1888,7 @@ const styles = StyleSheet.create({
   medAddBtn: {
     width: 26,
     height: 26,
-    borderRadius: 13,
+    borderRadius: Radius.full,
     backgroundColor: Colors.primary,
     alignItems: "center",
     justifyContent: "center",
@@ -1275,24 +1896,30 @@ const styles = StyleSheet.create({
 
   // Articles
   articleCard: {
-    width: 290,
+    width: 295,
     flexDirection: "row",
     backgroundColor: Colors.surface,
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: Colors.border,
-    marginRight: 12,
+    marginRight: Spacing.sm + 4,
+    ...Shadows.soft,
   },
-  articleImage: { width: 104, height: 100 },
-  articleBody: { flex: 1, padding: 12, justifyContent: "space-between" },
+  articleImage: { width: 108, height: 108 },
+  articleBody: {
+    flex: 1,
+    padding: Spacing.sm + 4,
+    justifyContent: "center",
+    gap: 5,
+  },
   articleCategoryBadge: {
     alignSelf: "flex-start",
-    borderRadius: 999,
-    backgroundColor: "#DBEAFE",
-    paddingHorizontal: 8,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 7,
     paddingVertical: 2,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   articleCategoryText: {
     fontSize: 9,
@@ -1300,71 +1927,110 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   articleTitle: {
+    ...Typography.label,
     fontSize: 13,
-    fontWeight: "700",
     color: Colors.text,
     lineHeight: 18,
   },
-  articleDesc: { fontSize: 11, color: Colors.textSecondary, lineHeight: 16 },
-  articleMetaRow: {
-    marginTop: 6,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  articleTime: { fontSize: 10, fontWeight: "600", color: Colors.primary },
-  articleViews: {
+  articleMeta: { flexDirection: "row", alignItems: "center", gap: 3 },
+  articleTime: {
+    ...Typography.caption,
     fontSize: 10,
-    color: Colors.textSecondary,
+    color: Colors.primary,
     fontWeight: "600",
   },
 
   // Ads
   adBanner: {
     height: 110,
-    marginHorizontal: 20,
-    borderRadius: 18,
+    marginHorizontal: Spacing.screenH,
+    borderRadius: Radius.lg,
     overflow: "hidden",
-    marginBottom: 12,
+    marginBottom: Spacing.sm + 4,
+    ...Shadows.soft,
   },
   adOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.46)",
-    padding: 16,
+    backgroundColor: "rgba(0,0,0,0.44)",
+    padding: Spacing.md,
     justifyContent: "center",
   },
   adBadge: {
     backgroundColor: Colors.primary,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: Radius.full,
     alignSelf: "flex-start",
-    marginBottom: 6,
+    marginBottom: 5,
   },
-  adBadgeText: { color: Colors.surface, fontSize: 9, fontWeight: "700" },
-  adTitle: { color: "#fff", fontSize: 16, fontWeight: "800", marginBottom: 2 },
+  adBadgeText: { color: Colors.textInverse, fontSize: 9, fontWeight: "700" },
+  adTitle: {
+    color: Colors.textInverse,
+    fontSize: 15,
+    fontWeight: "800",
+    marginBottom: 2,
+  },
   adSub: { color: "rgba(255,255,255,0.82)", fontSize: 11 },
 
   // Trust
-  trustRow: { flexDirection: "row", justifyContent: "space-between" },
+  trustRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: Spacing.sm,
+  },
   trustCard: {
     flex: 1,
-    marginHorizontal: 4,
-    borderRadius: 16,
-    padding: 14,
+    borderRadius: Radius.lg,
+    padding: Spacing.sm + 4,
     alignItems: "center",
+    borderWidth: 1.5,
+    ...Shadows.soft,
+  },
+  trustIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: Spacing.sm,
   },
   trustValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "800",
-    marginTop: 8,
-    marginBottom: 4,
+    marginBottom: 2,
+    color: Colors.primary,
   },
   trustLabel: {
-    fontSize: 10,
-    fontWeight: "500",
-    color: Colors.text,
+    ...Typography.caption,
+    color: Colors.textSecondary,
     textAlign: "center",
+  },
+
+  homeFooter: {
+    marginTop: Spacing.xl,
+    backgroundColor: "#243593",
+    paddingHorizontal: Spacing.screenH,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.xl + 18,
+    marginBottom: 0,
+  },
+  homeFooterBrand: {
+    color: Colors.textInverse,
+    fontSize: 18,
+    fontWeight: "800",
+    marginBottom: Spacing.sm,
+  },
+  homeFooterBody: {
+    color: "rgba(255,255,255,0.92)",
+    fontSize: 15,
+    lineHeight: 24,
+    marginBottom: Spacing.md,
+  },
+  homeFooterMeta: {
+    color: Colors.textInverse,
+    fontSize: 15,
+    fontWeight: "700",
   },
 
   // Appointments
@@ -1372,85 +2038,82 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: Colors.surface,
-    padding: 14,
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     borderWidth: 1,
     borderColor: Colors.border,
-    marginBottom: 12,
+    marginBottom: Spacing.sm + 4,
+    overflow: "hidden",
+    ...Shadows.soft,
   },
+  apptAccent: { width: 4, alignSelf: "stretch" },
   apptAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    marginRight: 12,
+    width: 44,
+    height: 44,
+    borderRadius: Radius.full,
+    marginRight: Spacing.sm + 2,
+    marginLeft: Spacing.sm + 2,
     backgroundColor: Colors.border,
   },
-  apptInfo: { flex: 1 },
-  apptDoc: { fontSize: 13, fontWeight: "700", color: Colors.text },
+  apptInfo: { flex: 1, paddingVertical: Spacing.sm + 4 },
+  apptDoc: {
+    ...Typography.label,
+    fontSize: 13,
+    color: Colors.text,
+    fontWeight: "700",
+  },
   apptSub: {
-    fontSize: 11,
+    ...Typography.caption,
     color: Colors.primary,
-    fontWeight: "500",
-    marginBottom: 4,
+    fontWeight: "600",
+    marginBottom: 3,
   },
   apptTimeRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  apptTime: { fontSize: 11, color: Colors.textSecondary },
+  apptTime: { ...Typography.caption, color: Colors.textTertiary },
   joinBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: Radius.full,
     backgroundColor: Colors.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-  joinText: { color: Colors.surface, fontSize: 12, fontWeight: "700" },
-
-  // Reminders
-  reminderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.surface,
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginBottom: 10,
-    gap: 12,
-  },
-  reminderIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#DCFCE7",
     alignItems: "center",
     justifyContent: "center",
-  },
-  reminderTitle: { fontSize: 13, fontWeight: "600", color: Colors.text },
-  reminderTime: { fontSize: 11, color: Colors.textSecondary },
-  reminderBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
+    marginRight: Spacing.sm + 4,
+    marginLeft: Spacing.sm,
   },
 
-  // Recent Activity
-  activityRow: {
+  aiBanner: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.surface,
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginBottom: 10,
-    gap: 12,
+    padding: Spacing.lg,
+    borderRadius: Radius.lg,
+    justifyContent: "space-between",
   },
-  activityIcon: {
+  aiBannerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  aiIconWrap: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#DBEAFE",
+    backgroundColor: Colors.surface,
     alignItems: "center",
     justifyContent: "center",
+    marginRight: 12,
   },
-  activityTitle: { fontSize: 13, fontWeight: "600", color: Colors.text },
-  activitySub: { fontSize: 11, color: Colors.textSecondary },
+  aiBannerTexts: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  aiBannerTitle: {
+    color: Colors.textInverse,
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  aiBannerSub: {
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 12,
+    lineHeight: 16,
+  },
 });

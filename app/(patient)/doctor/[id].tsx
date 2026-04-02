@@ -17,16 +17,20 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import ButtonPrimary from "../../../components/ButtonPrimary";
-import { DoctorCardSkeleton } from "../../../components/SkeletonLoader";
 import { Colors } from "../../../constants/Colors";
 import { Typography } from "../../../constants/Typography";
 import {
-    getDoctorById, getDoctorReviews,
+    getDoctorById,
+    getDoctorReviews,
     getMyDoctorLikes,
-    toggleDoctorLike
+    toggleDoctorLike,
 } from "../../../services/api";
+import { useFavoritesStore } from "../../../store/favoritesStore";
 import type { Doctor } from "../../../types";
 
 function formatDisplayDate(value?: string) {
@@ -40,14 +44,15 @@ function formatDisplayDate(value?: string) {
 
 export default function DoctorProfileScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [reviews, setReviews] = useState<any[]>([]);
-  const [liked, setLiked] = useState(false);
   const [liking, setLiking] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"about" | "reviews">("about");
+  const { isFavorite, setFavorite } = useFavoritesStore();
 
   const loadDoctorData = React.useCallback(async () => {
     if (!id) return;
@@ -61,11 +66,14 @@ export default function DoctorProfileScreen() {
       if (res.data) setDoctor(res.data);
       if (Array.isArray(reviewsRes.data)) setReviews(reviewsRes.data);
       if (Array.isArray(likesRes.data)) {
-        setLiked(likesRes.data.includes(String(id)));
+        const likedOnServer = likesRes.data.includes(String(id));
+        if (likedOnServer && res.data) {
+          setFavorite(res.data as Doctor, true);
+        }
       }
       setLoading(false);
     })();
-  }, [id]);
+  }, [id, setFavorite]);
 
   useEffect(() => {
     loadDoctorData();
@@ -77,17 +85,11 @@ export default function DoctorProfileScreen() {
     }, [loadDoctorData]),
   );
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={{ padding: 20 }}>
-          <DoctorCardSkeleton />
-        </View>
-      </SafeAreaView>
-    );
+  if (!doctor && loading) {
+    return <SafeAreaView style={styles.container} edges={["top"]} />;
   }
 
-  if (!doctor) {
+  if (!doctor && !loading) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.errorState}>
@@ -105,15 +107,11 @@ export default function DoctorProfileScreen() {
   const stats = [
     {
       icon: Star,
-      color: "#D97706",
-      bg: "#FEF3C7",
       value: String(doctor.rating),
       label: `${doctor.reviews || 0} Reviews`,
     },
     {
       icon: Clock,
-      color: "#0EA5E9",
-      bg: "#E0F2FE",
       value: String(doctor.experience)
         .replace(/\s*years?/i, "")
         .trim(),
@@ -121,19 +119,22 @@ export default function DoctorProfileScreen() {
     },
     {
       icon: Users,
-      color: "#16A34A",
-      bg: "#DCFCE7",
       value: "1000+",
       label: "Patients",
     },
   ];
   const tabs: ("about" | "reviews")[] = ["about", "reviews"];
+  const doctorId = String(doctor?.id ?? id ?? "");
+  const liked = Boolean(doctorId && isFavorite(doctorId));
 
   return (
     <View style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: 170 + Math.max(insets.bottom, 8) },
+        ]}
       >
         {/* Header Banner */}
         <View style={styles.bannerContainer}>
@@ -152,7 +153,7 @@ export default function DoctorProfileScreen() {
                 const response = await toggleDoctorLike(doctor.id);
                 setLiking(false);
                 if (response.data) {
-                  setLiked(Boolean(response.data.liked));
+                  setFavorite(doctor, Boolean(response.data.liked));
                   setDoctor((prev) =>
                     prev
                       ? {
@@ -199,11 +200,11 @@ export default function DoctorProfileScreen() {
                   i < stats.length - 1 && styles.statItemWithDivider,
                 ]}
               >
-                <View style={[styles.statIcon, { backgroundColor: stat.bg }]}>
+                <View style={styles.statIcon}>
                   <stat.icon
-                    color={stat.color}
+                    color={Colors.textInverse}
                     size={18}
-                    fill={i === 0 ? stat.color : "none"}
+                    fill={i === 0 ? Colors.textInverse : "none"}
                   />
                 </View>
                 <Text style={styles.statValue}>{stat.value}</Text>
@@ -272,13 +273,17 @@ export default function DoctorProfileScreen() {
                       </Text>
                     </View>
                     <View style={styles.reviewRating}>
-                      <Star size={12} color="#D97706" fill="#D97706" />
+                      <Star
+                        size={12}
+                        color={Colors.warningPressed}
+                        fill={Colors.warningPressed}
+                      />
                       <Text
                         style={{
                           fontSize: 12,
                           fontWeight: "700",
                           marginLeft: 4,
-                          color: "#D97706",
+                          color: Colors.warningPressed,
                         }}
                       >
                         {Number(review.rating || 0)}
@@ -311,7 +316,12 @@ export default function DoctorProfileScreen() {
       </ScrollView>
 
       {/* Sticky Bottom CTA */}
-      <View style={styles.bottomBar}>
+      <View
+        style={[
+          styles.bottomBar,
+          { paddingBottom: 16 + Math.max(insets.bottom, 8) },
+        ]}
+      >
         <Text style={styles.bottomFeeLabel}>Consultation Fee</Text>
         <Text style={styles.bottomFeeValue}>₹{doctor.fee}</Text>
         <ButtonPrimary
@@ -337,7 +347,7 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 210,
     position: "relative",
-    backgroundColor: "#2563EB",
+    backgroundColor: Colors.primary,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
     overflow: "hidden",
@@ -402,8 +412,8 @@ const styles = StyleSheet.create({
   },
   doctorName: {
     ...Typography.h2,
-    fontSize: 30,
-    lineHeight: 34,
+    fontSize: 26,
+    lineHeight: 31,
     fontWeight: "800",
     textAlign: "center",
     color: Colors.text,
@@ -412,16 +422,16 @@ const styles = StyleSheet.create({
   },
   doctorSpecialization: {
     ...Typography.body1,
-    color: "#2563EB",
+    color: Colors.primary,
     fontWeight: "600",
     textAlign: "center",
     marginBottom: 14,
   },
   statsRow: {
     flexDirection: "row",
-    marginBottom: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 4,
+    marginBottom: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 0,
     justifyContent: "space-between",
   },
   statItem: {
@@ -431,25 +441,26 @@ const styles = StyleSheet.create({
   },
   statItemWithDivider: {
     borderRightWidth: 1,
-    borderRightColor: "#E5E7EB",
+    borderRightColor: Colors.border,
   },
   statIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 8,
-  },
-  statValue: {
-    fontSize: 22,
-    lineHeight: 26,
-    fontWeight: "700",
-    color: Colors.text,
     marginBottom: 6,
   },
+  statValue: {
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: "700",
+    color: Colors.text,
+    marginBottom: 3,
+  },
   statLabel: {
-    fontSize: 13,
+    fontSize: 12,
     color: Colors.textSecondary,
     textAlign: "center",
   },
@@ -457,7 +468,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 20,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: Colors.surfaceAlt,
     paddingVertical: 16,
     paddingHorizontal: 16,
     borderRadius: 14,
@@ -466,7 +477,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     marginBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
+    borderBottomColor: Colors.border,
   },
   tabBtn: {
     flex: 1,
@@ -496,7 +507,7 @@ const styles = StyleSheet.create({
   reviewRating: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FEF3C7",
+    backgroundColor: Colors.warningLight,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -504,7 +515,7 @@ const styles = StyleSheet.create({
   writeReviewBtn: {
     alignItems: "center",
     paddingVertical: 16,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: Colors.primaryLight,
     borderRadius: 16,
     marginBottom: 8,
   },
@@ -541,6 +552,6 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 54,
     borderRadius: 14,
-    backgroundColor: "#2563EB",
+    backgroundColor: Colors.primary,
   },
 });

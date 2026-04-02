@@ -1,24 +1,27 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-    AlertTriangle,
-    ArrowLeft,
-    Minus,
-    Plus,
-    RefreshCcw,
-    ShieldCheck,
-    Star,
-    Truck,
+  AlertTriangle,
+  ArrowLeft,
+  Minus,
+  Plus,
+  RefreshCcw,
+  ShieldCheck,
+  Star,
+  Truck,
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import ActionModal from "../../../components/ActionModal";
 import ButtonPrimary from "../../../components/ButtonPrimary";
 import { Colors } from "../../../constants/Colors";
@@ -27,6 +30,7 @@ import { useCartStore } from "../../../store/cartStore";
 
 export default function MedicineDetailsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [med, setMed] = useState<any | null>(null);
   const { addItem } = useCartStore();
@@ -136,7 +140,10 @@ export default function MedicineDetailsScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: 130 + Math.max(insets.bottom, 8) },
+        ]}
       >
         {/* Product Image */}
         <View style={styles.imageBg}>
@@ -367,7 +374,12 @@ export default function MedicineDetailsScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.bottomBar}>
+      <View
+        style={[
+          styles.bottomBar,
+          { paddingBottom: 16 + Math.max(insets.bottom, 8) },
+        ]}
+      >
         <View>
           <Text style={{ fontSize: 12, color: Colors.textSecondary }}>
             Total

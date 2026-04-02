@@ -597,7 +597,7 @@ export default function DoctorProfileScreen() {
           }}
           activeOpacity={0.8}
         >
-          <LogOut color={Colors.error} size={18} />
+          <LogOut color={Colors.textInverse} size={18} />
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -821,9 +821,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingVertical: 16,
     borderRadius: 16,
-    backgroundColor: "#FEF2F2",
-    borderWidth: 1,
-    borderColor: "#FECACA",
+    backgroundColor: Colors.error,
   },
-  logoutText: { fontSize: 15, fontWeight: "700", color: Colors.error },
+  logoutText: { fontSize: 15, fontWeight: "700", color: Colors.textInverse },
 });

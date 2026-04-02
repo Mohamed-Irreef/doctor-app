@@ -53,6 +53,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
   const [outgoingCall, setOutgoingCall] = useState<OutgoingCall | null>(null);
   const [myProfile, setMyProfile] = useState<any>(null);
+  const myUserIdRef = useRef("");
   const pulseAnim = useRef(new Animated.Value(0)).current;
   const floatAnim = useRef(new Animated.Value(0)).current;
   const pendingOutgoingRef = useRef<{
@@ -63,6 +64,18 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   } | null>(null);
   const initRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ringtoneRef = useRef<Audio.Sound | null>(null);
+
+  const ensureMyUserId = useCallback(async () => {
+    if (myUserIdRef.current) return myUserIdRef.current;
+    const profileRes = await getMyProfile();
+    const user = profileRes.data?.user || profileRes.data || null;
+    const resolvedId = String(user?._id || user?.id || "");
+    if (resolvedId) {
+      myUserIdRef.current = resolvedId;
+      setMyProfile((prev: any) => prev || user);
+    }
+    return resolvedId;
+  }, []);
 
   useEffect(() => {
     if (!incomingCall && !outgoingCall) return;
@@ -185,9 +198,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       }
 
       const profileRes = await getMyProfile();
+      const user = profileRes.data?.user || profileRes.data || null;
       if (mounted) {
-        const user = profileRes.data?.user || profileRes.data || null;
-        if (user) setMyProfile(user);
+        if (user) {
+          setMyProfile(user);
+          myUserIdRef.current = String(user?._id || user?.id || "");
+        }
       }
 
       const socket = io(getSocketBaseUrl(), {
@@ -208,9 +224,24 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       });
 
       socket.on("call:incoming", (payload: any) => {
+        const callerId = String(payload?.callerId || "");
+        const selfId = String(myUserIdRef.current || "");
+        const roomId = String(payload?.roomId || "");
+
+        // Guard: ignore malformed/self incoming events so caller never sees
+        // accept/decline modal for their own initiated call.
+        if (!roomId || !callerId) return;
+        if (selfId && callerId === selfId) return;
+        if (
+          pendingOutgoingRef.current &&
+          String(pendingOutgoingRef.current.roomId) === roomId
+        ) {
+          return;
+        }
+
         setIncomingCall({
-          roomId: String(payload?.roomId || ""),
-          callerId: String(payload?.callerId || ""),
+          roomId,
+          callerId,
           callerName: payload?.callerName
             ? String(payload.callerName)
             : "Incoming call",
@@ -241,13 +272,21 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
       socket.on("call:decline", (payload: any) => {
         const pending = pendingOutgoingRef.current;
-        if (!pending) return;
-        if (String(payload?.roomId || "") !== String(pending.roomId)) return;
-        setOutgoingCall((prev) => {
-          if (!prev || String(prev.roomId) !== String(pending.roomId)) {
-            return prev;
-          }
-          return { ...prev, status: "declined" };
+        const declinedRoomId = String(payload?.roomId || "");
+
+        if (pending && declinedRoomId === String(pending.roomId)) {
+          setOutgoingCall((prev) => {
+            if (!prev || String(prev.roomId) !== String(pending.roomId)) {
+              return prev;
+            }
+            return { ...prev, status: "declined" };
+          });
+        }
+
+        // Also close callee incoming modal when caller cancels/declines.
+        setIncomingCall((prev) => {
+          if (!prev || String(prev.roomId) !== declinedRoomId) return prev;
+          return null;
         });
       });
 
@@ -299,12 +338,27 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
+      const ensuredSelfId = await ensureMyUserId();
+
+      const receiverId = String(payload.receiverId || "").trim();
+      const selfId = String(ensuredSelfId || myUserIdRef.current || "");
+
+      if (!receiverId) {
+        Alert.alert("Call unavailable", "Receiver not found.");
+        return false;
+      }
+
+      if (selfId && receiverId === selfId) {
+        Alert.alert("Call unavailable", "You cannot call yourself.");
+        return false;
+      }
+
       return new Promise<boolean>((resolve) => {
         socket.emit(
           "call:initiate",
           {
             callerName: myProfile?.name || "Caller",
-            receiverId: payload.receiverId,
+            receiverId,
             role: myProfile?.role,
             appointmentId: payload.appointmentId,
           },
@@ -318,7 +372,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             pendingOutgoingRef.current = {
               roomId: String(ack.roomId),
               peerName: payload.peerName,
-              receiverId: payload.receiverId,
+              receiverId,
               appointmentId:
                 payload.appointmentId || String(ack.appointmentId || ""),
             };
@@ -332,7 +386,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         );
       });
     },
-    [myProfile],
+    [ensureMyUserId, myProfile],
   );
 
   const onAcceptIncomingCall = useCallback(() => {
@@ -371,7 +425,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
   const onCancelOutgoingCall = useCallback(() => {
     if (!outgoingCall || !socketRef.current) return;
-    socketRef.current.emit("call:end", { roomId: outgoingCall.roomId });
+
+    // While ringing (before accept), cancel should be treated as decline so
+    // callee incoming modal closes immediately.
+    socketRef.current.emit("call:decline", { roomId: outgoingCall.roomId });
     pendingOutgoingRef.current = null;
     setOutgoingCall(null);
   }, [outgoingCall]);

@@ -1,27 +1,30 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, Calendar, Clock } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import ActionModal from "../../../components/ActionModal";
 import ButtonPrimary from "../../../components/ButtonPrimary";
 import { Colors } from "../../../constants/Colors";
 import {
-  getLabSlotAvailability,
-  getLabTestById,
-  holdLabSlot,
+    getLabSlotAvailability,
+    getLabTestById,
+    holdLabSlot,
 } from "../../../services/api";
 
 const DATE_WINDOW_DAYS = 7;
-const DATE_LOAD_BATCH_SIZE = 4;
 const SLOT_LOAD_BATCH_SIZE = 12;
 
 function toISODateOnly(date: Date) {
@@ -33,6 +36,7 @@ function toISODateOnly(date: Date) {
 
 export default function LabHomeBookingScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [test, setTest] = useState<any | null>(null);
   const [selectedDate, setSelectedDate] = useState(() =>
@@ -40,8 +44,6 @@ export default function LabHomeBookingScreen() {
   );
   const [slots, setSlots] = useState<{ time: string; status: string }[]>([]);
   const [selectedSlot, setSelectedSlot] = useState("");
-  const [visibleDateCount, setVisibleDateCount] =
-    useState(DATE_LOAD_BATCH_SIZE);
   const [visibleSlotCount, setVisibleSlotCount] =
     useState(SLOT_LOAD_BATCH_SIZE);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -69,11 +71,6 @@ export default function LabHomeBookingScreen() {
       };
     });
   }, []);
-
-  const visibleDateOptions = useMemo(
-    () => dateOptions.slice(0, visibleDateCount),
-    [dateOptions, visibleDateCount],
-  );
 
   const visibleSlots = useMemo(
     () => slots.slice(0, visibleSlotCount),
@@ -106,10 +103,6 @@ export default function LabHomeBookingScreen() {
     };
     loadSlots();
   }, [id, selectedDate]);
-
-  useEffect(() => {
-    setVisibleDateCount(DATE_LOAD_BATCH_SIZE);
-  }, []);
 
   const updateAddress = (key: string, value: string) => {
     setAddress((prev) => ({ ...prev, [key]: value }));
@@ -166,7 +159,7 @@ export default function LabHomeBookingScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
       <ActionModal
         visible={errorModal}
         type="error"
@@ -176,21 +169,30 @@ export default function LabHomeBookingScreen() {
         onConfirm={() => setErrorModal(false)}
       />
 
-      <View style={styles.header}>
+      <LinearGradient
+        colors={[Colors.primary, Colors.primaryPressed]}
+        style={[
+          styles.header,
+          { paddingTop: Math.max(insets.top, 8) + 8, paddingBottom: 12 },
+        ]}
+      >
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backBtn}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <ArrowLeft color={Colors.text} size={22} />
+          <ArrowLeft color={Colors.textInverse} size={22} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Home Collection</Text>
         <View style={{ width: 40 }} />
-      </View>
+      </LinearGradient>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: 130 + Math.max(insets.bottom, 8) },
+        ]}
       >
         <View style={styles.section}>
           <View style={styles.sectionTitleRow}>
@@ -202,7 +204,7 @@ export default function LabHomeBookingScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.dateRow}
           >
-            {visibleDateOptions.map((item) => (
+            {dateOptions.map((item) => (
               <TouchableOpacity
                 key={item.iso}
                 style={[
@@ -238,16 +240,6 @@ export default function LabHomeBookingScreen() {
               </TouchableOpacity>
             ))}
           </ScrollView>
-          {visibleDateCount < dateOptions.length ? (
-            <TouchableOpacity
-              style={styles.loadMoreBtn}
-              onPress={() =>
-                setVisibleDateCount((count) => count + DATE_LOAD_BATCH_SIZE)
-              }
-            >
-              <Text style={styles.loadMoreText}>Load More</Text>
-            </TouchableOpacity>
-          ) : null}
         </View>
 
         <View style={styles.section}>
@@ -354,7 +346,12 @@ export default function LabHomeBookingScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.bottomBar}>
+      <View
+        style={[
+          styles.bottomBar,
+          { paddingBottom: 16 + Math.max(insets.bottom, 8) },
+        ]}
+      >
         <View>
           <Text style={styles.totalLabel}>Test Price</Text>
           <Text style={styles.totalPrice}>₹{test?.price || 0}</Text>
@@ -377,9 +374,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomWidth: 0,
   },
   backBtn: {
     width: 40,
@@ -388,14 +383,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: "rgba(255,255,255,0.24)",
+    backgroundColor: "rgba(255,255,255,0.16)",
   },
   headerTitle: {
     flex: 1,
     textAlign: "center",
     fontSize: 17,
     fontWeight: "700",
-    color: Colors.text,
+    color: Colors.textInverse,
   },
   scroll: { padding: 20, paddingBottom: 120, gap: 16 },
   section: {
@@ -452,7 +448,7 @@ const styles = StyleSheet.create({
   },
   slotChipActive: {
     borderColor: Colors.primary,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: Colors.primaryLight,
   },
   slotChipDisabled: {
     borderColor: Colors.border,

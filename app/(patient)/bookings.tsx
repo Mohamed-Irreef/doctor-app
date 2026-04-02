@@ -1,16 +1,20 @@
+import { LinearGradient } from "expo-linear-gradient";
+import { Download, FlaskConical } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Linking,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Linking,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Download, FlaskConical } from "lucide-react-native";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Colors } from "../../constants/Colors";
 import { Typography } from "../../constants/Typography";
 import { getMyLabBookings } from "../../services/api";
@@ -56,6 +60,7 @@ function normalizeStatus(value?: string) {
 }
 
 export default function PatientBookingsScreen() {
+  const insets = useSafeAreaInsets();
   const [bookings, setBookings] = useState<LabBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -98,13 +103,19 @@ export default function PatientBookingsScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <Text style={Typography.h2}>My Lab Bookings</Text>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <LinearGradient
+        colors={[Colors.primary, Colors.primaryPressed]}
+        style={[
+          styles.header,
+          { paddingTop: Math.max(insets.top, 8) + 8, paddingBottom: 12 },
+        ]}
+      >
+        <Text style={styles.headerTitle}>My Lab Bookings</Text>
         <Text style={styles.subtitle}>
           Track every step from booking to report completion.
         </Text>
-      </View>
+      </LinearGradient>
 
       <ScrollView
         horizontal
@@ -249,10 +260,14 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 10,
   },
+  headerTitle: {
+    ...Typography.h2,
+    color: Colors.textInverse,
+  },
   subtitle: {
     marginTop: 4,
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: "rgba(255,255,255,0.82)",
   },
   filterRow: {
     paddingHorizontal: 20,

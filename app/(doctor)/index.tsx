@@ -1,25 +1,33 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
-    Activity,
-    ArrowRight,
-    Bell,
-    Briefcase,
-    DollarSign,
-    Users,
-    Zap,
+  Activity,
+  ArrowRight,
+  Bell,
+  Briefcase,
+  DollarSign,
+  Users,
+  Zap,
 } from "lucide-react-native";
 import React, { useCallback, useMemo, useState } from "react";
 import {
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import FadeInSection from "../../components/FadeInSection";
 import SectionHeader from "../../components/SectionHeader";
+import StatCard from "../../components/StatCard";
 import { Colors } from "../../constants/Colors";
+import { Shadows } from "../../constants/Shadows";
+import { Radius, Spacing } from "../../constants/Spacing";
 import { Typography } from "../../constants/Typography";
 import { createChat, getDoctorAppointments } from "../../services/api";
 import { useAuthStore } from "../../store/authStore";
@@ -27,28 +35,26 @@ import { useAuthStore } from "../../store/authStore";
 const QUICK_ACTIONS = [
   {
     label: "Manage Slots",
+    hint: "Set availability",
     icon: Zap,
     route: "/(doctor)/availability" as const,
-    bg: "#EFF6FF",
-    fg: Colors.primary,
   },
   {
     label: "Appointments",
+    hint: "View today queue",
     icon: Briefcase,
     route: "/(doctor)/appointments" as const,
-    bg: "#F0FDF4",
-    fg: "#16A34A",
   },
   {
     label: "Start Consult",
+    hint: "Open patient chats",
     icon: ArrowRight,
     route: "/(doctor)/chat" as const,
-    bg: "#FDF4FF",
-    fg: "#9333EA",
   },
 ];
 
 export default function DoctorDashboardScreen() {
+  const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
   const router = useRouter();
   const [isOnline, setIsOnline] = useState(true);
@@ -61,13 +67,11 @@ export default function DoctorDashboardScreen() {
         router.push("/(doctor)/chat");
         return;
       }
-
       const response = await createChat({ patientId });
       if (!response.data?._id) {
         router.push("/(doctor)/chat");
         return;
       }
-
       router.push({
         pathname: "/(doctor)/chat/[chatId]",
         params: {
@@ -106,7 +110,6 @@ export default function DoctorDashboardScreen() {
       ),
     [appointments, todayIso],
   );
-
   const upcomingAppointments = useMemo(
     () =>
       appointments.filter(
@@ -114,7 +117,6 @@ export default function DoctorDashboardScreen() {
       ),
     [appointments],
   );
-
   const pendingAppointments = useMemo(
     () =>
       appointments.filter(
@@ -122,7 +124,6 @@ export default function DoctorDashboardScreen() {
       ),
     [appointments],
   );
-
   const estimatedEarnings = useMemo(
     () =>
       upcomingAppointments.reduce(
@@ -131,7 +132,6 @@ export default function DoctorDashboardScreen() {
       ),
     [upcomingAppointments],
   );
-
   const scheduleItems = useMemo(
     () => todayAppointments.slice(0, 4),
     [todayAppointments],
@@ -140,30 +140,11 @@ export default function DoctorDashboardScreen() {
   const headerAvatar = user?.image
     ? { uri: user.image }
     : require("../../assets/images/profile.png");
-
-  const stats = [
-    {
-      label: "Today's Appts",
-      value: String(todayAppointments.length),
-      icon: Users,
-      color: Colors.primary,
-      bg: "#DBEAFE",
-    },
-    {
-      label: "Earnings",
-      value: `₹${estimatedEarnings}`,
-      icon: DollarSign,
-      color: "#16A34A",
-      bg: "#DCFCE7",
-    },
-    {
-      label: "Pending",
-      value: String(pendingAppointments.length),
-      icon: Activity,
-      color: "#9333EA",
-      bg: "#F3E8FF",
-    },
-  ];
+  const todayLabel = new Date().toLocaleDateString([], {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
 
   const greeting = () => {
     const h = new Date().getHours();
@@ -173,91 +154,165 @@ export default function DoctorDashboardScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={["bottom"]}>
+      <LinearGradient
+        colors={[Colors.gradientStart, Colors.primary]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.topHeaderBg, { height: insets.top + 105 }]}
+      />
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + 4 },
+        ]}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Image source={headerAvatar} style={styles.avatar} />
-            <View>
-              <Text style={styles.headerGreeting}>{greeting()},</Text>
-              <Text style={styles.headerName}>{user?.name ?? "Doctor"}</Text>
+        {/* ── HERO HEADER ── */}
+        <LinearGradient
+          colors={[Colors.gradientStart, Colors.primary]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.heroCard}
+        >
+          <View style={styles.header}>
+            <View style={styles.headerLeft}>
+              <View style={styles.avatarWrap}>
+                <Image source={headerAvatar} style={styles.avatar} />
+                <View
+                  style={[
+                    styles.avatarStatusDot,
+                    {
+                      backgroundColor: isOnline
+                        ? Colors.success
+                        : Colors.textDisabled,
+                    },
+                  ]}
+                />
+              </View>
+              <View>
+                <Text style={styles.headerGreeting}>{greeting()}</Text>
+                <Text style={styles.headerName}>{user?.name ?? "Doctor"}</Text>
+              </View>
+            </View>
+
+            <View style={styles.headerRight}>
+              <TouchableOpacity
+                style={[styles.onlineBadge, !isOnline && styles.offlineBadge]}
+                onPress={() => setIsOnline((v) => !v)}
+                activeOpacity={0.8}
+              >
+                <View
+                  style={[
+                    styles.pulseDot,
+                    { backgroundColor: isOnline ? "#22C55E" : "#94A3B8" },
+                  ]}
+                />
+                <Text
+                  style={[styles.onlineText, !isOnline && styles.offlineText]}
+                >
+                  {isOnline ? "Online" : "Offline"}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.notifBtn}>
+                <Bell color={Colors.textInverse} size={20} strokeWidth={1.8} />
+                <View style={styles.notifBadge} />
+              </TouchableOpacity>
             </View>
           </View>
-          <View style={styles.headerRight}>
-            {/* Availability Toggle */}
-            <TouchableOpacity
-              style={[styles.onlineBadge, !isOnline && styles.offlineBadge]}
-              onPress={() => setIsOnline((v) => !v)}
-              activeOpacity={0.8}
-            >
-              <View
-                style={[styles.onlineDot, !isOnline && styles.offlineDot]}
-              />
-              <Text
-                style={[styles.onlineText, !isOnline && styles.offlineText]}
-              >
-                {isOnline ? "Online" : "Offline"}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.notifBtn}>
-              <Bell color={Colors.text} size={22} />
-              <View style={styles.badge} />
-            </TouchableOpacity>
-          </View>
-        </View>
 
-        {/* Stats */}
-        <View style={styles.statsRow}>
-          {stats.map((s, i) => (
-            <View key={i} style={styles.statCard}>
-              <View style={[styles.statIcon, { backgroundColor: s.bg }]}>
-                <s.icon color={s.color} size={20} />
-              </View>
-              <Text style={styles.statValue}>{s.value}</Text>
-              <Text style={[Typography.caption, { textAlign: "center" }]}>
-                {s.label}
-              </Text>
+          <View style={styles.heroMetaRow}>
+            <View style={styles.heroPill}>
+              <Text style={styles.heroPillText}>{todayLabel}</Text>
             </View>
-          ))}
-        </View>
+            <Text style={styles.heroMetaText}>
+              {todayAppointments.length} appointments scheduled today
+            </Text>
+          </View>
+        </LinearGradient>
 
-        {/* Quick Actions */}
-        <View style={styles.quickRow}>
-          {QUICK_ACTIONS.map((a, i) => (
-            <TouchableOpacity
-              key={i}
-              style={[styles.quickCard, { backgroundColor: a.bg }]}
-              onPress={() => router.push(a.route)}
-              activeOpacity={0.8}
-            >
-              <View
-                style={[
-                  styles.quickIconWrap,
-                  { backgroundColor: Colors.surface },
-                ]}
+        {/* ── STATS ROW ── */}
+        <FadeInSection delay={0}>
+          <Text style={styles.sectionEyebrow}>Dashboard Overview</Text>
+          <View style={styles.statsRow}>
+            <StatCard
+              icon={<Users color={Colors.primary} size={20} strokeWidth={2} />}
+              value={String(todayAppointments.length)}
+              label="Today's Appts"
+              iconBg={Colors.primaryLight}
+              delay={0}
+            />
+            <StatCard
+              icon={
+                <DollarSign
+                  color={Colors.primaryHover}
+                  size={20}
+                  strokeWidth={2}
+                />
+              }
+              value={`₹${estimatedEarnings}`}
+              label="Earnings"
+              iconBg={Colors.primaryLight}
+              delay={80}
+            />
+            <StatCard
+              icon={
+                <Activity
+                  color={Colors.primaryPressed}
+                  size={20}
+                  strokeWidth={2}
+                />
+              }
+              value={String(pendingAppointments.length)}
+              label="Pending"
+              iconBg={Colors.primaryUltraLight}
+              delay={160}
+            />
+          </View>
+        </FadeInSection>
+
+        {/* ── QUICK ACTIONS ── */}
+        <FadeInSection delay={100}>
+          <Text style={styles.sectionEyebrow}>Quick Actions</Text>
+          <View style={styles.quickRow}>
+            {QUICK_ACTIONS.map((a, i) => (
+              <TouchableOpacity
+                key={i}
+                style={styles.quickCard}
+                onPress={() => router.push(a.route)}
+                activeOpacity={0.82}
               >
-                <a.icon color={a.fg} size={20} />
-              </View>
-              <Text style={[styles.quickLabel, { color: a.fg }]}>
-                {a.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+                <View style={styles.quickIconWrap}>
+                  <a.icon
+                    color={Colors.textInverse}
+                    size={20}
+                    strokeWidth={1.9}
+                  />
+                </View>
+                <Text style={styles.quickLabel}>{a.label}</Text>
+                <Text style={styles.quickHint}>{a.hint}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </FadeInSection>
 
-        {/* Today's Schedule */}
+        {/* ── TODAY'S SCHEDULE ── */}
         <View style={styles.section}>
           <SectionHeader
             title="Today's Schedule"
             onPressSeeAll={() => router.push("/(doctor)/appointments")}
           />
           {scheduleItems.length === 0 ? (
-            <View style={styles.emptyScheduleCard}>
-              <Text style={styles.emptyScheduleText}>
+            <View style={styles.emptyCard}>
+              <View style={styles.emptyIconWrap}>
+                <Briefcase
+                  size={24}
+                  color={Colors.textDisabled}
+                  strokeWidth={1.5}
+                />
+              </View>
+              <Text style={styles.emptyText}>
                 No appointments scheduled for today.
               </Text>
             </View>
@@ -266,7 +321,7 @@ export default function DoctorDashboardScreen() {
               <TouchableOpacity
                 key={String(item._id || item.id)}
                 style={styles.scheduleCard}
-                activeOpacity={0.85}
+                activeOpacity={0.88}
                 onPress={() =>
                   router.push({
                     pathname: "/(doctor)/appointment/[id]",
@@ -274,11 +329,15 @@ export default function DoctorDashboardScreen() {
                   })
                 }
               >
+                {/* Left accent bar */}
                 <View style={styles.scheduleAccent} />
+
                 <View style={styles.scheduleMain}>
                   <View style={styles.scheduleTopRow}>
-                    <View style={styles.timePillWrap}>
-                      <Text style={styles.timePill}>{item.time || "-"}</Text>
+                    <View style={styles.timePill}>
+                      <Text style={styles.timePillText}>
+                        {item.time || "-"}
+                      </Text>
                     </View>
                     <View style={styles.modeBadge}>
                       <View style={styles.modeDot} />
@@ -287,6 +346,7 @@ export default function DoctorDashboardScreen() {
                       </Text>
                     </View>
                   </View>
+
                   <View style={styles.patientRow}>
                     <Image
                       source={{
@@ -306,6 +366,7 @@ export default function DoctorDashboardScreen() {
                     </View>
                   </View>
                 </View>
+
                 <TouchableOpacity
                   style={styles.startBtn}
                   onPress={() => {
@@ -320,7 +381,11 @@ export default function DoctorDashboardScreen() {
                   }}
                 >
                   <Text style={styles.startBtnText}>Start</Text>
-                  <ArrowRight size={14} color={Colors.surface} />
+                  <ArrowRight
+                    size={13}
+                    color={Colors.textInverse}
+                    strokeWidth={2.5}
+                  />
                 </TouchableOpacity>
               </TouchableOpacity>
             ))
@@ -332,248 +397,306 @@ export default function DoctorDashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F4F7FC" },
-  scrollContent: { paddingTop: 16, paddingBottom: 42 },
+  container: { flex: 1, backgroundColor: Colors.background },
+  scrollContent: { paddingBottom: 48 },
+
+  topHeaderBg: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+
+  heroCard: {
+    marginHorizontal: Spacing.screenH,
+    borderRadius: Radius.xl,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs + 2,
+    marginBottom: Spacing.lg,
+    ...Shadows.card,
+  },
+
+  // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    marginBottom: 24,
+    marginBottom: Spacing.xs + 2,
   },
-  headerLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
-  headerRight: { flexDirection: "row", alignItems: "center", gap: 10 },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm + 2,
+  },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: Spacing.sm },
+  avatarWrap: { position: "relative" },
   avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: Colors.border,
+    width: 50,
+    height: 50,
+    borderRadius: Radius.full,
+    backgroundColor: "rgba(255,255,255,0.22)",
     borderWidth: 2,
-    borderColor: "#E9EEF9",
+    borderColor: "rgba(255,255,255,0.45)",
+  },
+  avatarStatusDot: {
+    position: "absolute",
+    bottom: 2,
+    right: 2,
+    width: 11,
+    height: 11,
+    borderRadius: Radius.full,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.95)",
   },
   headerGreeting: {
-    ...Typography.body2,
-    color: "#6B7280",
+    ...Typography.caption,
+    color: "rgba(255,255,255,0.82)",
     marginBottom: 2,
   },
   headerName: {
-    ...Typography.h3,
-    color: "#0F172A",
+    ...Typography.subheading,
     fontWeight: "800",
+    color: Colors.textInverse,
   },
+
   onlineBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    backgroundColor: "#DCFCE7",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    gap: 5,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    paddingHorizontal: Spacing.sm + 4,
+    paddingVertical: 5,
+    borderRadius: Radius.full,
     borderWidth: 1,
-    borderColor: "#86EFAC",
+    borderColor: "rgba(255,255,255,0.35)",
   },
-  offlineBadge: { backgroundColor: "#F1F5F9", borderColor: Colors.border },
-  onlineDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#16A34A",
+  offlineBadge: {
+    backgroundColor: "rgba(15,23,42,0.22)",
+    borderColor: "rgba(255,255,255,0.25)",
   },
-  offlineDot: { backgroundColor: Colors.textSecondary },
-  onlineText: { fontSize: 12, fontWeight: "700", color: "#16A34A" },
-  offlineText: { color: Colors.textSecondary },
+  pulseDot: { width: 7, height: 7, borderRadius: Radius.full },
+  onlineText: {
+    ...Typography.buttonSm,
+    fontSize: 12,
+    color: Colors.textInverse,
+  },
+  offlineText: { color: "rgba(255,255,255,0.8)" },
+
   notifBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.surface,
+    width: 42,
+    height: 42,
+    borderRadius: Radius.full,
+    backgroundColor: "rgba(255,255,255,0.16)",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#E6EBF3",
+    borderColor: "rgba(255,255,255,0.3)",
   },
-  badge: {
+  notifBadge: {
     position: "absolute",
     top: 10,
     right: 11,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 7,
+    height: 7,
+    borderRadius: Radius.full,
     backgroundColor: Colors.error,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+  },
+  heroMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: Spacing.sm,
+    marginTop: 0,
+  },
+  heroPill: {
+    borderRadius: Radius.full,
+    backgroundColor: "rgba(255,255,255,0.16)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  heroPillText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: Colors.textInverse,
+  },
+  heroMetaText: {
+    flex: 1,
+    textAlign: "right",
+    fontSize: 12,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.86)",
+  },
+
+  // Stats
+  sectionEyebrow: {
+    paddingHorizontal: Spacing.screenH,
+    paddingVertical: 6,
+    marginBottom: 8,
+    fontSize: 12,
+    fontWeight: "800",
+    color: Colors.primary,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.sm,
+    overflow: "hidden",
+    textTransform: "uppercase",
+    letterSpacing: 0.7,
   },
   statsRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    marginBottom: 22,
-    gap: 10,
+    paddingHorizontal: Spacing.screenH,
+    gap: Spacing.sm,
+    marginBottom: Spacing.md + 2,
   },
-  statCard: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#E6EBF3",
-    alignItems: "center",
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-    elevation: 4,
-  },
-  statIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 10,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#0F172A",
-    marginBottom: 4,
-  },
+
+  // Quick Actions
   quickRow: {
     flexDirection: "row",
-    paddingHorizontal: 20,
-    gap: 10,
-    marginBottom: 28,
+    paddingHorizontal: Spacing.screenH,
+    gap: Spacing.sm,
+    marginBottom: Spacing.section,
   },
   quickCard: {
     flex: 1,
-    borderRadius: 18,
-    paddingVertical: 14,
-    paddingHorizontal: 10,
-    alignItems: "center",
-    gap: 8,
-    borderWidth: 1,
-    borderColor: "#E6EBF3",
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  quickIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    borderRadius: Radius.lg,
+    minHeight: 108,
+    paddingVertical: Spacing.sm + 4,
+    paddingHorizontal: Spacing.sm,
+    backgroundColor: Colors.surface,
     alignItems: "center",
     justifyContent: "center",
+    gap: 5,
     borderWidth: 1,
-    borderColor: "#E6EBF3",
+    borderColor: "rgba(30,58,138,0.08)",
+    ...Shadows.card,
   },
-  quickLabel: { fontSize: 11, fontWeight: "700", textAlign: "center" },
-  section: { paddingHorizontal: 20 },
-  emptyScheduleCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#E6EBF3",
-    padding: 16,
-    marginBottom: 12,
+  quickIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.primaryPressed,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  emptyScheduleText: {
-    color: Colors.textSecondary,
-    fontSize: 13,
+  quickLabel: {
+    ...Typography.buttonSm,
+    fontSize: 12,
+    fontWeight: "800",
+    color: Colors.primary,
+    textAlign: "center",
+  },
+  quickHint: {
+    fontSize: 10,
     fontWeight: "600",
+    color: Colors.textSecondary,
+    textAlign: "center",
   },
+
+  // Section
+  section: { paddingHorizontal: Spacing.screenH },
+
+  emptyCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm + 2,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  emptyIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyText: { ...Typography.body2, color: Colors.textTertiary },
+
+  // Schedule Card
   scheduleCard: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: Colors.surface,
-    borderRadius: 18,
-    padding: 12,
-    marginBottom: 12,
+    borderRadius: Radius.lg,
+    marginBottom: Spacing.sm + 4,
     borderWidth: 1,
-    borderColor: "#E6EBF3",
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-    elevation: 4,
+    borderColor: Colors.border,
+    overflow: "hidden",
+    ...Shadows.card,
   },
   scheduleAccent: {
     width: 4,
     alignSelf: "stretch",
-    borderRadius: 10,
-    backgroundColor: "#3B82F6",
-    marginRight: 10,
+    backgroundColor: Colors.primary,
   },
-  scheduleMain: { flex: 1, gap: 10 },
+  scheduleMain: { flex: 1, padding: Spacing.sm + 4, gap: Spacing.sm + 2 },
   scheduleTopRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  timePillWrap: { alignItems: "center" },
   timePill: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: "#2563EB",
-    backgroundColor: "#EAF1FF",
+    backgroundColor: Colors.primaryLight,
     paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 9,
+    paddingVertical: 4,
+    borderRadius: Radius.sm,
   },
+  timePillText: { fontSize: 11, fontWeight: "800", color: Colors.primary },
   modeBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    backgroundColor: "#EEF2FF",
-    borderRadius: 999,
+    gap: 4,
+    backgroundColor: Colors.primaryLight,
+    borderRadius: Radius.full,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   modeDot: {
-    width: 6,
-    height: 6,
+    width: 5,
+    height: 5,
     borderRadius: 3,
-    backgroundColor: "#4F46E5",
+    backgroundColor: Colors.primary,
   },
   modeText: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#4338CA",
+    color: Colors.primaryPressed,
     textTransform: "capitalize",
   },
   patientRow: { flexDirection: "row", alignItems: "center" },
   patientAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    marginRight: 10,
+    width: 40,
+    height: 40,
+    borderRadius: Radius.full,
+    marginRight: Spacing.sm,
     backgroundColor: Colors.border,
   },
   patientInfo: { flex: 1 },
-  patientName: {
-    ...Typography.body1,
-    color: "#0F172A",
-    fontWeight: "800",
-  },
+  patientName: { ...Typography.label, fontWeight: "800", color: Colors.text },
   patientHint: {
     ...Typography.caption,
-    color: "#64748B",
+    color: Colors.textTertiary,
     marginTop: 2,
-    fontWeight: "600",
+    fontWeight: "500",
   },
+
   startBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#2563EB",
-    paddingHorizontal: 13,
-    paddingVertical: 9,
-    borderRadius: 12,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.sm + 5,
+    paddingVertical: Spacing.sm + 1,
+    borderRadius: Radius.md,
     gap: 4,
-    shadowColor: "#1D4ED8",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 3,
+    marginRight: Spacing.sm + 4,
+    ...Shadows.button,
   },
-  startBtnText: { color: Colors.surface, fontSize: 12, fontWeight: "800" },
+  startBtnText: { color: Colors.textInverse, fontSize: 12, fontWeight: "800" },
 });

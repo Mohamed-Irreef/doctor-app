@@ -1,3 +1,4 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import {
@@ -18,7 +19,10 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Colors } from "../../constants/Colors";
 import { Typography } from "../../constants/Typography";
 import { getMyLabBookings } from "../../services/api";
@@ -37,6 +41,7 @@ type LabBooking = {
 
 export default function RecordsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [records, setRecords] = useState<LabBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -96,17 +101,23 @@ export default function RecordsScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <LinearGradient
+        colors={[Colors.primary, Colors.primaryPressed]}
+        style={[
+          styles.header,
+          { paddingTop: Math.max(insets.top, 8) + 8, paddingBottom: 14 },
+        ]}
+      >
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backBtn}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <ArrowLeft color={Colors.text} size={20} />
+          <ArrowLeft color={Colors.textInverse} size={20} />
         </TouchableOpacity>
-        <Text style={Typography.h2}>Medical Records</Text>
-      </View>
+        <Text style={styles.headerTitle}>Medical Records</Text>
+      </LinearGradient>
 
       {loading ? (
         <View style={styles.centerWrap}>
@@ -194,19 +205,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 18,
     gap: 10,
+  },
+  headerTitle: {
+    ...Typography.h2,
+    color: Colors.textInverse,
   },
   backBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: "rgba(255,255,255,0.24)",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.surface,
+    backgroundColor: "rgba(255,255,255,0.16)",
   },
   listContent: { paddingHorizontal: 20, paddingBottom: 32, gap: 12 },
   card: {

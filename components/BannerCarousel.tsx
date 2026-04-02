@@ -1,8 +1,14 @@
+/**
+ * BannerCarousel — Auto-scrolling hero carousel with animated pill indicators
+ * Features: spring-animated active dot, pause on user scroll, auto-resume
+ */
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, FlatList, StyleSheet, ViewStyle,
   Dimensions, TouchableOpacity, Animated,
 } from 'react-native';
+import { Colors } from '../constants/Colors';
+import { Spacing } from '../constants/Spacing';
 
 interface BannerCarouselProps {
   data: any[];
@@ -22,15 +28,32 @@ export default function BannerCarousel({
   itemWidth,
 }: BannerCarouselProps) {
   const ITEM_WIDTH = itemWidth ?? SCREEN_WIDTH - 48;
+  const SNAP_INTERVAL = ITEM_WIDTH + Spacing.md;
+
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Animated dot widths
+  const dotAnimations = useRef(data.map((_, i) => new Animated.Value(i === 0 ? 1 : 0))).current;
+
+  const animateDots = (nextIndex: number) => {
+    data.forEach((_, i) => {
+      Animated.spring(dotAnimations[i], {
+        toValue: i === nextIndex ? 1 : 0,
+        damping: 14,
+        stiffness: 200,
+        useNativeDriver: false,
+      }).start();
+    });
+  };
 
   const startAutoScroll = () => {
     timerRef.current = setInterval(() => {
       setActiveIndex(prev => {
         const next = (prev + 1) % data.length;
         flatListRef.current?.scrollToIndex({ index: next, animated: true });
+        animateDots(next);
         return next;
       });
     }, autoScrollInterval);
@@ -38,15 +61,16 @@ export default function BannerCarousel({
 
   useEffect(() => {
     startAutoScroll();
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [data.length]);
 
   const handleScroll = (event: any) => {
     const x = event.nativeEvent.contentOffset.x;
-    const index = Math.round(x / (ITEM_WIDTH + 16));
-    if (index !== activeIndex) setActiveIndex(index);
+    const index = Math.round(x / SNAP_INTERVAL);
+    if (index !== activeIndex && index >= 0 && index < data.length) {
+      setActiveIndex(index);
+      animateDots(index);
+    }
   };
 
   return (
@@ -57,7 +81,7 @@ export default function BannerCarousel({
         horizontal
         pagingEnabled={false}
         showsHorizontalScrollIndicator={false}
-        snapToInterval={ITEM_WIDTH + 16}
+        snapToInterval={SNAP_INTERVAL}
         decelerationRate="fast"
         onScroll={handleScroll}
         scrollEventThrottle={16}
@@ -66,30 +90,44 @@ export default function BannerCarousel({
         }}
         onMomentumScrollEnd={() => startAutoScroll()}
         getItemLayout={(_, index) => ({
-          length: ITEM_WIDTH + 16,
-          offset: (ITEM_WIDTH + 16) * index,
+          length: SNAP_INTERVAL,
+          offset: SNAP_INTERVAL * index,
           index,
         })}
         renderItem={({ item, index }) => (
-          <View style={{ width: ITEM_WIDTH, marginRight: 16 }}>
+          <View style={{ width: ITEM_WIDTH, marginRight: Spacing.md }}>
             {renderItem(item, index)}
           </View>
         )}
         keyExtractor={(_, i) => String(i)}
       />
 
-      {/* Pagination dots */}
+      {/* Animated Pill Indicators */}
       <View style={styles.pagination}>
-        {data.map((_, i) => (
-          <TouchableOpacity
-            key={i}
-            onPress={() => {
-              flatListRef.current?.scrollToIndex({ index: i, animated: true });
-              setActiveIndex(i);
-            }}
-            style={[styles.dot, i === activeIndex && styles.dotActive]}
-          />
-        ))}
+        {data.map((_, i) => {
+          const dotWidth = dotAnimations[i].interpolate({
+            inputRange: [0, 1],
+            outputRange: [6, 20],
+          });
+          const dotOpacity = dotAnimations[i].interpolate({
+            inputRange: [0, 1],
+            outputRange: [0.35, 1],
+          });
+          return (
+            <TouchableOpacity
+              key={i}
+              onPress={() => {
+                flatListRef.current?.scrollToIndex({ index: i, animated: true });
+                setActiveIndex(i);
+                animateDots(i);
+              }}
+            >
+              <Animated.View
+                style={[styles.dot, { width: dotWidth, opacity: dotOpacity }]}
+              />
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </View>
   );
@@ -99,18 +137,13 @@ const styles = StyleSheet.create({
   pagination: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 12,
+    alignItems: 'center',
+    marginTop: Spacing.sm + 4,
+    gap: 4,
   },
   dot: {
-    width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#CBD5E1',
-    marginHorizontal: 3,
-  },
-  dotActive: {
-    width: 20,
-    borderRadius: 4,
-    backgroundColor: '#2563EB',
+    backgroundColor: Colors.primary,
   },
 });

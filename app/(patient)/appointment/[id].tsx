@@ -1,3 +1,4 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
     ArrowLeft,
@@ -18,7 +19,10 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import ActionModal from "../../../components/ActionModal";
 import ButtonPrimary from "../../../components/ButtonPrimary";
 import { Colors } from "../../../constants/Colors";
@@ -29,6 +33,7 @@ import {
 
 export default function AppointmentDetailsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [appt, setAppt] = useState<any | null>(null);
   const [cancelModal, setCancelModal] = useState(false);
@@ -65,18 +70,27 @@ export default function AppointmentDetailsScreen() {
 
   if (!appt) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.header}>
+      <SafeAreaView
+        style={styles.container}
+        edges={["left", "right", "bottom"]}
+      >
+        <LinearGradient
+          colors={[Colors.primary, Colors.primaryPressed]}
+          style={[
+            styles.header,
+            { paddingTop: Math.max(insets.top, 8) + 8, paddingBottom: 12 },
+          ]}
+        >
           <TouchableOpacity
             onPress={() => router.back()}
             style={styles.backBtn}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
-            <ArrowLeft color={Colors.text} size={22} />
+            <ArrowLeft color={Colors.textInverse} size={22} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Appointment</Text>
           <View style={{ width: 40 }} />
-        </View>
+        </LinearGradient>
         <View
           style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
         >
@@ -100,7 +114,7 @@ export default function AppointmentDetailsScreen() {
     type === "Video" ? "#E0F2FE" : type === "Chat" ? "#F3E8FF" : "#DCFCE7";
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
       {/* Cancel Confirmation */}
       <ActionModal
         visible={cancelModal}
@@ -132,21 +146,30 @@ export default function AppointmentDetailsScreen() {
         }}
       />
 
-      <View style={styles.header}>
+      <LinearGradient
+        colors={[Colors.primary, Colors.primaryPressed]}
+        style={[
+          styles.header,
+          { paddingTop: Math.max(insets.top, 8) + 8, paddingBottom: 12 },
+        ]}
+      >
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backBtn}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <ArrowLeft color={Colors.text} size={22} />
+          <ArrowLeft color={Colors.textInverse} size={22} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Appointment</Text>
         <View style={{ width: 40 }} />
-      </View>
+      </LinearGradient>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: 126 + Math.max(insets.bottom, 10) },
+        ]}
       >
         {/* Status Banner */}
         <View
@@ -312,7 +335,12 @@ export default function AppointmentDetailsScreen() {
       </ScrollView>
 
       {/* Bottom Buttons */}
-      <View style={styles.bottomBar}>
+      <View
+        style={[
+          styles.bottomBar,
+          { paddingBottom: 12 + Math.max(insets.bottom, 10) },
+        ]}
+      >
         {isUpcoming ? (
           <>
             <ButtonPrimary
@@ -357,9 +385,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomWidth: 0,
   },
   backBtn: {
     width: 40,
@@ -368,16 +394,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: "rgba(255,255,255,0.24)",
+    backgroundColor: "rgba(255,255,255,0.16)",
   },
   headerTitle: {
     flex: 1,
     textAlign: "center",
     fontSize: 17,
     fontWeight: "700",
-    color: Colors.text,
+    color: Colors.textInverse,
   },
-  scroll: { padding: 20, paddingBottom: 120 },
+  scroll: { padding: 20, paddingBottom: 126 },
   statusBanner: {
     flexDirection: "row",
     alignItems: "center",

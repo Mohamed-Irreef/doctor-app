@@ -1,4 +1,5 @@
 import { Tabs } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import {
     Activity,
     Calendar,
@@ -8,114 +9,90 @@ import {
     User,
 } from "lucide-react-native";
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import SideDrawer from "../../components/SideDrawer";
 import { Colors } from "../../constants/Colors";
-import { useDrawerStore } from "../../store/drawerStore";
+import { Radius, Spacing } from "../../constants/Spacing";
 
-function TabIcon({
-  icon: Icon,
-  color,
-  focused,
-}: {
-  icon: any;
-  color: string;
-  focused: boolean;
-}) {
+const TAB_ITEMS = [
+  { name: "index", title: "Home", icon: Home },
+  { name: "search", title: "Doctors", icon: Stethoscope },
+  { name: "labs", title: "Labs", icon: Activity },
+  { name: "pharmacy", title: "Pharmacy", icon: Pill },
+  { name: "appointments", title: "Appts", icon: Calendar },
+  { name: "profile", title: "Profile", icon: User },
+];
+
+function TabIcon({ icon: Icon, focused }: { icon: any; focused: boolean }) {
   return (
-    <View style={[styles.iconWrap, focused && styles.iconActive]}>
-      <Icon
-        color={focused ? Colors.primary : Colors.textSecondary}
-        size={22}
-        strokeWidth={focused ? 2.5 : 1.8}
-      />
+    <View style={styles.tabItem}>
+      <View style={[styles.iconPill, focused && styles.iconPillActive]}>
+        <Icon
+          color={focused ? Colors.primary : Colors.textTertiary}
+          size={focused ? 21 : 20}
+          strokeWidth={focused ? 2.35 : 1.9}
+        />
+      </View>
     </View>
   );
 }
 
 export default function PatientLayout() {
-  const { openDrawer } = useDrawerStore();
   const insets = useSafeAreaInsets();
+
+  const tabBarStyle = {
+    ...styles.tabBar,
+    height: 66 + Math.max(insets.bottom, Spacing.sm),
+    paddingBottom: Math.max(insets.bottom, Spacing.sm),
+  } as const;
+
   const hiddenScreenOptions = {
     href: null,
     tabBarStyle: { display: "none" },
   } as const;
 
-  const tabBarStyle = {
-    ...styles.tabBar,
-    height: 58 + Math.max(insets.bottom, 8) + 6,
-    paddingBottom: Math.max(insets.bottom, 8) + 6,
-  } as const;
-
   return (
     <View style={{ flex: 1 }}>
+      <StatusBar style="light" backgroundColor={Colors.primary} />
       <Tabs
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: Colors.primary,
-          tabBarInactiveTintColor: Colors.textSecondary,
+          tabBarInactiveTintColor: Colors.textTertiary,
           tabBarStyle,
+          tabBarItemStyle: styles.tabBarItem,
           tabBarLabelStyle: styles.tabLabel,
-          tabBarIconStyle: { marginTop: 2 },
+          tabBarIconStyle: { marginTop: 2, marginBottom: 4 },
         }}
       >
-        <Tabs.Screen
-          name="index"
-          options={{
-            title: "Home",
-            tabBarIcon: ({ color, focused }) => (
-              <TabIcon icon={Home} color={color} focused={focused} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="search"
-          options={{
-            title: "Doctors",
-            tabBarIcon: ({ color, focused }) => (
-              <TabIcon icon={Stethoscope} color={color} focused={focused} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="labs"
-          options={{
-            title: "Labs",
-            tabBarIcon: ({ color, focused }) => (
-              <TabIcon icon={Activity} color={color} focused={focused} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="pharmacy"
-          options={{
-            title: "Pharmacy",
-            tabBarIcon: ({ color, focused }) => (
-              <TabIcon icon={Pill} color={color} focused={focused} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="appointments"
-          options={{
-            title: "Appts",
-            tabBarIcon: ({ color, focused }) => (
-              <TabIcon icon={Calendar} color={color} focused={focused} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="profile"
-          options={{
-            title: "Profile",
-            tabBarIcon: ({ color, focused }) => (
-              <TabIcon icon={User} color={color} focused={focused} />
-            ),
-          }}
-        />
+        {TAB_ITEMS.map(({ name, title, icon }) => (
+          <Tabs.Screen
+            key={name}
+            name={name}
+            options={{
+              title,
+              tabBarIcon: ({ focused }) => (
+                <TabIcon icon={icon} focused={focused} />
+              ),
+              tabBarLabel: ({ focused }) => (
+                <Text
+                  style={[
+                    styles.tabLabel,
+                    {
+                      color: focused ? Colors.primary : Colors.textTertiary,
+                      fontWeight: focused ? "700" : "600",
+                    },
+                  ]}
+                >
+                  {title}
+                </Text>
+              ),
+            }}
+          />
+        ))}
 
-        {/* Hidden screens — no tab bar entry */}
+        {/* Hidden screens */}
         <Tabs.Screen name="bookings" options={hiddenScreenOptions} />
         <Tabs.Screen name="records" options={hiddenScreenOptions} />
         <Tabs.Screen name="doctor/[id]" options={hiddenScreenOptions} />
@@ -152,28 +129,46 @@ export default function PatientLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    paddingTop: 8,
+    paddingTop: Spacing.sm - 1,
+    paddingHorizontal: 6,
     backgroundColor: Colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    elevation: 8,
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: -2 },
+    borderTopWidth: 0,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#0B1F4A",
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: -6 },
+      },
+      android: {
+        elevation: 12,
+      },
+    }),
+  },
+  tabBarItem: {
+    paddingVertical: 3,
+  },
+  tabItem: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+  },
+  iconPill: {
+    width: 50,
+    height: 32,
+    borderRadius: Radius.full,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconPillActive: {
+    backgroundColor: Colors.primaryLight,
+    borderWidth: 1,
+    borderColor: "rgba(30,58,138,0.12)",
   },
   tabLabel: {
     fontSize: 11,
     fontWeight: "600",
-    marginTop: 2,
-  },
-  iconWrap: {
-    width: 40,
-    height: 32,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 12,
-  },
-  iconActive: {
-    backgroundColor: "#EFF6FF",
+    letterSpacing: 0.15,
+    marginTop: 3,
   },
 });

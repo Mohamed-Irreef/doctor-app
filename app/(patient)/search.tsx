@@ -1,3 +1,4 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
     ArrowLeft,
@@ -11,6 +12,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
     FlatList,
     Image,
+    Modal,
+    Pressable,
     ScrollView,
     StyleSheet,
     Text,
@@ -18,8 +21,14 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import ChipFilter from "../../components/ChipFilter";
 import { Colors } from "../../constants/Colors";
+import { Shadows } from "../../constants/Shadows";
+import { Radius, Spacing } from "../../constants/Spacing";
 import { Typography } from "../../constants/Typography";
 import {
     getDoctors,
@@ -51,35 +60,31 @@ function DoctorRow({
     <TouchableOpacity
       style={styles.docRow}
       onPress={onPress}
-      activeOpacity={0.85}
+      activeOpacity={0.88}
     >
       <Image source={{ uri: item.image }} style={styles.docImage} />
+
       <View style={styles.docInfo}>
         <Text style={styles.docName}>{item.name}</Text>
         <Text style={styles.docSpec}>{item.specialization}</Text>
+
         <View style={styles.docMeta}>
-          <Star size={12} color="#F59E0B" fill="#F59E0B" />
+          <Star size={11} color={Colors.ratingGold} fill={Colors.ratingGold} />
           <Text style={styles.docRating}>
             {item.rating} ({item.reviews})
           </Text>
-          <View style={styles.dot} />
+          <View style={styles.metaDot} />
           <Text style={styles.docExp}>{item.experience}</Text>
         </View>
+
         <Text style={styles.docHospital} numberOfLines={1}>
           {item.hospital ?? "Multi-specialty Hospital"}
         </Text>
+
         <View style={styles.docFooter}>
           <Text style={styles.docFee}>
-            ₹{item.fee}{" "}
-            <Text
-              style={{
-                fontSize: 11,
-                fontWeight: "400",
-                color: Colors.textSecondary,
-              }}
-            >
-              / visit
-            </Text>
+            ₹{item.fee}
+            <Text style={styles.docFeeUnit}> / visit</Text>
           </Text>
           <View style={styles.availBadge}>
             <View style={styles.availDot} />
@@ -87,6 +92,7 @@ function DoctorRow({
           </View>
         </View>
       </View>
+
       <TouchableOpacity
         onPress={onFav}
         style={styles.favBtn}
@@ -95,7 +101,7 @@ function DoctorRow({
       >
         <Heart
           size={18}
-          color={faved ? Colors.error : Colors.textSecondary}
+          color={faved ? Colors.error : Colors.textDisabled}
           fill={faved ? Colors.error : "none"}
         />
       </TouchableOpacity>
@@ -105,6 +111,7 @@ function DoctorRow({
 
 export default function SearchDoctorScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { specialty } = useLocalSearchParams<{ specialty?: string }>();
 
   const [query, setQuery] = useState("");
@@ -170,77 +177,58 @@ export default function SearchDoctorScreen() {
   }, [query, activeSpec, activeSort, doctors]);
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
       {/* Header */}
-      <View style={styles.header}>
+      <LinearGradient
+        colors={[Colors.primary, Colors.primaryPressed]}
+        style={[
+          styles.header,
+          { paddingTop: Math.max(insets.top, 8) + 8, paddingBottom: 12 },
+        ]}
+      >
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backBtn}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <ArrowLeft color={Colors.text} size={22} />
+          <ArrowLeft color={Colors.textInverse} size={21} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Find Your Doctor</Text>
         <TouchableOpacity
-          onPress={() => setShowSort((s) => !s)}
-          style={styles.sortBtn}
+          onPress={() => setShowSort(true)}
+          style={[
+            styles.sortBtn,
+            activeSort !== "Relevance" && styles.sortBtnActive,
+          ]}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <SlidersHorizontal size={20} color={Colors.primary} />
+          <SlidersHorizontal
+            size={18}
+            color={
+              activeSort !== "Relevance" ? Colors.primary : Colors.textInverse
+            }
+          />
         </TouchableOpacity>
-      </View>
-
-      {/* Sort Dropdown */}
-      {showSort && (
-        <View style={styles.sortPanel}>
-          <Text
-            style={[Typography.body2, { fontWeight: "700", marginBottom: 10 }]}
-          >
-            Sort By
-          </Text>
-          {SORT_OPTIONS.map((s) => (
-            <TouchableOpacity
-              key={s}
-              style={[
-                styles.sortOption,
-                activeSort === s && styles.sortOptionActive,
-              ]}
-              onPress={() => {
-                setActiveSort(s);
-                setShowSort(false);
-              }}
-            >
-              <Text
-                style={[
-                  styles.sortText,
-                  activeSort === s && styles.sortTextActive,
-                ]}
-              >
-                {s}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
+      </LinearGradient>
 
       {/* Search Input */}
       <View style={styles.searchRow}>
         <Search
-          color={Colors.textSecondary}
-          size={18}
-          style={{ marginRight: 10 }}
+          color={Colors.textTertiary}
+          size={17}
+          style={{ marginRight: Spacing.sm + 2 }}
         />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search by name or specialty..."
-          placeholderTextColor={Colors.textSecondary}
+          placeholder="Search doctor or specialty"
+          placeholderTextColor={Colors.textTertiary}
           value={query}
           onChangeText={setQuery}
           autoFocus={false}
         />
         {query.length > 0 && (
           <TouchableOpacity onPress={() => setQuery("")}>
-            <X color={Colors.textSecondary} size={18} />
+            <X color={Colors.textTertiary} size={17} />
           </TouchableOpacity>
         )}
       </View>
@@ -250,28 +238,22 @@ export default function SearchDoctorScreen() {
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.chipRow}
-        contentContainerStyle={{ paddingHorizontal: 16 }}
+        contentContainerStyle={{
+          paddingHorizontal: Spacing.screenH,
+          paddingVertical: 2,
+        }}
       >
         {specialtyFilters.map((spec) => (
-          <TouchableOpacity
+          <ChipFilter
             key={spec}
-            style={[styles.chip, activeSpec === spec && styles.chipActive]}
+            label={spec}
+            active={activeSpec === spec}
             onPress={() => setActiveSpec(spec)}
-            activeOpacity={0.75}
-          >
-            <Text
-              style={[
-                styles.chipText,
-                activeSpec === spec && styles.chipTextActive,
-              ]}
-            >
-              {spec}
-            </Text>
-          </TouchableOpacity>
+          />
         ))}
       </ScrollView>
 
-      {/* Result Count */}
+      {/* Result Count + Active Sort */}
       <View style={styles.resultRow}>
         <Text style={styles.resultCount}>
           {filtered.length} doctor{filtered.length !== 1 ? "s" : ""} found
@@ -281,7 +263,8 @@ export default function SearchDoctorScreen() {
             onPress={() => setActiveSort("Relevance")}
             style={styles.clearSort}
           >
-            <Text style={styles.clearSortText}>Sort: {activeSort} ×</Text>
+            <Text style={styles.clearSortText}>Sort: {activeSort}</Text>
+            <X size={11} color={Colors.primary} />
           </TouchableOpacity>
         )}
       </View>
@@ -294,6 +277,9 @@ export default function SearchDoctorScreen() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyState}>
+            <View style={styles.emptyIconWrap}>
+              <Search size={32} color={Colors.textDisabled} />
+            </View>
             <Text style={styles.emptyTitle}>No doctors found</Text>
             <Text style={styles.emptySub}>
               Try adjusting your search or filters
@@ -305,7 +291,7 @@ export default function SearchDoctorScreen() {
               }}
               style={styles.clearBtn}
             >
-              <Text style={{ color: Colors.surface, fontWeight: "700" }}>
+              <Text style={{ color: Colors.textInverse, fontWeight: "700" }}>
                 Clear Filters
               </Text>
             </TouchableOpacity>
@@ -324,7 +310,6 @@ export default function SearchDoctorScreen() {
               const doctorId = String((item as any).id || (item as any)._id);
               const response = await toggleDoctorLike(doctorId);
               if (!response.data) return;
-
               setLikedDoctorIds((prev) => {
                 const set = new Set(prev);
                 if (response.data.liked) set.add(doctorId);
@@ -338,194 +323,282 @@ export default function SearchDoctorScreen() {
           />
         )}
       />
+
+      {/* Sort Modal */}
+      <Modal
+        visible={showSort}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSort(false)}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setShowSort(false)}
+        >
+          <View style={styles.sortModal}>
+            <Text style={styles.sortTitle}>Sort By</Text>
+            {SORT_OPTIONS.map((s) => (
+              <TouchableOpacity
+                key={s}
+                style={[
+                  styles.sortOption,
+                  activeSort === s && styles.sortOptionActive,
+                ]}
+                onPress={() => {
+                  setActiveSort(s);
+                  setShowSort(false);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.sortText,
+                    activeSort === s && styles.sortTextActive,
+                  ]}
+                >
+                  {s}
+                </Text>
+                {activeSort === s && <View style={styles.sortCheck} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+
+  // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    paddingHorizontal: Spacing.screenH,
+    backgroundColor: Colors.primary,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: Radius.full,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "rgba(255,255,255,0.12)",
+    marginRight: Spacing.sm,
   },
   headerTitle: {
     flex: 1,
-    textAlign: "center",
-    fontSize: 17,
-    fontWeight: "700",
-    color: Colors.text,
+    ...Typography.subheading,
+    color: Colors.textInverse,
   },
   sortBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#EFF6FF",
+    width: 38,
+    height: 38,
+    borderRadius: Radius.full,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
     alignItems: "center",
     justifyContent: "center",
   },
-  sortPanel: {
-    position: "absolute",
-    top: 64,
-    right: 16,
-    zIndex: 99,
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  sortOption: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    marginBottom: 4,
-  },
-  sortOptionActive: { backgroundColor: "#EFF6FF" },
-  sortText: { fontSize: 14, color: Colors.textSecondary, fontWeight: "500" },
-  sortTextActive: { color: Colors.primary, fontWeight: "700" },
+  sortBtnActive: { backgroundColor: Colors.surface },
+
+  // Search
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: Colors.surface,
-    borderRadius: 14,
+    borderRadius: Radius.md,
     borderWidth: 1,
     borderColor: Colors.border,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginHorizontal: 16,
-    marginTop: 14,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm + 4,
+    marginHorizontal: Spacing.screenH,
+    marginTop: Spacing.md,
+    ...Shadows.soft,
   },
   searchInput: { flex: 1, fontSize: 14, color: Colors.text, height: 24 },
-  chipRow: { marginTop: 12, marginBottom: 12, flexGrow: 0, maxHeight: 44 },
-  chip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    justifyContent: "center",
-    alignItems: "center",
-    height: 36,
+
+  // Chips
+  chipRow: {
+    marginTop: Spacing.sm + 4,
+    marginBottom: Spacing.sm + 2,
+    flexGrow: 0,
+    maxHeight: 46,
   },
-  chipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  chipText: { fontSize: 13, fontWeight: "500", color: Colors.textSecondary },
-  chipTextActive: { color: Colors.surface },
+
+  // Results
   resultRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: Spacing.screenH,
+    paddingVertical: Spacing.sm,
   },
-  resultCount: { fontSize: 13, color: Colors.textSecondary, fontWeight: "500" },
+  resultCount: {
+    ...Typography.caption,
+    color: Colors.textTertiary,
+    fontWeight: "600",
+  },
   clearSort: {
-    backgroundColor: "#EFF6FF",
-    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: Colors.primaryUltraLight,
+    paddingHorizontal: Spacing.sm + 2,
     paddingVertical: 4,
-    borderRadius: 10,
+    borderRadius: Radius.full,
   },
-  clearSortText: { fontSize: 12, color: Colors.primary, fontWeight: "600" },
-  listContent: { paddingHorizontal: 16, paddingBottom: 40 },
+  clearSortText: {
+    ...Typography.caption,
+    color: Colors.primary,
+    fontWeight: "600",
+  },
+
+  // Doctor Row
+  listContent: {
+    paddingHorizontal: Spacing.screenH,
+    paddingBottom: 40,
+    paddingTop: 4,
+  },
   docRow: {
     flexDirection: "row",
     backgroundColor: Colors.surface,
-    borderRadius: 18,
-    marginBottom: 14,
+    borderRadius: Radius.lg,
+    marginBottom: Spacing.sm + 4,
     borderWidth: 1,
     borderColor: Colors.border,
     overflow: "hidden",
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    ...Shadows.card,
   },
-  docImage: { width: 110, height: 130, resizeMode: "cover" },
-  docInfo: { flex: 1, padding: 12 },
+  docImage: { width: 110, height: 132, resizeMode: "cover" },
+  docInfo: { flex: 1, padding: Spacing.sm + 4 },
   docName: {
+    ...Typography.label,
     fontSize: 15,
     fontWeight: "700",
     color: Colors.text,
     marginBottom: 2,
   },
   docSpec: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: Colors.primary,
-    marginBottom: 6,
-  },
-  docMeta: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
-  docRating: {
-    fontSize: 12,
+    ...Typography.caption,
     fontWeight: "700",
-    color: "#D97706",
+    color: Colors.primary,
+    marginBottom: 5,
+  },
+  docMeta: { flexDirection: "row", alignItems: "center", marginBottom: 3 },
+  docRating: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: Colors.warningPressed,
     marginLeft: 4,
   },
-  dot: {
+  metaDot: {
     width: 3,
     height: 3,
     borderRadius: 2,
     backgroundColor: Colors.border,
-    marginHorizontal: 6,
+    marginHorizontal: 5,
   },
-  docExp: { fontSize: 12, color: Colors.textSecondary },
-  docHospital: { fontSize: 11, color: Colors.textSecondary, marginBottom: 8 },
+  docExp: { ...Typography.caption, color: Colors.textTertiary },
+  docHospital: { ...Typography.caption, marginBottom: Spacing.sm },
   docFooter: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
   docFee: { fontSize: 15, fontWeight: "800", color: Colors.text },
+  docFeeUnit: { fontSize: 11, fontWeight: "400", color: Colors.textSecondary },
   availBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#DCFCE7",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
+    backgroundColor: Colors.successLight,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: Radius.full,
+    gap: 4,
   },
   availDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#16A34A",
-    marginRight: 4,
+    backgroundColor: Colors.success,
   },
-  availText: { fontSize: 10, fontWeight: "600", color: "#16A34A" },
-  favBtn: { padding: 12, justifyContent: "flex-start" },
-  emptyState: { alignItems: "center", paddingTop: 60 },
+  availText: { fontSize: 10, fontWeight: "700", color: Colors.successPressed },
+  favBtn: { padding: Spacing.sm + 4, justifyContent: "flex-start" },
+
+  // Empty
+  emptyState: { alignItems: "center", paddingTop: 56 },
+  emptyIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: Spacing.md,
+  },
   emptyTitle: {
+    ...Typography.heading,
     fontSize: 17,
-    fontWeight: "700",
     color: Colors.text,
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
-  emptySub: { fontSize: 14, color: Colors.textSecondary, marginBottom: 24 },
+  emptySub: {
+    ...Typography.body2,
+    color: Colors.textTertiary,
+    marginBottom: Spacing.lg,
+    textAlign: "center",
+  },
   clearBtn: {
     backgroundColor: Colors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 14,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: 13,
+    borderRadius: Radius.md,
+    ...Shadows.button,
+  },
+
+  // Sort Modal
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: Colors.overlay,
+    justifyContent: "flex-end",
+  },
+  sortModal: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
+    padding: Spacing.lg,
+    paddingBottom: Spacing.xxl,
+  },
+  sortTitle: {
+    ...Typography.subheading,
+    color: Colors.text,
+    marginBottom: Spacing.md,
+    textAlign: "center",
+  },
+  sortOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: Spacing.sm + 4,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.md,
+    marginBottom: 4,
+  },
+  sortOptionActive: { backgroundColor: Colors.primaryUltraLight },
+  sortText: {
+    ...Typography.body2,
+    fontWeight: "500",
+    color: Colors.textSecondary,
+  },
+  sortTextActive: { color: Colors.primary, fontWeight: "700" },
+  sortCheck: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: Colors.primary,
   },
 });

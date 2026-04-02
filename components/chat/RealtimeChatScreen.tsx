@@ -18,6 +18,7 @@ import {
     ActivityIndicator,
     Alert,
     Image,
+    Keyboard,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -27,7 +28,10 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { io, Socket } from "socket.io-client";
 import { Colors } from "../../constants/Colors";
 import { useCall } from "../../context/CallContext";
@@ -64,6 +68,11 @@ type Props = {
   initialBlockedBy?: string | null;
 };
 
+type ChatParticipants = {
+  doctorId: string;
+  patientId: string;
+};
+
 function getEntityId(value: any) {
   if (!value) return "";
   if (typeof value === "string") return value;
@@ -91,6 +100,7 @@ export default function RealtimeChatScreen({
   initialBlockedBy = null,
 }: Props) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { initiateVideoCall } = useCall();
   const scrollRef = useRef<ScrollView | null>(null);
   const socketRef = useRef<Socket | null>(null);
@@ -103,13 +113,28 @@ export default function RealtimeChatScreen({
   const [myId, setMyId] = useState("");
   const [peerOnline, setPeerOnline] = useState(false);
   const [isPeerTyping, setIsPeerTyping] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [isBlocked, setIsBlocked] = useState(Boolean(initialBlocked));
   const [blockedBy, setBlockedBy] = useState<string | null>(initialBlockedBy);
+  const [participants, setParticipants] = useState<ChatParticipants | null>(
+    null,
+  );
 
   const canSend =
     !isBlocked || (blockedBy ? String(blockedBy) === String(myId) : true);
 
   const effectivePeerId = useMemo(() => {
+    if (!myId) return "";
+
+    const doctorFromChat = getEntityId(participants?.doctorId);
+    const patientFromChat = getEntityId(participants?.patientId);
+    if (doctorFromChat && patientFromChat) {
+      if (String(doctorFromChat) === String(myId))
+        return String(patientFromChat);
+      if (String(patientFromChat) === String(myId))
+        return String(doctorFromChat);
+    }
+
     const direct = String(peerId || "");
     if (direct && direct !== myId) return direct;
 
@@ -123,12 +148,19 @@ export default function RealtimeChatScreen({
     }
 
     return "";
-  }, [messages, myId, peerId]);
+  }, [messages, myId, peerId, participants]);
 
   const loadMessages = useCallback(async () => {
     if (!chatId) return;
     setLoading(true);
     const response = await getChatMessages(chatId, { page: 1, limit: 100 });
+    const chat = response.data?.chat || null;
+    if (chat) {
+      setParticipants({
+        doctorId: getEntityId(chat.doctorId),
+        patientId: getEntityId(chat.patientId),
+      });
+    }
     if (response.data?.items) {
       setMessages(response.data.items);
       await markChatSeen(chatId);
@@ -154,6 +186,25 @@ export default function RealtimeChatScreen({
   useEffect(() => {
     loadMessages();
   }, [loadMessages]);
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, () => {
+      setIsKeyboardVisible(true);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setIsKeyboardVisible(false);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     const connect = async () => {
@@ -320,7 +371,6 @@ export default function RealtimeChatScreen({
   };
 
   const onToggleBlock = async () => {
-    if (currentRole !== "doctor") return;
     const nextBlock = !isBlocked;
 
     const response = await blockChat(chatId, nextBlock);
@@ -336,15 +386,19 @@ export default function RealtimeChatScreen({
   };
 
   const onVideoCallPress = () => {
-    if (currentRole !== "doctor") return;
+    if (!myId) {
+      Alert.alert("Video Call", "Please wait a moment and try again.");
+      return;
+    }
+
     if (!effectivePeerId || String(effectivePeerId) === String(myId)) {
-      Alert.alert("Video Call", "Patient id not found for this chat.");
+      Alert.alert("Video Call", "User id not found for this chat.");
       return;
     }
 
     initiateVideoCall({
       receiverId: String(effectivePeerId),
-      peerName: peerName || "Patient",
+      peerName: peerName || "User",
     }).then((result) => {
       if (!result) {
         Alert.alert("Video Call", "Unable to start call.");
@@ -367,19 +421,17 @@ export default function RealtimeChatScreen({
             {peerOnline ? "Online" : "Offline"}
           </Text>
         </View>
-        {currentRole === "doctor" ? (
-          <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.iconBtn} onPress={onVideoCallPress}>
-              <Video color={Colors.textSecondary} size={18} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.iconBtn} onPress={onToggleBlock}>
-              <ShieldBan
-                color={isBlocked ? Colors.error : Colors.textSecondary}
-                size={18}
-              />
-            </TouchableOpacity>
-          </View>
-        ) : null}
+        <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.iconBtn} onPress={onVideoCallPress}>
+            <Video color={Colors.textSecondary} size={21} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.iconBtn} onPress={onToggleBlock}>
+            <ShieldBan
+              color={isBlocked ? Colors.error : Colors.textSecondary}
+              size={21}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {isBlocked && !canSend ? (
@@ -392,12 +444,13 @@ export default function RealtimeChatScreen({
 
       <KeyboardAvoidingView
         style={styles.chatArea}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView
           ref={scrollRef}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           {loading ? (
             <View style={styles.loadingWrap}>
@@ -449,7 +502,16 @@ export default function RealtimeChatScreen({
           ) : null}
         </ScrollView>
 
-        <View style={styles.inputRow}>
+        <View
+          style={[
+            styles.inputRow,
+            {
+              paddingBottom: isKeyboardVisible
+                ? 8
+                : Math.max(insets.bottom, 10),
+            },
+          ]}
+        >
           <TouchableOpacity style={styles.attachBtn} onPress={onSendImage}>
             <Paperclip color={Colors.textSecondary} size={19} />
           </TouchableOpacity>
@@ -498,6 +560,7 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
+    marginRight: 2,
   },
   avatar: {
     width: 38,
@@ -566,7 +629,7 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.border,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    paddingBottom: Platform.OS === "ios" ? 22 : 10,
+    paddingBottom: 10,
   },
   attachBtn: {
     width: 40,

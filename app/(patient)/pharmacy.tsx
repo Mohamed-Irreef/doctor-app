@@ -1,23 +1,27 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
-  ArrowLeft,
-  ClipboardList,
-  Plus,
-  Search,
-  ShoppingCart,
+    ArrowLeft,
+    ClipboardList,
+    Plus,
+    Search,
+    ShoppingCart,
 } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Image,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Colors } from "../../constants/Colors";
 import { getMedicines } from "../../services/api";
 import { useCartStore } from "../../store/cartStore";
@@ -33,6 +37,7 @@ const CATS = [
 
 export default function PharmacyScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { items, addItem } = useCartStore();
   const cartCount = items.reduce((sum, i) => sum + i.quantity, 0);
   const [activeCategory, setActiveCategory] = useState("All");
@@ -62,14 +67,20 @@ export default function PharmacyScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <LinearGradient
+        colors={[Colors.primary, Colors.primaryPressed]}
+        style={[
+          styles.header,
+          { paddingTop: Math.max(insets.top, 8) + 8, paddingBottom: 12 },
+        ]}
+      >
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backBtn}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <ArrowLeft color={Colors.text} size={22} />
+          <ArrowLeft color={Colors.textInverse} size={22} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Medicines</Text>
         <TouchableOpacity
@@ -77,7 +88,7 @@ export default function PharmacyScreen() {
           onPress={() => router.push("/(patient)/cart")}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <ShoppingCart color={Colors.primary} size={22} />
+          <ShoppingCart color={Colors.textInverse} size={22} />
           {cartCount > 0 && (
             <View style={styles.cartBadge}>
               <Text style={styles.cartBadgeText}>{cartCount}</Text>
@@ -89,9 +100,9 @@ export default function PharmacyScreen() {
           onPress={() => router.push("/(patient)/medicine-orders")}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <ClipboardList color={Colors.primary} size={20} />
+          <ClipboardList color={Colors.textInverse} size={20} />
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
 
       {loading ? (
         <View style={styles.loadingWrap}>
@@ -244,15 +255,13 @@ export default function PharmacyScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1, backgroundColor: Colors.primaryUltraLight },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    backgroundColor: Colors.primary,
   },
   backBtn: {
     width: 40,
@@ -261,22 +270,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "rgba(255,255,255,0.12)",
   },
   headerTitle: {
     flex: 1,
     textAlign: "center",
     fontSize: 17,
     fontWeight: "700",
-    color: Colors.text,
+    color: Colors.textInverse,
   },
   cartBtn: {
     width: 40,
     height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
     marginLeft: 6,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+    backgroundColor: "rgba(255,255,255,0.12)",
   },
   historyBtn: {
     width: 40,
@@ -285,7 +299,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "rgba(255,255,255,0.12)",
   },
   cartBadge: {
     position: "absolute",
@@ -301,20 +316,22 @@ const styles = StyleSheet.create({
   cartBadgeText: { fontSize: 9, fontWeight: "800", color: "#fff" },
   listContent: { padding: 16, paddingBottom: 40 },
   promoBanner: {
-    backgroundColor: "#ECFEFF",
+    backgroundColor: Colors.primaryUltraLight,
+    borderWidth: 1,
+    borderColor: Colors.primaryLight,
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
   },
-  promoTitle: { fontSize: 15, fontWeight: "800", color: "#0E7490" },
-  promoSub: { fontSize: 12, color: "#0F766E", marginTop: 4 },
+  promoTitle: { fontSize: 15, fontWeight: "800", color: Colors.primary },
+  promoSub: { fontSize: 12, color: Colors.textSecondary, marginTop: 4 },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: Colors.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.primaryLight,
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginBottom: 12,
@@ -327,10 +344,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.primaryLight,
     backgroundColor: Colors.surface,
   },
-  catChipActive: { backgroundColor: "#0EA5E9", borderColor: "#0EA5E9" },
+  catChipActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
   catText: { fontSize: 12, fontWeight: "500", color: Colors.textSecondary },
   catTextActive: { color: Colors.surface },
   medCard: {
@@ -340,10 +360,10 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.primaryLight,
     shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.05,
     shadowRadius: 6,
     elevation: 2,
   },
@@ -373,8 +393,8 @@ const styles = StyleSheet.create({
   },
   medCat: {
     fontSize: 10,
-    fontWeight: "500",
-    color: Colors.primary,
+    fontWeight: "600",
+    color: Colors.textSecondary,
     marginBottom: 8,
   },
   rxTag: {
@@ -401,7 +421,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "#0EA5E9",
+    backgroundColor: Colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },

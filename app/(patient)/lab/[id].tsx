@@ -1,4 +1,5 @@
 import { useFocusEffect } from "@react-navigation/native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, Clock, FlaskConical } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
@@ -10,7 +11,10 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Colors } from "../../../constants/Colors";
 import { getLabTestById, getLabTestReviews } from "../../../services/api";
 
@@ -25,6 +29,7 @@ function formatDisplayDate(value?: string) {
 
 export default function LabTestDetailsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [test, setTest] = useState<any | null>(null);
   const [reviews, setReviews] = useState<any[]>([]);
@@ -85,23 +90,32 @@ export default function LabTestDetailsScreen() {
     test.testImage || test.imageUrl || test.testImageUrl || test.image || "";
   const isAboutTab = activeTab === "about";
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
       {/* Header */}
-      <View style={styles.header}>
+      <LinearGradient
+        colors={[Colors.primary, Colors.primaryPressed]}
+        style={[
+          styles.header,
+          { paddingTop: Math.max(insets.top, 8) + 8, paddingBottom: 12 },
+        ]}
+      >
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backBtn}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <ArrowLeft color={Colors.text} size={22} />
+          <ArrowLeft color={Colors.textInverse} size={22} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Test Details</Text>
         <View style={{ width: 40 }} />
-      </View>
+      </LinearGradient>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: 130 + Math.max(insets.bottom, 8) },
+        ]}
       >
         <View style={styles.heroCard}>
           {imageUrl ? (
@@ -392,7 +406,12 @@ export default function LabTestDetailsScreen() {
         )}
       </ScrollView>
 
-      <View style={styles.bottomBar}>
+      <View
+        style={[
+          styles.bottomBar,
+          { paddingBottom: 14 + Math.max(insets.bottom, 8) },
+        ]}
+      >
         <TouchableOpacity
           style={[
             styles.actionBtn,
@@ -436,10 +455,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    backgroundColor: Colors.primary,
   },
   backBtn: {
     width: 40,
@@ -448,14 +464,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "rgba(255,255,255,0.12)",
   },
   headerTitle: {
     flex: 1,
     textAlign: "center",
     fontSize: 17,
     fontWeight: "700",
-    color: Colors.text,
+    color: Colors.textInverse,
   },
   scroll: { padding: 20, paddingBottom: 120 },
   heroCard: {
@@ -474,7 +491,7 @@ const styles = StyleSheet.create({
   heroImageFallback: {
     width: "100%",
     height: 170,
-    backgroundColor: "#EEF2FF",
+    backgroundColor: Colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -505,12 +522,12 @@ const styles = StyleSheet.create({
     textDecorationLine: "line-through",
   },
   discBadge: {
-    backgroundColor: "#DCFCE7",
+    backgroundColor: Colors.successLight,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
   },
-  discText: { fontSize: 10, fontWeight: "700", color: "#16A34A" },
+  discText: { fontSize: 10, fontWeight: "700", color: Colors.successPressed },
   tabs: {
     marginTop: 16,
     flexDirection: "row",
@@ -562,7 +579,7 @@ const styles = StyleSheet.create({
   overviewText: { fontSize: 14, color: Colors.textSecondary, lineHeight: 22 },
   metaRow: { flexDirection: "row", gap: 8, marginTop: 14 },
   metaChip: {
-    backgroundColor: "#EFF6FF",
+    backgroundColor: Colors.primaryLight,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
@@ -601,17 +618,17 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderRadius: 12,
     padding: 12,
-    backgroundColor: "#F8FAFF",
+    backgroundColor: Colors.primaryUltraLight,
   },
   blockTitle: { fontSize: 12, color: Colors.primary, fontWeight: "700" },
   blockText: { fontSize: 13, color: Colors.text, marginTop: 6 },
   linkCard: {
     marginTop: 6,
     borderWidth: 1,
-    borderColor: "#BFDBFE",
+    borderColor: Colors.primaryLight,
     borderRadius: 12,
     padding: 12,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: Colors.primaryLight,
   },
   linkTitle: { fontSize: 13, fontWeight: "700", color: Colors.primary },
   linkSub: { fontSize: 12, color: Colors.textSecondary, marginTop: 4 },
@@ -639,13 +656,17 @@ const styles = StyleSheet.create({
   reviewRating: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FEF3C7",
+    backgroundColor: Colors.warningLight,
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  reviewStar: { fontSize: 12, color: "#D97706", marginRight: 4 },
-  reviewRatingText: { fontSize: 12, fontWeight: "700", color: "#D97706" },
+  reviewStar: { fontSize: 12, color: Colors.warningPressed, marginRight: 4 },
+  reviewRatingText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: Colors.warningPressed,
+  },
   reviewComment: {
     marginTop: 8,
     fontSize: 14,
@@ -659,7 +680,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: "center",
-    backgroundColor: "#F1F5F9",
+    backgroundColor: Colors.surfaceAlt,
   },
   writeReviewText: {
     fontSize: 14,
@@ -693,7 +714,7 @@ const styles = StyleSheet.create({
   },
   actionBtnActive: {
     borderColor: Colors.primary,
-    backgroundColor: "#2563EB",
+    backgroundColor: Colors.primary,
   },
   actionText: { fontSize: 13, fontWeight: "700", color: Colors.text },
   actionTextActive: { color: Colors.surface },

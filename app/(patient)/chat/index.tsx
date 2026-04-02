@@ -1,3 +1,4 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
 import { ArrowLeft, MessageSquare, Search } from "lucide-react-native";
 import React, { useCallback, useMemo, useState } from "react";
@@ -11,7 +12,10 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Colors } from "../../../constants/Colors";
 import { createChat, getDoctors, getUserChats } from "../../../services/api";
 
@@ -26,6 +30,7 @@ function resolveId(value: any) {
 
 export default function PatientChatListScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [doctors, setDoctors] = useState<any[]>([]);
@@ -92,14 +97,20 @@ export default function PatientChatListScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <LinearGradient
+        colors={[Colors.primary, Colors.primaryPressed]}
+        style={[
+          styles.header,
+          { paddingTop: Math.max(insets.top, 8) + 8, paddingBottom: 12 },
+        ]}
+      >
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <ArrowLeft color={Colors.text} size={20} />
+          <ArrowLeft color={Colors.textInverse} size={20} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Chat with Doctor</Text>
         <View style={{ width: 36 }} />
-      </View>
+      </LinearGradient>
 
       <View style={styles.searchRow}>
         <Search size={16} color={Colors.textSecondary} />
@@ -176,16 +187,14 @@ export default function PatientChatListScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  container: { flex: 1, backgroundColor: Colors.background },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomWidth: 0,
   },
   backBtn: {
     width: 36,
@@ -194,9 +203,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: "rgba(255,255,255,0.24)",
+    backgroundColor: "rgba(255,255,255,0.16)",
   },
-  headerTitle: { fontSize: 17, fontWeight: "700", color: Colors.text },
+  headerTitle: { fontSize: 17, fontWeight: "700", color: Colors.textInverse },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",

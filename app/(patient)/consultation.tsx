@@ -3,26 +3,26 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, Paperclip, Phone, Send, Video } from "lucide-react-native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { io, Socket } from "socket.io-client";
 import { Colors } from "../../constants/Colors";
 import {
-  getAppointmentChatMessages,
-  getAuthToken,
-  getSocketBaseUrl,
-  sendAppointmentChatMessage,
-  uploadFile,
+    getAppointmentChatMessages,
+    getAuthToken,
+    getSocketBaseUrl,
+    sendAppointmentChatMessage,
+    uploadFile,
 } from "../../services/api";
 
 type ChatMessage = {
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
   },
   headerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
 
-  chatArea: { flex: 1, backgroundColor: "#F8FAFC" },
+  chatArea: { flex: 1, backgroundColor: Colors.background },
   scrollContent: { padding: 20, paddingBottom: 40 },
   dateHeader: {
     textAlign: "center",

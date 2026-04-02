@@ -1,10 +1,10 @@
 import * as Google from "expo-auth-session/providers/google";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { Lock, Mail, Stethoscope, UserRound } from "lucide-react-native";
 import React, { useState } from "react";
 import {
-    Image,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -107,6 +107,7 @@ export default function LoginScreen() {
     if (!email || !password) {
       setErrorText("Please enter your email and password to continue.");
       setErrorModal(true);
+      const [showPassword, setShowPassword] = useState(false);
       return;
     }
     setLoading(true);
@@ -187,17 +188,22 @@ export default function LoginScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <Image
-          source={{
-            uri: "https://images.unsplash.com/photo-1576091160550-2173ff9e5ee5?auto=format&fit=crop&q=80&w=800",
-          }}
-          style={styles.headerImage}
-        />
+        <LinearGradient
+          colors={[Colors.primary, Colors.primaryPressed]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.hero}
+        >
+          <View style={styles.heroDotLeft} />
+          <View style={styles.heroDotRight} />
+          <Text style={styles.heroBrand}>NiviDoc</Text>
+          <Text style={styles.heroSub}>Trusted healthcare platform</Text>
+        </LinearGradient>
 
         <View style={styles.formContainer}>
           <Text style={[Typography.h1, styles.title]}>Welcome Back</Text>
           <Text style={[Typography.body1, styles.subtitle]}>
-            Login to continue to MediBook
+            Login to continue to NiviDoc
           </Text>
 
           <View style={styles.roleContainer}>
@@ -322,28 +328,66 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  scrollContent: { flexGrow: 1 },
-  headerImage: { width: "100%", height: 300 },
+  container: { flex: 1, backgroundColor: Colors.primaryUltraLight },
+  scrollContent: { flexGrow: 1, backgroundColor: Colors.primaryUltraLight },
+  hero: {
+    width: "100%",
+    height: 300,
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+  },
+  heroDotLeft: {
+    position: "absolute",
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    top: -40,
+    left: -60,
+  },
+  heroDotRight: {
+    position: "absolute",
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    bottom: -20,
+    right: -40,
+  },
+  heroBrand: {
+    fontSize: 38,
+    fontWeight: "800",
+    color: Colors.textInverse,
+    letterSpacing: 0.4,
+  },
+  heroSub: {
+    marginTop: 8,
+    fontSize: 14,
+    color: "rgba(255,255,255,0.85)",
+    fontWeight: "500",
+  },
   formContainer: {
     flex: 1,
     backgroundColor: Colors.surface,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    marginTop: -32,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    marginTop: -24,
     padding: 24,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
     shadowColor: Colors.black,
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 5,
   },
   title: { marginBottom: 6 },
-  subtitle: { color: Colors.textSecondary, marginBottom: 24 },
+  subtitle: { color: Colors.textSecondary, marginBottom: 22 },
   roleContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 24,
+    marginBottom: 20,
   },
   roleCard: {
     flex: 1,
@@ -357,22 +401,25 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     marginHorizontal: 4,
   },
-  roleCardActive: { borderColor: Colors.primary, backgroundColor: "#EFF6FF" },
+  roleCardActive: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryUltraLight,
+  },
   roleText: { marginLeft: 8, fontWeight: "600", color: Colors.textSecondary },
   roleTextActive: { color: Colors.primary },
-  forgotPassword: { alignSelf: "flex-end", marginBottom: 24 },
-  loginBtn: { marginBottom: 24 },
+  forgotPassword: { alignSelf: "flex-end", marginBottom: 20 },
+  loginBtn: { marginBottom: 18 },
   googleBtn: {
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.primaryLight,
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.surface,
     marginBottom: 20,
   },
   googleText: {
-    color: "#111827",
+    color: "#2D2D2D",
     fontSize: 15,
     fontWeight: "600",
   },

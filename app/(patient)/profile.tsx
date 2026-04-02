@@ -1,8 +1,9 @@
 import { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
-import { Calendar, Camera, MapPin, Save } from "lucide-react-native";
+import { ArrowLeft, Calendar, Camera, MapPin, Save } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
     Image,
@@ -13,7 +14,10 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import ActionModal from "../../components/ActionModal";
 import { Colors } from "../../constants/Colors";
 import * as api from "../../services/api";
@@ -32,6 +36,7 @@ function formatDate(date?: string | Date | null) {
 
 export default function PatientProfileScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { login } = useAuthStore();
 
   const [name, setName] = useState("");
@@ -84,7 +89,7 @@ export default function PatientProfileScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaType.Images,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       quality: 0.8,
     });
@@ -183,7 +188,7 @@ export default function PatientProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
       <ActionModal
         visible={errorModal}
         type="error"
@@ -192,6 +197,24 @@ export default function PatientProfileScreen() {
         confirmLabel="OK"
         onConfirm={() => setErrorModal(false)}
       />
+
+      <LinearGradient
+        colors={[Colors.primary, Colors.primaryPressed]}
+        style={[
+          styles.header,
+          { paddingTop: Math.max(insets.top, 8) + 8, paddingBottom: 12 },
+        ]}
+      >
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <ArrowLeft color={Colors.textInverse} size={22} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Profile</Text>
+        <View style={{ width: 40 }} />
+      </LinearGradient>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -320,6 +343,29 @@ export default function PatientProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    backgroundColor: Colors.primary,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "rgba(255,255,255,0.12)",
+  },
+  headerTitle: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 17,
+    fontWeight: "700",
+    color: Colors.textInverse,
+  },
   scroll: { padding: 20, paddingBottom: 80 },
   title: { fontSize: 24, fontWeight: "800", color: "#111827", marginBottom: 8 },
   subtitle: { color: Colors.textSecondary, marginBottom: 20 },

@@ -18,30 +18,21 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Badge, { getStatusVariant } from "../../components/Badge";
 import { Colors } from "../../constants/Colors";
 import { Typography } from "../../constants/Typography";
+import { Spacing, Radius } from "../../constants/Spacing";
+import { Shadows } from "../../constants/Shadows";
 import { createChat, getDoctorAppointments } from "../../services/api";
 
 type AppointmentItem = {
   _id: string;
   id?: string;
-  patient?: {
-    _id?: string;
-    id?: string;
-    name?: string;
-    image?: string;
-    age?: number;
-  };
+  patient?: { _id?: string; id?: string; name?: string; image?: string; age?: number };
   time?: string;
   date?: string;
   type?: "video" | "chat" | "in-person" | string;
   status?: string;
-};
-
-const BADGE_COLORS: Record<string, { bg: string; text: string }> = {
-  Upcoming: { bg: "#DBEAFE", text: Colors.primary },
-  Pending: { bg: "#FEF3C7", text: "#D97706" },
-  Completed: { bg: "#DCFCE7", text: "#16A34A" },
 };
 
 const TABS = ["Upcoming", "Pending", "Completed"] as const;
@@ -53,36 +44,23 @@ export default function DoctorAppointmentsScreen() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const openPatientChat = useCallback(
-    async (item: AppointmentItem) => {
-      const patientId = String(item.patient?._id || item.patient?.id || "");
-      if (!patientId) {
-        router.push("/(doctor)/chat");
-        return;
-      }
-
-      const response = await createChat({ patientId });
-      if (!response.data?._id) {
-        router.push("/(doctor)/chat");
-        return;
-      }
-
-      router.push({
-        pathname: "/(doctor)/chat/[chatId]",
-        params: {
-          chatId: String(response.data._id),
-          patientId,
-          patientName: item.patient?.name || "Patient",
-          patientImage: item.patient?.image || "",
-          isBlocked: String(Boolean(response.data.isBlocked)),
-          blockedBy: response.data.blockedBy
-            ? String(response.data.blockedBy)
-            : "",
-        },
-      });
-    },
-    [router],
-  );
+  const openPatientChat = useCallback(async (item: AppointmentItem) => {
+    const patientId = String(item.patient?._id || item.patient?.id || "");
+    if (!patientId) { router.push("/(doctor)/chat"); return; }
+    const response = await createChat({ patientId });
+    if (!response.data?._id) { router.push("/(doctor)/chat"); return; }
+    router.push({
+      pathname: "/(doctor)/chat/[chatId]",
+      params: {
+        chatId: String(response.data._id),
+        patientId,
+        patientName: item.patient?.name || "Patient",
+        patientImage: item.patient?.image || "",
+        isBlocked: String(Boolean(response.data.isBlocked)),
+        blockedBy: response.data.blockedBy ? String(response.data.blockedBy) : "",
+      },
+    });
+  }, [router]);
 
   const loadAppointments = useCallback(async () => {
     setLoading(true);
@@ -93,23 +71,15 @@ export default function DoctorAppointmentsScreen() {
     setLoading(false);
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadAppointments();
-    }, [loadAppointments]),
-  );
+  useFocusEffect(useCallback(() => { loadAppointments(); }, [loadAppointments]));
 
-  const data = useMemo(
-    () =>
-      appointments.filter((item) => {
-        const status = String(item.status || "").toLowerCase();
-        if (activeTab === "Upcoming") return status === "upcoming";
-        if (activeTab === "Pending") return status === "pending";
-        if (activeTab === "Completed") return status === "completed";
-        return false;
-      }),
-    [activeTab, appointments],
-  );
+  const data = useMemo(() => appointments.filter((item) => {
+    const status = String(item.status || "").toLowerCase();
+    if (activeTab === "Upcoming") return status === "upcoming";
+    if (activeTab === "Pending") return status === "pending";
+    if (activeTab === "Completed") return status === "completed";
+    return false;
+  }), [activeTab, appointments]);
 
   const prettyType = (rawType?: string) => {
     const normalized = String(rawType || "video");
@@ -119,8 +89,9 @@ export default function DoctorAppointmentsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={Typography.h2}>Appointments</Text>
+        <Text style={styles.headerTitle}>Appointments</Text>
       </View>
 
       {/* Tabs */}
@@ -131,18 +102,13 @@ export default function DoctorAppointmentsScreen() {
             style={[styles.tabBtn, activeTab === tab && styles.tabBtnActive]}
             onPress={() => setActiveTab(tab)}
           >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === tab && styles.tabTextActive,
-              ]}
-            >
-              {tab}
-            </Text>
+            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
+            {activeTab === tab && <View style={styles.tabIndicator} />}
           </TouchableOpacity>
         ))}
       </View>
 
+      {/* List */}
       <FlatList
         data={data}
         keyExtractor={(item) => String(item._id || item.id)}
@@ -152,140 +118,93 @@ export default function DoctorAppointmentsScreen() {
           loading ? (
             <View style={styles.loadingState}>
               <ActivityIndicator color={Colors.primary} />
-              <Text style={styles.loadingText}>Loading appointments...</Text>
+              <Text style={styles.loadingText}>Loading appointments…</Text>
             </View>
           ) : (
-            <Text style={styles.empty}>No appointments found.</Text>
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconWrap}>
+                <Calendar size={32} color={Colors.textDisabled} />
+              </View>
+              <Text style={styles.emptyTitle}>No {activeTab} appointments</Text>
+            </View>
           )
         }
         renderItem={({ item }) => {
-          const normalizedStatus = `${String(item.status || "")
-            .charAt(0)
-            .toUpperCase()}${String(item.status || "").slice(1)}`;
-          const badge = BADGE_COLORS[normalizedStatus] || BADGE_COLORS.Upcoming;
+          const normalizedStatus = `${String(item.status || "").charAt(0).toUpperCase()}${String(item.status || "").slice(1)}`;
           const appointmentId = String(item._id || item.id);
           const isVideo = String(item.type || "").toLowerCase() === "video";
+
           return (
             <TouchableOpacity
               style={styles.card}
-              activeOpacity={0.9}
-              onPress={() =>
-                router.push({
-                  pathname: "/(doctor)/appointment/[id]",
-                  params: { id: appointmentId },
-                })
-              }
+              activeOpacity={0.88}
+              onPress={() => router.push({ pathname: "/(doctor)/appointment/[id]", params: { id: appointmentId } })}
             >
-              {/* Card Header */}
-              <View style={styles.cardHeader}>
-                <Image
-                  source={{ uri: item.patient?.image }}
-                  style={styles.avatar}
-                />
-                <View style={styles.info}>
-                  <Text style={styles.name}>
-                    {item.patient?.name || "Patient"}
-                  </Text>
-                  <Text
-                    style={[
-                      Typography.caption,
-                      { color: Colors.primary, marginBottom: 4 },
-                    ]}
-                  >
-                    {prettyType(item.type)}
-                  </Text>
-                  <View style={styles.metaRow}>
-                    <Calendar size={13} color={Colors.textSecondary} />
-                    <Text style={styles.metaText}>
-                      {item.date
-                        ? new Date(item.date).toLocaleDateString()
-                        : "-"}
-                    </Text>
-                    <Clock size={13} color={Colors.textSecondary} />
-                    <Text style={styles.metaText}>{item.time || "-"}</Text>
-                  </View>
-                </View>
-                <View style={[styles.badge, { backgroundColor: badge.bg }]}>
-                  <Text style={[styles.badgeText, { color: badge.text }]}>
-                    {normalizedStatus}
-                  </Text>
-                </View>
-              </View>
+              {/* Left accent bar */}
+              <View style={[styles.accentBar, {
+                backgroundColor: activeTab === "Pending" ? Colors.warning :
+                  activeTab === "Completed" ? Colors.success : Colors.primary
+              }]} />
 
-              {/* Actions */}
-              <View style={styles.cardFooter}>
-                {activeTab === "Pending" && (
-                  <>
-                    <TouchableOpacity style={styles.rejectBtn}>
-                      <X color={Colors.error} size={16} />
-                      <Text
-                        style={[styles.actionText, { color: Colors.error }]}
+              <View style={styles.cardInner}>
+                {/* Card Header */}
+                <View style={styles.cardHeader}>
+                  <Image source={{ uri: item.patient?.image }} style={styles.avatar} />
+                  <View style={styles.info}>
+                    <Text style={styles.name}>{item.patient?.name || "Patient"}</Text>
+                    <Text style={styles.consultType}>{prettyType(item.type)}</Text>
+                    <View style={styles.metaRow}>
+                      <Calendar size={12} color={Colors.textTertiary} />
+                      <Text style={styles.metaText}>{item.date ? new Date(item.date).toLocaleDateString() : "-"}</Text>
+                      <Clock size={12} color={Colors.textTertiary} />
+                      <Text style={styles.metaText}>{item.time || "-"}</Text>
+                    </View>
+                  </View>
+                  <Badge label={normalizedStatus} variant={getStatusVariant(item.status)} size="sm" dot />
+                </View>
+
+                {/* Actions */}
+                <View style={styles.cardFooter}>
+                  {activeTab === "Pending" && (
+                    <>
+                      <TouchableOpacity style={styles.rejectBtn}>
+                        <X color={Colors.error} size={14} />
+                        <Text style={[styles.actionText, { color: Colors.error }]}>Decline</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.acceptBtn}>
+                        <Check color={Colors.textInverse} size={14} />
+                        <Text style={[styles.actionText, { color: Colors.textInverse }]}>Accept</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                  {activeTab === "Upcoming" && (
+                    <>
+                      <TouchableOpacity style={styles.outlineBtn}>
+                        <Text style={[styles.actionText, { color: Colors.primary }]}>Reschedule</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.outlineBtn} onPress={() => openPatientChat(item)}>
+                        <MessageSquare color={Colors.primary} size={14} />
+                        <Text style={[styles.actionText, { color: Colors.primary }]}>Message</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.acceptBtn}
+                        onPress={() => {
+                          if (!isVideo) { openPatientChat(item); return; }
+                          router.push({ pathname: "/(doctor)/appointment/video/[id]", params: { id: appointmentId } });
+                        }}
                       >
-                        Decline
-                      </Text>
+                        <Video color={Colors.textInverse} size={14} />
+                        <Text style={[styles.actionText, { color: Colors.textInverse }]}>Start Consult</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                  {activeTab === "Completed" && (
+                    <TouchableOpacity style={[styles.outlineBtn, { flex: 1 }]}>
+                      <MessageSquare color={Colors.primary} size={14} />
+                      <Text style={[styles.actionText, { color: Colors.primary }]}>View Summary</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.acceptBtn}>
-                      <Check color={Colors.surface} size={16} />
-                      <Text
-                        style={[styles.actionText, { color: Colors.surface }]}
-                      >
-                        Accept
-                      </Text>
-                    </TouchableOpacity>
-                  </>
-                )}
-                {activeTab === "Upcoming" && (
-                  <>
-                    <TouchableOpacity style={styles.outlineBtn}>
-                      <Text
-                        style={[styles.actionText, { color: Colors.primary }]}
-                      >
-                        Reschedule
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.outlineBtn}
-                      onPress={() => openPatientChat(item)}
-                    >
-                      <MessageSquare color={Colors.primary} size={16} />
-                      <Text
-                        style={[styles.actionText, { color: Colors.primary }]}
-                      >
-                        Message
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.acceptBtn}
-                      onPress={() => {
-                        if (!isVideo) {
-                          openPatientChat(item);
-                          return;
-                        }
-                        router.push({
-                          pathname: "/(doctor)/appointment/video/[id]",
-                          params: { id: appointmentId },
-                        });
-                      }}
-                    >
-                      <Video color={Colors.surface} size={16} />
-                      <Text
-                        style={[styles.actionText, { color: Colors.surface }]}
-                      >
-                        Start Consult
-                      </Text>
-                    </TouchableOpacity>
-                  </>
-                )}
-                {activeTab === "Completed" && (
-                  <TouchableOpacity style={[styles.outlineBtn, { flex: 1 }]}>
-                    <MessageSquare color={Colors.primary} size={16} />
-                    <Text
-                      style={[styles.actionText, { color: Colors.primary }]}
-                    >
-                      View Summary
-                    </Text>
-                  </TouchableOpacity>
-                )}
+                  )}
+                </View>
               </View>
             </TouchableOpacity>
           );
@@ -297,110 +216,107 @@ export default function DoctorAppointmentsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
+
+  header: {
+    paddingHorizontal: Spacing.screenH,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.sm,
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
+  headerTitle: { ...Typography.h3, fontSize: 20, color: Colors.text },
+
   tabContainer: {
     flexDirection: "row",
-    paddingHorizontal: 20,
-    marginBottom: 16,
+    backgroundColor: Colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
   tabBtn: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: Spacing.sm + 4,
     alignItems: "center",
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
-    marginBottom: -1,
+    position: "relative",
   },
-  tabBtnActive: { borderBottomColor: Colors.primary },
-  tabText: { fontWeight: "600", fontSize: 13, color: Colors.textSecondary },
+  tabBtnActive: {},
+  tabIndicator: {
+    position: "absolute",
+    bottom: 0,
+    left: "20%",
+    right: "20%",
+    height: 2.5,
+    backgroundColor: Colors.primary,
+    borderTopLeftRadius: 2,
+    borderTopRightRadius: 2,
+  },
+  tabText: { ...Typography.label, fontSize: 13, color: Colors.textTertiary },
   tabTextActive: { color: Colors.primary },
-  listContent: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 40 },
-  empty: { textAlign: "center", marginTop: 40, color: Colors.textSecondary },
+
+  listContent: { paddingHorizontal: Spacing.screenH, paddingTop: 4, paddingBottom: 40 },
+
   card: {
+    flexDirection: "row",
     backgroundColor: Colors.surface,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: Radius.lg,
+    marginBottom: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    overflow: "hidden",
+    ...Shadows.card,
   },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 16,
-  },
+  accentBar: { width: 4 },
+  cardInner: { flex: 1, padding: Spacing.md },
+
+  cardHeader: { flexDirection: "row", alignItems: "flex-start", marginBottom: Spacing.md },
   avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    marginRight: 14,
+    width: 50,
+    height: 50,
+    borderRadius: Radius.full,
+    marginRight: Spacing.sm + 4,
     backgroundColor: Colors.lightGray,
   },
   info: { flex: 1 },
-  name: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: Colors.text,
-    marginBottom: 2,
-  },
+  name: { ...Typography.label, fontSize: 15, fontWeight: "700", color: Colors.text, marginBottom: 2 },
+  consultType: { ...Typography.caption, color: Colors.primary, fontWeight: "600", marginBottom: 4 },
   metaRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  metaText: { fontSize: 12, color: Colors.textSecondary, marginRight: 8 },
-  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  badgeText: { fontSize: 11, fontWeight: "700" },
+  metaText: { ...Typography.caption, color: Colors.textTertiary, marginRight: 6 },
+
   cardFooter: {
     flexDirection: "row",
-    gap: 10,
+    gap: Spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    paddingTop: 14,
+    borderTopColor: Colors.borderLight,
+    paddingTop: Spacing.sm + 4,
   },
   rejectBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: "#FEF2F2",
-    borderWidth: 1,
-    borderColor: "#FECACA",
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 5, paddingVertical: Spacing.sm + 2, borderRadius: Radius.md,
+    backgroundColor: Colors.errorLight, borderWidth: 1, borderColor: "#FECACA",
   },
   acceptBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 10,
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 5, paddingVertical: Spacing.sm + 2, borderRadius: Radius.md,
     backgroundColor: Colors.primary,
   },
   outlineBtn: {
-    flex: 1,
-    flexDirection: "row",
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 5, paddingVertical: Spacing.sm + 2, borderRadius: Radius.md,
+    backgroundColor: Colors.primaryUltraLight, borderWidth: 1, borderColor: Colors.primaryLight,
+  },
+  actionText: { ...Typography.buttonSm, fontSize: 12 },
+
+  loadingState: { alignItems: "center", justifyContent: "center", paddingVertical: 40, gap: Spacing.sm },
+  loadingText: { ...Typography.caption, color: Colors.textTertiary },
+  emptyState: { alignItems: "center", paddingVertical: 56 },
+  emptyIconWrap: {
+    width: 68,
+    height: 68,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.surfaceAlt,
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: "#EFF6FF",
-    borderWidth: 1,
-    borderColor: "#BFDBFE",
+    marginBottom: Spacing.md,
   },
-  actionText: { fontSize: 13, fontWeight: "700" },
-  loadingState: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 40,
-    gap: 10,
-  },
-  loadingText: { color: Colors.textSecondary, fontSize: 13 },
+  emptyTitle: { ...Typography.body2, color: Colors.textTertiary, fontWeight: "600" },
 });

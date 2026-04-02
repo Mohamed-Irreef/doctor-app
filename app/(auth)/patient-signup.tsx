@@ -1,5 +1,6 @@
 import { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
     ArrowLeft,
@@ -28,11 +29,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ActionModal from "../../components/ActionModal";
+import { Colors } from "../../constants/Colors";
 import * as api from "../../services/api";
 import { useAuthStore } from "../../store/authStore";
 
-const PrimaryColor = "#2563EB";
-const BgColor = "#F9FAFB";
+const PrimaryColor = Colors.primary;
+const BgColor = Colors.primaryUltraLight;
 
 type PickerType = "gender" | "blood" | null;
 
@@ -139,7 +141,7 @@ export default function PatientSignupScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaType.Images,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       quality: 0.8,
     });
@@ -240,117 +242,122 @@ export default function PatientSignupScreen() {
           onConfirm={() => setErrorModal(false)}
         />
 
-        <View style={styles.header}>
+        <LinearGradient
+          colors={[Colors.primary, Colors.primaryPressed]}
+          style={styles.header}
+        >
           <TouchableOpacity
             onPress={() => router.back()}
             style={styles.backBtn}
           >
-            <ArrowLeft color="#111827" size={24} />
+            <ArrowLeft color={Colors.textInverse} size={24} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Create Account</Text>
           <View style={{ width: 44 }} />
-        </View>
+        </LinearGradient>
 
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.title}>Patient Registration</Text>
-          <Text style={styles.subtitle}>Profile photo is optional.</Text>
+          <View style={styles.formCard}>
+            <Text style={styles.title}>Patient Registration</Text>
+            <Text style={styles.subtitle}>Profile photo is optional.</Text>
 
-          <TouchableOpacity
-            style={styles.uploadArea}
-            activeOpacity={0.8}
-            onPress={pickProfileImage}
-          >
-            <View style={styles.uploadIconBg}>
-              <Camera color={PrimaryColor} size={24} />
-            </View>
-            <View>
-              <Text style={styles.uploadText}>Upload Profile Picture</Text>
-              <Text style={styles.uploadSub}>
-                {imageUri ? "Photo selected" : "PNG/JPG up to 5MB"}
-              </Text>
-            </View>
-          </TouchableOpacity>
-
-          <View style={styles.formSection}>
-            <InputField
-              icon={User}
-              placeholder="Full Name *"
-              value={name}
-              onChangeText={setName}
-            />
-            <InputField
-              icon={Phone}
-              placeholder="Phone Number *"
-              keyboardType="phone-pad"
-              value={phone}
-              onChangeText={setPhone}
-            />
-            <InputField
-              icon={Mail}
-              placeholder="Email Address *"
-              keyboardType="email-address"
-              value={email}
-              onChangeText={setEmail}
-            />
-            <InputField
-              icon={Lock}
-              placeholder="Password *"
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-            />
-            <Dropdown
-              icon={User}
-              placeholder="Gender *"
-              value={gender}
-              onPress={() => setActivePicker("gender")}
-            />
-            <Dropdown
-              icon={Calendar}
-              placeholder="Date of Birth *"
-              value={dob ? formatDate(dob) : ""}
-              onPress={openDobPicker}
-            />
-            <Dropdown
-              icon={Droplet}
-              placeholder="Blood Group *"
-              value={bloodGroup}
-              onPress={() => setActivePicker("blood")}
-            />
-            <InputField
-              icon={MapPin}
-              placeholder="City, State, Pincode *"
-              value={address}
-              onChangeText={setAddress}
-            />
-            <InputField
-              icon={Contact}
-              placeholder="Emergency Contact Name & Number *"
-              value={emergencyContact}
-              onChangeText={setEmergencyContact}
-            />
-          </View>
-
-          <TouchableOpacity
-            style={styles.submitBtn}
-            onPress={handleSignup}
-            activeOpacity={0.85}
-            disabled={loading}
-          >
-            <Text style={styles.submitBtnText}>
-              {loading ? "Creating Account..." : "Create Account"}
-            </Text>
-          </TouchableOpacity>
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
-              <Text style={styles.footerLink}>Log In</Text>
+            <TouchableOpacity
+              style={styles.uploadArea}
+              activeOpacity={0.8}
+              onPress={pickProfileImage}
+            >
+              <View style={styles.uploadIconBg}>
+                <Camera color={PrimaryColor} size={24} />
+              </View>
+              <View>
+                <Text style={styles.uploadText}>Upload Profile Picture</Text>
+                <Text style={styles.uploadSub}>
+                  {imageUri ? "Photo selected" : "PNG/JPG up to 5MB"}
+                </Text>
+              </View>
             </TouchableOpacity>
+
+            <View style={styles.formSection}>
+              <InputField
+                icon={User}
+                placeholder="Full Name *"
+                value={name}
+                onChangeText={setName}
+              />
+              <InputField
+                icon={Phone}
+                placeholder="Phone Number *"
+                keyboardType="phone-pad"
+                value={phone}
+                onChangeText={setPhone}
+              />
+              <InputField
+                icon={Mail}
+                placeholder="Email Address *"
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+              />
+              <InputField
+                icon={Lock}
+                placeholder="Password *"
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+              />
+              <Dropdown
+                icon={User}
+                placeholder="Gender *"
+                value={gender}
+                onPress={() => setActivePicker("gender")}
+              />
+              <Dropdown
+                icon={Calendar}
+                placeholder="Date of Birth *"
+                value={dob ? formatDate(dob) : ""}
+                onPress={openDobPicker}
+              />
+              <Dropdown
+                icon={Droplet}
+                placeholder="Blood Group *"
+                value={bloodGroup}
+                onPress={() => setActivePicker("blood")}
+              />
+              <InputField
+                icon={MapPin}
+                placeholder="City, State, Pincode *"
+                value={address}
+                onChangeText={setAddress}
+              />
+              <InputField
+                icon={Contact}
+                placeholder="Emergency Contact Name & Number *"
+                value={emergencyContact}
+                onChangeText={setEmergencyContact}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={styles.submitBtn}
+              onPress={handleSignup}
+              activeOpacity={0.85}
+              disabled={loading}
+            >
+              <Text style={styles.submitBtnText}>
+                {loading ? "Creating Account..." : "Create Account"}
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Already have an account? </Text>
+              <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
+                <Text style={styles.footerLink}>Log In</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
 
@@ -407,16 +414,32 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: BgColor,
+    backgroundColor: PrimaryColor,
   },
   backBtn: {
     width: 44,
     height: 44,
     alignItems: "center",
     justifyContent: "center",
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "rgba(255,255,255,0.12)",
   },
-  headerTitle: { fontSize: 18, fontWeight: "700", color: "#111827" },
-  scroll: { padding: 24, paddingBottom: 60 },
+  headerTitle: { fontSize: 18, fontWeight: "700", color: Colors.textInverse },
+  scroll: { padding: 18, paddingBottom: 60 },
+  formCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
+  },
   title: { fontSize: 24, fontWeight: "800", color: "#111827", marginBottom: 8 },
   subtitle: {
     fontSize: 14,
@@ -429,10 +452,10 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.surface,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: Colors.border,
     height: 52,
   },
   inputIcon: { marginLeft: 16, marginRight: 12 },
@@ -442,10 +465,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: Colors.primaryUltraLight,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#BFDBFE",
+    borderColor: Colors.primaryLight,
     borderStyle: "dashed",
     marginBottom: 18,
   },

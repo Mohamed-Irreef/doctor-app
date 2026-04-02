@@ -1,3 +1,4 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
     ArrowLeft,
@@ -16,7 +17,10 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Colors } from "../../constants/Colors";
 import { getLabTests } from "../../services/api";
 
@@ -32,6 +36,7 @@ const ROW_BATCH_SIZE = 4;
 
 export default function LabsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [activeCategory, setActiveCategory] = useState("All");
   const [labTests, setLabTests] = useState<any[]>([]);
   const [visibleRows, setVisibleRows] = useState(ROW_BATCH_SIZE);
@@ -71,18 +76,24 @@ export default function LabsScreen() {
   }, [activeCategory, labTests.length]);
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <LinearGradient
+        colors={[Colors.primary, Colors.primaryPressed]}
+        style={[
+          styles.header,
+          { paddingTop: Math.max(insets.top, 8) + 8, paddingBottom: 12 },
+        ]}
+      >
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backBtn}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <ArrowLeft color={Colors.text} size={22} />
+          <ArrowLeft color={Colors.textInverse} size={22} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Lab Tests</Text>
         <View style={{ width: 40 }} />
-      </View>
+      </LinearGradient>
 
       <FlatList
         data={visibleTests}
@@ -188,30 +199,35 @@ export default function LabsScreen() {
               activeOpacity={0.85}
             >
               <View style={styles.testLeft}>
-                {imageUrl ? (
-                  <Image
-                    source={{ uri: imageUrl }}
-                    style={styles.testThumbImage}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View style={styles.testThumbFallback}>
-                    <FlaskConical color={Colors.primary} size={22} />
-                  </View>
-                )}
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.testName}>{item.name}</Text>
-                  <View style={styles.metaRow}>
-                    <View style={styles.categoryChip}>
-                      <Text style={styles.categoryText}>
-                        {item.category || "General"}
+                <View style={styles.testTopRow}>
+                  {imageUrl ? (
+                    <Image
+                      source={{ uri: imageUrl }}
+                      style={styles.testThumbImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={styles.testThumbFallback}>
+                      <FlaskConical color={Colors.primary} size={22} />
+                    </View>
+                  )}
+                  <View style={styles.testBody}>
+                    <Text style={styles.testName}>{item.name}</Text>
+                    <View style={styles.metaRow}>
+                      <View style={styles.categoryChip}>
+                        <Text style={styles.categoryText}>
+                          {item.category || "General"}
+                        </Text>
+                      </View>
+                      <View style={styles.dot} />
+                      <Text style={styles.metaText}>
+                        {item.sampleType || "Sample"}
                       </Text>
                     </View>
-                    <View style={styles.dot} />
-                    <Text style={styles.metaText}>
-                      {item.sampleType || "Sample"}
-                    </Text>
                   </View>
+                </View>
+
+                <View style={styles.testBottomInfo}>
                   {(item.reportTime || item.turnaround) && (
                     <View style={styles.timeRow}>
                       <Clock size={11} color={Colors.textSecondary} />
@@ -267,9 +283,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    backgroundColor: Colors.primary,
   },
   backBtn: {
     width: 40,
@@ -278,16 +292,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "rgba(255,255,255,0.12)",
   },
   headerTitle: {
     flex: 1,
     textAlign: "center",
     fontSize: 17,
     fontWeight: "700",
-    color: Colors.text,
+    color: Colors.textInverse,
   },
-  listContent: { paddingBottom: 40 },
+  listContent: { paddingBottom: 120 },
   loadMoreBtn: {
     marginHorizontal: 16,
     marginTop: 4,
@@ -360,11 +375,12 @@ const styles = StyleSheet.create({
   },
   testCard: {
     flexDirection: "row",
+    alignItems: "flex-start",
     backgroundColor: Colors.surface,
     marginHorizontal: 16,
     marginBottom: 12,
     borderRadius: 18,
-    padding: 14,
+    padding: 12,
     borderWidth: 1,
     borderColor: "#DAE5F3",
     shadowColor: Colors.black,
@@ -373,17 +389,38 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 3,
   },
-  testLeft: { flex: 1, flexDirection: "row", marginRight: 10, gap: 12 },
+  testLeft: {
+    flex: 1,
+    flexDirection: "column",
+    marginRight: 10,
+    gap: 8,
+    alignItems: "flex-start",
+  },
+  testTopRow: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "flex-start",
+    width: "100%",
+  },
+  testBody: {
+    flex: 1,
+    justifyContent: "flex-start",
+  },
+  testBottomInfo: {
+    width: "100%",
+    paddingLeft: 2,
+    marginTop: 7,
+  },
   testThumbImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 14,
+    width: 60,
+    height: 60,
+    borderRadius: 12,
     backgroundColor: Colors.border,
   },
   testThumbFallback: {
-    width: 64,
-    height: 64,
-    borderRadius: 14,
+    width: 60,
+    height: 60,
+    borderRadius: 12,
     backgroundColor: "#E0ECFF",
     alignItems: "center",
     justifyContent: "center",
@@ -392,13 +429,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
     color: Colors.text,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginBottom: 6,
+    marginBottom: 0,
   },
   categoryChip: {
     backgroundColor: "#EEF2FF",
@@ -423,73 +460,77 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  timeText: { fontSize: 11, color: Colors.textSecondary },
+  timeText: { fontSize: 12, color: Colors.textSecondary },
   homeRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  homeText: { fontSize: 11, color: Colors.primary, fontWeight: "600" },
+  homeText: { fontSize: 12, color: Colors.primary, fontWeight: "700" },
   testRightPanel: {
-    alignItems: "flex-end",
-    minWidth: 98,
-    backgroundColor: "#F8FBFF",
+    alignSelf: "flex-start",
+    justifyContent: "flex-start",
+    alignItems: "center",
+    width: 100,
+    backgroundColor: "#F3F8FF",
     borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: 8,
+    paddingTop: 7,
+    paddingBottom: 7,
     borderWidth: 1,
-    borderColor: "#DCE9F8",
+    borderColor: "#D6E6FB",
   },
   popularBadge: {
     backgroundColor: "#FFF3D6",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
     borderRadius: 999,
-    marginBottom: 6,
+    marginBottom: 3,
   },
-  popularText: { fontSize: 9, fontWeight: "700", color: "#B45309" },
+  popularText: { fontSize: 8, fontWeight: "700", color: "#B45309" },
   testPrice: {
     fontSize: 24,
     lineHeight: 26,
     fontWeight: "900",
     color: "#0F172A",
-    marginTop: 2,
+    marginTop: 0,
   },
   strikeWrap: {
-    alignItems: "flex-end",
-    marginTop: 2,
-    marginBottom: 4,
+    alignItems: "center",
+    marginTop: 1,
+    marginBottom: 3,
   },
   testOriginal: {
-    fontSize: 12,
+    fontSize: 10,
     color: Colors.textSecondary,
     textDecorationLine: "line-through",
   },
   offBadge: {
     backgroundColor: "#DCFCE7",
-    paddingHorizontal: 7,
+    paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 999,
-    marginTop: 4,
+    marginTop: 3,
   },
-  offText: { fontSize: 9, fontWeight: "800", color: "#15803D" },
+  offText: { fontSize: 8, fontWeight: "800", color: "#15803D" },
   saveText: {
-    fontSize: 10,
+    fontSize: 8,
     color: "#0F766E",
     fontWeight: "700",
-    marginBottom: 8,
+    marginBottom: 5,
   },
   addBtn: {
-    minWidth: 62,
+    width: "100%",
     backgroundColor: Colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 10,
+    alignItems: "center",
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 2,
   },
-  addBtnText: { color: Colors.surface, fontSize: 12, fontWeight: "800" },
+  addBtnText: { color: Colors.surface, fontSize: 10, fontWeight: "800" },
   emptyWrap: {
     paddingHorizontal: 20,
     paddingVertical: 24,
