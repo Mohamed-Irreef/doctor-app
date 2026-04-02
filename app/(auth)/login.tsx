@@ -107,12 +107,13 @@ export default function LoginScreen() {
     if (!email || !password) {
       setErrorText("Please enter your email and password to continue.");
       setErrorModal(true);
-      const [showPassword, setShowPassword] = useState(false);
       return;
     }
+
+    const normalizedEmail = email.trim().toLowerCase();
     setLoading(true);
     const result = await api.loginUser(
-      email,
+      normalizedEmail,
       password,
       selectedRole ?? "patient",
     );

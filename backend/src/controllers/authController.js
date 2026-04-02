@@ -11,6 +11,10 @@ const { sendEmail } = require("../services/emailService");
 
 const googleClient = new OAuth2Client(env.googleClientId);
 
+function normalizeEmail(email = "") {
+  return String(email).trim().toLowerCase();
+}
+
 function buildAuthPayload(user) {
   const payload = { sub: String(user._id), role: user.role, email: user.email };
   return {
@@ -44,12 +48,13 @@ function isPatientProfileComplete(user, profile) {
 }
 
 const registerPatient = catchAsync(async (req, res) => {
-  const existing = await User.findOne({ email: req.body.email.toLowerCase() });
+  const normalizedEmail = normalizeEmail(req.body.email);
+  const existing = await User.findOne({ email: normalizedEmail });
   if (existing) throw new ApiError(409, "Email already registered");
 
   const user = new User({
     name: req.body.name,
-    email: req.body.email,
+    email: normalizedEmail,
     phone: req.body.phone,
     image: req.body.image,
     role: "patient",
@@ -84,11 +89,16 @@ const registerPatient = catchAsync(async (req, res) => {
 });
 
 const login = catchAsync(async (req, res) => {
-  const user = await User.findOne({ email: req.body.email.toLowerCase() });
+  const normalizedEmail = normalizeEmail(req.body.email);
+  const user = await User.findOne({ email: normalizedEmail });
   if (!user) throw new ApiError(401, "Invalid credentials");
 
   if (user.role !== req.body.role) {
     throw new ApiError(403, "Role mismatch for this account");
+  }
+
+  if (user.authProvider === "google" && !user.passwordHash) {
+    throw new ApiError(403, "This account uses Google sign-in");
   }
 
   const ok = await user.comparePassword(req.body.password);
@@ -125,11 +135,12 @@ const googleAuth = catchAsync(async (req, res) => {
     throw new ApiError(400, "Invalid Google profile");
   }
 
-  let user = await User.findOne({ email: payload.email.toLowerCase() });
+  const normalizedEmail = normalizeEmail(payload.email);
+  let user = await User.findOne({ email: normalizedEmail });
   if (!user) {
     user = await User.create({
       name: payload.name || "Google User",
-      email: payload.email.toLowerCase(),
+      email: normalizedEmail,
       phone: "",
       role: req.body.role,
       image: payload.picture,

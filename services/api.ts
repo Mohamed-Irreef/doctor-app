@@ -1,18 +1,25 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import * as SecureStore from "expo-secure-store";
 
 const TOKEN_KEY = "nividoc_token";
 const USER_KEY = "nividoc_user";
 
-const baseURL = process.env.EXPO_PUBLIC_API_URL || "http://10.0.2.2:5000/api";
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "";
+const BASE_URL = API_BASE_URL;
+export const SOCKET_URL = API_BASE_URL.replace(/\/api\/?$/, "");
+
+if (!BASE_URL) {
+  console.warn("[api] EXPO_PUBLIC_API_URL is not set.");
+}
 
 const API = axios.create({
-  baseURL,
+  baseURL: BASE_URL,
   timeout: 20000,
 });
 
 API.interceptors.request.use(async (config) => {
-  const token = await AsyncStorage.getItem(TOKEN_KEY);
+  const token = await SecureStore.getItemAsync(TOKEN_KEY);
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -20,21 +27,21 @@ API.interceptors.request.use(async (config) => {
 });
 
 export async function setAuthSession(token: string, user: unknown) {
-  await AsyncStorage.setItem(TOKEN_KEY, token);
+  await SecureStore.setItemAsync(TOKEN_KEY, token);
   await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
 export async function clearAuthSession() {
-  await AsyncStorage.removeItem(TOKEN_KEY);
+  await SecureStore.deleteItemAsync(TOKEN_KEY);
   await AsyncStorage.removeItem(USER_KEY);
 }
 
 export async function getAuthToken() {
-  return AsyncStorage.getItem(TOKEN_KEY);
+  return SecureStore.getItemAsync(TOKEN_KEY);
 }
 
 export function getSocketBaseUrl() {
-  return baseURL.replace(/\/api\/?$/, "");
+  return SOCKET_URL;
 }
 
 const ok = <T>(data: T) => ({ data, error: null, status: "success" as const });
@@ -243,7 +250,12 @@ export async function uploadFile(
 
 export async function loginUser(email: string, password: string, role: string) {
   try {
-    const res = await API.post("/auth/login", { email, password, role });
+    const normalizedEmail = email.trim().toLowerCase();
+    const res = await API.post("/auth/login", {
+      email: normalizedEmail,
+      password,
+      role,
+    });
     const payload = res.data.data;
     if (payload?.accessToken) {
       await setAuthSession(payload.accessToken, payload.user);
