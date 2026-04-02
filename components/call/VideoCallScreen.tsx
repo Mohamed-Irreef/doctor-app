@@ -12,6 +12,7 @@ import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
     mediaDevices,
+    MediaStream,
     RTCIceCandidate,
     RTCPeerConnection,
     RTCSessionDescription,
@@ -44,6 +45,7 @@ export default function VideoCallScreen({
   const localStreamRef = useRef<any>(null);
   const [localStream, setLocalStream] = useState<any>(null);
   const [remoteStream, setRemoteStream] = useState<any>(null);
+  const remoteStreamRef = useRef<any>(null);
   const [micEnabled, setMicEnabled] = useState(true);
   const [camEnabled, setCamEnabled] = useState(true);
   const offerSentRef = useRef(false);
@@ -74,6 +76,7 @@ export default function VideoCallScreen({
 
     setLocalStream(null);
     setRemoteStream(null);
+    remoteStreamRef.current = null;
   };
 
   useEffect(() => {
@@ -112,7 +115,20 @@ export default function VideoCallScreen({
 
       pc.ontrack = (event: any) => {
         const [streamValue] = event.streams || [];
-        if (streamValue) setRemoteStream(streamValue);
+        if (streamValue) {
+          remoteStreamRef.current = streamValue;
+          setRemoteStream(streamValue);
+          return;
+        }
+
+        // Some devices emit tracks without full streams; build one manually.
+        if (event.track) {
+          if (!remoteStreamRef.current) {
+            remoteStreamRef.current = new MediaStream();
+          }
+          remoteStreamRef.current.addTrack(event.track);
+          setRemoteStream(remoteStreamRef.current);
+        }
       };
 
       pc.onicecandidate = (event: any) => {
@@ -241,11 +257,20 @@ export default function VideoCallScreen({
       )}
 
       {localStream ? (
-        <RTCView
-          streamURL={localStream.toURL()}
-          style={styles.localVideo}
-          objectFit="cover"
-        />
+        <View
+          style={[
+            styles.localVideoWrap,
+            { top: Math.max(insets.top, 12) + 12 },
+          ]}
+        >
+          <RTCView
+            streamURL={localStream.toURL()}
+            style={styles.localVideo}
+            objectFit="cover"
+            mirror
+            zOrder={2}
+          />
+        </View>
       ) : null}
 
       <View
@@ -298,15 +323,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  localVideo: {
+  localVideoWrap: {
     position: "absolute",
     width: 120,
     height: 180,
     right: 16,
-    top: 56,
     borderRadius: 12,
     overflow: "hidden",
     backgroundColor: "#0F172A",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
+    zIndex: 20,
+    elevation: 20,
+  },
+  localVideo: {
+    width: "100%",
+    height: "100%",
   },
   controls: {
     position: "absolute",

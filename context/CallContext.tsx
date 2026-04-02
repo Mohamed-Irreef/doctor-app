@@ -212,6 +212,17 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       });
       socketRef.current = socket;
 
+      socket.on("connect_error", () => {
+        if (!mounted) return;
+        if (initRetryRef.current) clearTimeout(initRetryRef.current);
+        initRetryRef.current = setTimeout(() => {
+          if (!socketRef.current?.connected) {
+            socketRef.current = null;
+            init();
+          }
+        }, 1200);
+      });
+
       socket.on("disconnect", () => {
         if (!mounted) return;
         if (initRetryRef.current) clearTimeout(initRetryRef.current);
@@ -332,7 +343,39 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
   const initiateVideoCall = useCallback(
     async (payload: InitiateCallPayload) => {
-      const socket = socketRef.current;
+      let socket = socketRef.current;
+
+      if (socket && !socket.connected) {
+        try {
+          await new Promise<void>((resolve, reject) => {
+            const timer = setTimeout(() => {
+              socket?.off("connect", onConnect);
+              socket?.off("connect_error", onError);
+              reject(new Error("Socket connect timeout"));
+            }, 1800);
+
+            const onConnect = () => {
+              clearTimeout(timer);
+              socket?.off("connect_error", onError);
+              resolve();
+            };
+
+            const onError = () => {
+              clearTimeout(timer);
+              socket?.off("connect", onConnect);
+              reject(new Error("Socket connect error"));
+            };
+
+            socket?.once("connect", onConnect);
+            socket?.once("connect_error", onError);
+            socket?.connect();
+          });
+        } catch {
+          // Fall through to shared unavailable alert below.
+        }
+      }
+
+      socket = socketRef.current;
       if (!socket?.connected) {
         Alert.alert("Call unavailable", "Please try again in a moment.");
         return false;

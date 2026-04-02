@@ -10,7 +10,7 @@ async function start() {
   const server = http.createServer(app);
   initSocket(server);
 
-  server.listen(env.port, () => {
+  server.listen(env.port, "0.0.0.0", () => {
     console.log(`NiviDoc backend running on port ${env.port}`);
     console.log("Mongodb Connected");
     logInfo("server_started", {
@@ -21,7 +21,6 @@ async function start() {
 }
 
 start().catch((err) => {
-   
   console.error(err);
   logError("server_start_failed", err);
   process.exit(1);

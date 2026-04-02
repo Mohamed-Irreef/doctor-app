@@ -143,9 +143,16 @@ async function resolveAppointmentForCall(caller, receiverId, appointmentId) {
 }
 
 function initSocket(server) {
+  const allowedOrigins = env.corsOrigin.length ? env.corsOrigin : [];
   io = new Server(server, {
     cors: {
-      origin: env.corsOrigin.length ? env.corsOrigin : true,
+      origin: (origin, callback) => {
+        // React Native/WebSocket clients may not send Origin.
+        if (!origin) return callback(null, true);
+        if (!allowedOrigins.length) return callback(null, true);
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+        return callback(null, false);
+      },
       credentials: true,
     },
   });
@@ -388,7 +395,7 @@ function initSocket(server) {
         return;
       }
       socket.join(`call:${roomId}`);
-      socket.to(`call:${roomId}`).emit("call:peer-joined", {
+      io.to(`call:${roomId}`).emit("call:peer-joined", {
         roomId,
         userId,
       });

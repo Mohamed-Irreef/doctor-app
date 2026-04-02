@@ -122,6 +122,7 @@ export default function RealtimeChatScreen({
 
   const canSend =
     !isBlocked || (blockedBy ? String(blockedBy) === String(myId) : true);
+  const isDoctorRole = currentRole === "doctor";
 
   const effectivePeerId = useMemo(() => {
     if (!myId) return "";
@@ -186,6 +187,13 @@ export default function RealtimeChatScreen({
   useEffect(() => {
     loadMessages();
   }, [loadMessages]);
+
+  useEffect(() => {
+    setParticipants(null);
+    setMessages([]);
+    setPeerOnline(false);
+    setIsPeerTyping(false);
+  }, [chatId]);
 
   useEffect(() => {
     const showEvent =
@@ -373,16 +381,40 @@ export default function RealtimeChatScreen({
   const onToggleBlock = async () => {
     const nextBlock = !isBlocked;
 
+    const applyBlockState = (data: any) => {
+      setIsBlocked(Boolean(data?.isBlocked));
+      const blockedById = getEntityId(data?.blockedBy);
+      setBlockedBy(blockedById || null);
+    };
+
+    const socket = socketRef.current;
+    if (socket?.connected) {
+      let socketUpdated = false;
+      await new Promise<void>((resolve) => {
+        socket.emit("block_chat", { chatId, block: nextBlock }, (ack: any) => {
+          if (ack?.ok && ack?.data) {
+            applyBlockState(ack.data);
+            socketUpdated = true;
+            resolve();
+            return;
+          }
+
+          resolve();
+        });
+      });
+
+      if (socketUpdated) {
+        return;
+      }
+    }
+
     const response = await blockChat(chatId, nextBlock);
     if (!response.data) {
       Alert.alert("Error", response.error || "Unable to update block status");
       return;
     }
 
-    setIsBlocked(Boolean(response.data.isBlocked));
-    setBlockedBy(
-      response.data.blockedBy ? String(response.data.blockedBy) : null,
-    );
+    applyBlockState(response.data);
   };
 
   const onVideoCallPress = () => {
@@ -391,13 +423,35 @@ export default function RealtimeChatScreen({
       return;
     }
 
-    if (!effectivePeerId || String(effectivePeerId) === String(myId)) {
+    const selfId = String(myId);
+    const directPeerId = String(peerId || "").trim();
+    const doctorFromChat = getEntityId(participants?.doctorId);
+    const patientFromChat = getEntityId(participants?.patientId);
+
+    let resolvedReceiverId = String(effectivePeerId || "").trim();
+
+    if (!resolvedReceiverId || resolvedReceiverId === selfId) {
+      if (doctorFromChat && patientFromChat) {
+        if (doctorFromChat === selfId) resolvedReceiverId = patientFromChat;
+        if (patientFromChat === selfId) resolvedReceiverId = doctorFromChat;
+      }
+    }
+
+    if (
+      (!resolvedReceiverId || resolvedReceiverId === selfId) &&
+      directPeerId &&
+      directPeerId !== selfId
+    ) {
+      resolvedReceiverId = directPeerId;
+    }
+
+    if (!resolvedReceiverId || resolvedReceiverId === selfId) {
       Alert.alert("Video Call", "User id not found for this chat.");
       return;
     }
 
     initiateVideoCall({
-      receiverId: String(effectivePeerId),
+      receiverId: resolvedReceiverId,
       peerName: peerName || "User",
     }).then((result) => {
       if (!result) {
@@ -425,12 +479,14 @@ export default function RealtimeChatScreen({
           <TouchableOpacity style={styles.iconBtn} onPress={onVideoCallPress}>
             <Video color={Colors.textSecondary} size={21} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn} onPress={onToggleBlock}>
-            <ShieldBan
-              color={isBlocked ? Colors.error : Colors.textSecondary}
-              size={21}
-            />
-          </TouchableOpacity>
+          {isDoctorRole ? (
+            <TouchableOpacity style={styles.iconBtn} onPress={onToggleBlock}>
+              <ShieldBan
+                color={isBlocked ? Colors.error : Colors.textSecondary}
+                size={21}
+              />
+            </TouchableOpacity>
+          ) : null}
         </View>
       </View>
 

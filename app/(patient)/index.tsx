@@ -105,7 +105,7 @@ const QUICK_ACTIONS = [
     id: "2",
     label: "Video Consult",
     image: require("../../assets/images/video_consult.png"),
-    route: "/(patient)/consultation",
+    route: "/(patient)/video-consult",
   },
   {
     id: "3",
@@ -686,7 +686,7 @@ export default function PatientHomeScreen() {
           {/* ── AI NiviDoc BANNER (Premium Gradient) ── */}
           <FadeInSection delay={50} style={styles.pad}>
             <AnimatedCard
-              onPress={() => router.push("/(patient)/consultation")}
+              onPress={() => router.push("/(patient)/ai-chat")}
               scaleValue={0.97}
             >
               <LinearGradient
