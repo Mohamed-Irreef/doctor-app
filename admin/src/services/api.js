@@ -4,8 +4,12 @@ const TOKEN_KEY = "nividoc_admin_token";
 const AUTH_KEY = "nividoc_admin_auth";
 const USER_KEY = "nividoc_admin_user";
 
+// Vite exposes only VITE_* environment variables to the client bundle.
+export const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
+  baseURL: API_BASE_URL,
   timeout: 20000,
 });
 

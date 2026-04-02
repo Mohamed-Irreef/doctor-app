@@ -6,14 +6,13 @@ const cookieParser = require("cookie-parser");
 const rateLimit = require("express-rate-limit");
 const requestLogger = require("./middlewares/requestLogger");
 const sanitizeInput = require("./middlewares/sanitizeInput");
-const env = require("./config/env");
 const routes = require("./routes");
 const { notFound, errorHandler } = require("./middlewares/errorHandler");
 
 let sentry;
 try {
   // Optional: enabled only when @sentry/node is installed and SENTRY_DSN is configured.
-   
+
   sentry = require("@sentry/node");
   if (process.env.SENTRY_DSN) {
     sentry.init({ dsn: process.env.SENTRY_DSN });
@@ -32,9 +31,11 @@ app.use(
 );
 app.use(morgan("dev"));
 app.use(requestLogger);
+// TEMP (development/testing): allow any origin (mobile apps, localhost, Postman, etc.) with credentials.
+// When frontend domains are finalized, switch to env-based restricted origins.
 app.use(
   cors({
-    origin: env.corsOrigin.length ? env.corsOrigin : true,
+    origin: true,
     credentials: true,
   }),
 );

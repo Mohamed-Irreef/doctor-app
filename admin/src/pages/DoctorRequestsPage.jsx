@@ -20,10 +20,13 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import Modal from "../components/Modal";
 import PageHeader from "../components/PageHeader";
 import Toast from "../components/Toast";
-import { approveAdminDoctor, getAdminDoctorRequests } from "../services/api";
+import {
+  API_BASE_URL,
+  approveAdminDoctor,
+  getAdminDoctorRequests,
+} from "../services/api";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-const API_ORIGIN = API_BASE.replace(/\/api\/?$/, "");
+const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
 
 const toDocumentLinks = (documents = [], files = [], urls = []) => {
   const fromDocuments = Array.isArray(documents)
