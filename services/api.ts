@@ -250,12 +250,7 @@ export async function uploadFile(
 
 export async function loginUser(email: string, password: string, role: string) {
   try {
-    const normalizedEmail = email.trim().toLowerCase();
-    const res = await API.post("/auth/login", {
-      email: normalizedEmail,
-      password,
-      role,
-    });
+    const res = await API.post("/auth/login", { email, password, role });
     const payload = res.data.data;
     if (payload?.accessToken) {
       await setAuthSession(payload.accessToken, payload.user);

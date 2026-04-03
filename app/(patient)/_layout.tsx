@@ -118,6 +118,8 @@ export default function PatientLayout() {
         <Tabs.Screen name="cart" options={hiddenScreenOptions} />
         <Tabs.Screen name="medicine-orders" options={hiddenScreenOptions} />
         <Tabs.Screen name="favorites" options={hiddenScreenOptions} />
+        <Tabs.Screen name="ai-chat" options={hiddenScreenOptions} />
+        <Tabs.Screen name="video-consult" options={hiddenScreenOptions} />
         <Tabs.Screen name="notifications" options={hiddenScreenOptions} />
         <Tabs.Screen name="payment-result" options={hiddenScreenOptions} />
         <Tabs.Screen name="review" options={hiddenScreenOptions} />
@@ -129,6 +131,7 @@ export default function PatientLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
+    flexDirection: "row",
     paddingTop: Spacing.sm - 1,
     paddingHorizontal: 6,
     backgroundColor: Colors.surface,
@@ -146,6 +149,9 @@ const styles = StyleSheet.create({
     }),
   },
   tabBarItem: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 3,
   },
   tabItem: {
