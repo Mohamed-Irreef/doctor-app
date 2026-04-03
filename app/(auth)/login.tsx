@@ -87,6 +87,7 @@ export default function LoginScreen() {
   const [selectedRole, setSelectedRole] = useState<Role>("patient");
   const [loading, setLoading] = useState(false);
   const [errorModal, setErrorModal] = useState(false);
+  const [errorTitle, setErrorTitle] = useState("Login Error");
   const [errorText, setErrorText] = useState(
     "Please enter your email and password to continue.",
   );
@@ -105,9 +106,9 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email || !password) {
+      setErrorTitle("Missing Information");
       setErrorText("Please enter your email and password to continue.");
       setErrorModal(true);
-      const [showPassword, setShowPassword] = useState(false);
       return;
     }
     setLoading(true);
@@ -133,7 +134,13 @@ export default function LoginScreen() {
       return;
     }
 
-    setErrorText(result.error || "Login failed. Please check credentials.");
+    const message = result.error || "Login failed. Please check credentials.";
+    setErrorTitle(
+      message.toLowerCase().includes("too many")
+        ? "Too Many Requests"
+        : "Login Error",
+    );
+    setErrorText(message);
     setErrorModal(true);
   };
 
@@ -144,7 +151,13 @@ export default function LoginScreen() {
       setLoading(false);
 
       if (result.status !== "success" || !result.data) {
-        setErrorText(result.error || "Google login failed.");
+        const message = result.error || "Google login failed.";
+        setErrorTitle(
+          message.toLowerCase().includes("too many")
+            ? "Too Many Requests"
+            : "Login Error",
+        );
+        setErrorText(message);
         setErrorModal(true);
         return;
       }
@@ -166,6 +179,7 @@ export default function LoginScreen() {
   );
 
   const handleGoogleError = React.useCallback((message: string) => {
+    setErrorTitle("Login Error");
     setErrorText(message);
     setErrorModal(true);
   }, []);
@@ -178,7 +192,7 @@ export default function LoginScreen() {
       <ActionModal
         visible={errorModal}
         type="error"
-        title="Missing Information"
+        title={errorTitle}
         message={errorText}
         confirmLabel="OK"
         onConfirm={() => setErrorModal(false)}

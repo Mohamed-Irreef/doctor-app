@@ -23,6 +23,9 @@ try {
 
 const app = express();
 
+// Respect client IPs when running behind a reverse proxy (Render, Nginx, etc.).
+app.set("trust proxy", 1);
+
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -59,7 +62,9 @@ const authLimiter = rateLimit({
   },
 });
 
-app.use("/api/auth", authLimiter);
+app.use("/api/auth/login", authLimiter);
+app.use("/api/auth/google", authLimiter);
+app.use("/api/auth/register", authLimiter);
 
 app.use(
   "/api",
