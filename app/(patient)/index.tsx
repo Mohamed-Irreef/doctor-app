@@ -1269,7 +1269,7 @@ export default function PatientHomeScreen() {
                 })
                 .slice(0, 3)
                 .map((appt) => (
-                  <View key={appt.id} style={styles.apptCard}>
+                  <View key={appt._id || appt.id} style={styles.apptCard}>
                     <View
                       style={[
                         styles.apptAccent,
@@ -1304,7 +1304,7 @@ export default function PatientHomeScreen() {
                       onPress={() =>
                         router.push({
                           pathname: "/(patient)/appointment/[id]",
-                          params: { id: appt.id },
+                          params: { id: appt._id || appt.id },
                         })
                       }
                     >

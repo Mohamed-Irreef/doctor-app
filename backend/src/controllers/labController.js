@@ -7,6 +7,7 @@ const LabPartnerProfile = require("../models/LabPartnerProfile");
 const LabSlotHold = require("../models/LabSlotHold");
 const PatientProfile = require("../models/PatientProfile");
 const Notification = require("../models/Notification");
+const cloudinary = require("../config/cloudinary");
 const ApiError = require("../utils/ApiError");
 const ApiResponse = require("../utils/ApiResponse");
 const catchAsync = require("../utils/catchAsync");
@@ -21,6 +22,46 @@ const SLOT_START_HOUR = 9;
 const SLOT_END_HOUR = 23;
 const SLOT_INTERVAL_MIN = 30;
 const HOLD_WINDOW_MINUTES = 5;
+
+// ── Cloudinary signed URL helpers (same logic as adminEcosystemController) ───
+function parseCloudinaryAsset(url) {
+  if (!url || typeof url !== "string") return null;
+  const match = url.match(
+    /res\.cloudinary\.com\/([^/]+)\/(image|video|raw)\/([^/]+)\/(?:v\d+\/)?(.+)$/,
+  );
+  if (!match) return null;
+  const [, , resourceType, deliveryType, rest] = match;
+  const lastDot = rest.lastIndexOf(".");
+  const publicId = lastDot > 0 ? rest.substring(0, lastDot) : rest;
+  const format = lastDot > 0 ? rest.substring(lastDot + 1) : "";
+  return { resourceType, deliveryType, publicId, format };
+}
+
+function buildSignedViewerUrl(url) {
+  const parsed = parseCloudinaryAsset(url);
+  if (!parsed?.publicId) return url;
+  const resourceType = parsed.resourceType || "image";
+  const deliveryType = parsed.deliveryType || "upload";
+  const expiresAt = Math.floor(Date.now() / 1000) + 60 * 60; // 1-hour expiry
+  try {
+    const privateUrl = cloudinary.utils.private_download_url(
+      parsed.publicId,
+      parsed.format,
+      { resource_type: resourceType, type: deliveryType, expires_at: expiresAt, attachment: false },
+    );
+    if (privateUrl) return privateUrl;
+  } catch {
+    // fall through to signed URL
+  }
+  return cloudinary.url(parsed.publicId, {
+    secure: true,
+    sign_url: true,
+    resource_type: resourceType,
+    type: deliveryType,
+    format: parsed.format,
+  });
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 function normalizeLabTest(test, profileMap) {
   const profile =
@@ -43,6 +84,9 @@ function normalizeLabTest(test, profileMap) {
           )
         : 0),
     reportTime: test.reportTime || test.turnaround || "",
+    reportSampleUrl: test.reportSampleUrl
+      ? buildSignedViewerUrl(test.reportSampleUrl)
+      : "",
     lab: profile
       ? {
           id: profile._id,
