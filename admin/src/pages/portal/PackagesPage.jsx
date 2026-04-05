@@ -1015,7 +1015,9 @@ export default function PackagesPage() {
               {(brochurePreviewUrl || form.brochureUrl || form.brochure) && (
                 <p className="text-xs text-slate-600">
                   <a
-                    href={brochurePreviewUrl || form.brochureUrl || form.brochure}
+                    href={
+                      brochurePreviewUrl || form.brochureUrl || form.brochure
+                    }
                     target="_blank"
                     rel="noreferrer"
                     className="text-blue-600 hover:text-blue-700 font-semibold"

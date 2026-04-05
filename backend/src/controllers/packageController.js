@@ -185,7 +185,7 @@ const createPackage = catchAsync(async (req, res) => {
     const result = await uploadBufferToCloudinary(
       req.files.brochureFile[0].buffer,
       "nividoc/packages/brochures",
-      { resource_type: "raw" },
+      { resource_type: "raw", access_mode: "public" },
     );
     body.brochure = result?.secure_url;
   }
@@ -264,11 +264,15 @@ const getLabPackages = catchAsync(async (req, res) => {
     const obj = p.toObject();
     return {
       ...obj,
-      brochureUrl: obj.brochure ? buildSignedViewerUrl(obj.brochure) : obj.brochure,
+      brochureUrl: obj.brochure
+        ? buildSignedViewerUrl(obj.brochure)
+        : obj.brochure,
     };
   });
 
-  return res.status(200).json(new ApiResponse(200, "Packages fetched", packages));
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "Packages fetched", packages));
 });
 
 const updatePackage = catchAsync(async (req, res) => {
@@ -326,7 +330,7 @@ const updatePackage = catchAsync(async (req, res) => {
     const result = await uploadBufferToCloudinary(
       req.files.brochureFile[0].buffer,
       "nividoc/packages/brochures",
-      { resource_type: "raw" },
+      { resource_type: "raw", access_mode: "public" },
     );
     body.brochure = result?.secure_url;
   }
@@ -411,7 +415,9 @@ const getPendingPackages = catchAsync(async (req, res) => {
     const obj = p.toObject();
     return {
       ...obj,
-      brochureUrl: obj.brochure ? buildSignedViewerUrl(obj.brochure) : obj.brochure,
+      brochureUrl: obj.brochure
+        ? buildSignedViewerUrl(obj.brochure)
+        : obj.brochure,
     };
   });
   return res
@@ -478,15 +484,13 @@ const getApprovedPackages = catchAsync(async (req, res) => {
     };
   });
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(200, "Packages fetched", {
-        packages,
-        total,
-        page: Number(page),
-      }),
-    );
+  return res.status(200).json(
+    new ApiResponse(200, "Packages fetched", {
+      packages,
+      total,
+      page: Number(page),
+    }),
+  );
 });
 
 const getPackageById = catchAsync(async (req, res) => {
@@ -497,7 +501,9 @@ const getPackageById = catchAsync(async (req, res) => {
   }).populate("labId", "labName address city state pincode profilePhoto");
   if (!pkg) throw new ApiError(404, "Package not found");
 
-  const brochureUrl = pkg.brochure ? buildSignedViewerUrl(pkg.brochure) : pkg.brochure;
+  const brochureUrl = pkg.brochure
+    ? buildSignedViewerUrl(pkg.brochure)
+    : pkg.brochure;
 
   const obj = pkg.toObject();
   const labProfile = obj.labId;

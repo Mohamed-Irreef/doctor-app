@@ -529,23 +529,38 @@ export default function ApprovalHubPage() {
                   >
                     <div className="flex items-center gap-3">
                       {pkg.image && (
-                        <img src={pkg.image} alt={pkg.name} className="h-14 w-14 rounded-lg object-cover border border-slate-200" />
+                        <img
+                          src={pkg.image}
+                          alt={pkg.name}
+                          className="h-14 w-14 rounded-lg object-cover border border-slate-200"
+                        />
                       )}
                       <div>
                         <p className="font-bold text-slate-900">{pkg.name}</p>
-                        <p className="text-slate-500">{pkg.labName} • {pkg.category}</p>
+                        <p className="text-slate-500">
+                          {pkg.labName} • {pkg.category}
+                        </p>
                         <p className="text-slate-500">
                           {pkg.testCount} tests • ₹{pkg.price?.offer}
-                          {pkg.price?.discount > 0 && <span className="ml-1 text-emerald-600 font-semibold">{pkg.price.discount}% off</span>}
+                          {pkg.price?.discount > 0 && (
+                            <span className="ml-1 text-emerald-600 font-semibold">
+                              {pkg.price.discount}% off
+                            </span>
+                          )}
                         </p>
                       </div>
                     </div>
                     <div className="flex gap-2">
                       <button
                         className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
-                        onClick={() => { setSelectedPackage(pkg); setPackageDetailOpen(true); }}
+                        onClick={() => {
+                          setSelectedPackage(pkg);
+                          setPackageDetailOpen(true);
+                        }}
                       >
-                        <span className="inline-flex items-center gap-1"><Eye size={14} /> View</span>
+                        <span className="inline-flex items-center gap-1">
+                          <Eye size={14} /> View
+                        </span>
                       </button>
                       <button
                         disabled={busyKey === approveKey}
@@ -555,7 +570,13 @@ export default function ApprovalHubPage() {
                           setMessage({ type: "", text: "" });
                           const r = await approveAdminPackage(id);
                           setBusyKey("");
-                          setMessage({ type: r.status === "success" ? "success" : "error", text: r.status === "success" ? "Package approved successfully." : r.error || "Failed." });
+                          setMessage({
+                            type: r.status === "success" ? "success" : "error",
+                            text:
+                              r.status === "success"
+                                ? "Package approved successfully."
+                                : r.error || "Failed.",
+                          });
                           await load();
                         }}
                       >
@@ -564,11 +585,14 @@ export default function ApprovalHubPage() {
                       <button
                         disabled={busyKey === rejectKey}
                         className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-700 disabled:opacity-50"
-                        onClick={() => openRejectModal({
-                          fn: (pkgId, payload) => rejectAdminPackage(pkgId, payload.reason),
-                          id,
-                          listKey: "pkg",
-                        })}
+                        onClick={() =>
+                          openRejectModal({
+                            fn: (pkgId, payload) =>
+                              rejectAdminPackage(pkgId, payload.reason),
+                            id,
+                            listKey: "pkg",
+                          })
+                        }
                       >
                         Reject
                       </button>
@@ -593,7 +617,11 @@ export default function ApprovalHubPage() {
           <div className="space-y-4">
             {selectedPackage.image && (
               <div className="overflow-hidden rounded-xl border border-slate-200">
-                <img src={selectedPackage.image} alt={selectedPackage.name} className="max-h-64 w-full object-cover" />
+                <img
+                  src={selectedPackage.image}
+                  alt={selectedPackage.name}
+                  className="max-h-64 w-full object-cover"
+                />
               </div>
             )}
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -601,26 +629,81 @@ export default function ApprovalHubPage() {
               <Field label="Code" value={selectedPackage.code} />
               <Field label="Category" value={selectedPackage.category} />
               <Field label="Lab" value={selectedPackage.labName} />
-              <Field label="Offer Price" value={selectedPackage.price?.offer ? `INR ${selectedPackage.price.offer}` : "-"} />
-              <Field label="Original Price" value={selectedPackage.price?.original ? `INR ${selectedPackage.price.original}` : "-"} />
-              <Field label="Discount" value={selectedPackage.price?.discount ? `${selectedPackage.price.discount}%` : "-"} />
-              <Field label="GST %" value={selectedPackage.price?.gst ? `${selectedPackage.price.gst}%` : "-"} />
-              <Field label="Final Price" value={selectedPackage.price?.final ? `INR ${selectedPackage.price.final}` : "-"} />
+              <Field
+                label="Offer Price"
+                value={
+                  selectedPackage.price?.offer
+                    ? `INR ${selectedPackage.price.offer}`
+                    : "-"
+                }
+              />
+              <Field
+                label="Original Price"
+                value={
+                  selectedPackage.price?.original
+                    ? `INR ${selectedPackage.price.original}`
+                    : "-"
+                }
+              />
+              <Field
+                label="Discount"
+                value={
+                  selectedPackage.price?.discount
+                    ? `${selectedPackage.price.discount}%`
+                    : "-"
+                }
+              />
+              <Field
+                label="GST %"
+                value={
+                  selectedPackage.price?.gst
+                    ? `${selectedPackage.price.gst}%`
+                    : "-"
+                }
+              />
+              <Field
+                label="Final Price"
+                value={
+                  selectedPackage.price?.final
+                    ? `INR ${selectedPackage.price.final}`
+                    : "-"
+                }
+              />
               <Field label="Total Tests" value={selectedPackage.testCount} />
-              <Field label="Age Range" value={selectedPackage.ageRange ? `${selectedPackage.ageRange.min}-${selectedPackage.ageRange.max} yrs` : "-"} />
+              <Field
+                label="Age Range"
+                value={
+                  selectedPackage.ageRange
+                    ? `${selectedPackage.ageRange.min}-${selectedPackage.ageRange.max} yrs`
+                    : "-"
+                }
+              />
               <Field label="Gender" value={selectedPackage.gender} />
-              <Field label="Short Description" value={selectedPackage.shortDescription} />
-              <Field label="Tags" value={Array.isArray(selectedPackage.tags) ? selectedPackage.tags.join(", ") : "-"} />
+              <Field
+                label="Short Description"
+                value={selectedPackage.shortDescription}
+              />
+              <Field
+                label="Tags"
+                value={
+                  Array.isArray(selectedPackage.tags)
+                    ? selectedPackage.tags.join(", ")
+                    : "-"
+                }
+              />
               <Field label="Status" value={selectedPackage.status} />
             </div>
             {(selectedPackage.brochureUrl || selectedPackage.brochure) && (
               <div>
-                <h3 className="mb-2 text-sm font-extrabold text-slate-900">Brochure</h3>
+                <h3 className="mb-2 text-sm font-extrabold text-slate-900">
+                  Brochure
+                </h3>
                 <a
                   href={selectedPackage.brochureUrl || selectedPackage.brochure}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-sm font-semibold text-blue-700 hover:bg-blue-50">
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+                >
                   <FileText size={15} /> Download Brochure
                 </a>
               </div>
