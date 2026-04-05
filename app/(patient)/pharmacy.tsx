@@ -3,9 +3,8 @@ import { useRouter } from "expo-router";
 import {
     ArrowLeft,
     ClipboardList,
-    Plus,
     Search,
-    ShoppingCart,
+    ShoppingCart
 } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -203,29 +202,61 @@ export default function PharmacyScreen() {
               }
               activeOpacity={0.85}
             >
-              <Image source={{ uri: item.image }} style={styles.medImage} />
-              {item.inStock === false && (
-                <View style={styles.outBadge}>
-                  <Text style={styles.outText}>Out of Stock</Text>
+              <View style={styles.medImageWrap}>
+                <Image source={{ uri: item.image }} style={styles.medImage} />
+                <View style={styles.medBadgesRow}>
+                  {item.inStock !== false ? (
+                    <View style={styles.medStockBadge}>
+                      <Text style={styles.medStockBadgeText}>In Stock</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.medOutBadge}>
+                      <Text style={styles.medOutBadgeText}>Out of Stock</Text>
+                    </View>
+                  )}
+                  {(Number(item.discountPercent || 0) > 0 ||
+                    (Number(item.mrp || 0) > Number(item.price || 0) &&
+                      Number(item.price || 0) > 0)) && (
+                    <View style={styles.medDiscountBadge}>
+                      <Text style={styles.medDiscountBadgeText}>
+                        {Number(item.discountPercent || 0) > 0
+                          ? `${Math.round(Number(item.discountPercent))}% OFF`
+                          : `${Math.round(
+                              ((Number(item.mrp || 0) -
+                                Number(item.price || 0)) /
+                                Number(item.mrp || 1)) *
+                                100,
+                            )}% OFF`}
+                      </Text>
+                    </View>
+                  )}
                 </View>
-              )}
+              </View>
+
               <Text style={styles.medName} numberOfLines={2}>
                 {item.name}
               </Text>
-              <Text style={styles.medCat}>{item.brand || item.category}</Text>
+
               {item.prescriptionRequired ? (
                 <View style={styles.rxTag}>
-                  <Text style={styles.rxText}>Prescription</Text>
+                  <Text style={styles.rxText}>Rx Required</Text>
                 </View>
               ) : null}
+
+              {(item.strength || item.dosageForm) && (
+                <Text style={styles.medMeta} numberOfLines={1}>
+                  {[item.strength, item.dosageForm].filter(Boolean).join(" • ")}
+                </Text>
+              )}
+
               <View style={styles.medBottom}>
-                <View>
+                <View style={styles.medPriceRow}>
                   <Text style={styles.medPrice}>
-                    Rs {Number(item.price || 0).toFixed(2)}
+                    ₹{Number(item.price || 0).toFixed(2)}
                   </Text>
                   {item.mrp && Number(item.mrp) > Number(item.price) ? (
                     <Text style={styles.mrpText}>
-                      MRP Rs {Number(item.mrp).toFixed(2)}
+                      ₹{Number(item.mrp).toFixed(2)}
                     </Text>
                   ) : null}
                 </View>
@@ -254,7 +285,9 @@ export default function PharmacyScreen() {
                   disabled={item.inStock === false}
                   activeOpacity={0.75}
                 >
-                  <Plus size={16} color={Colors.surface} />
+                  <Text style={styles.addBtnText}>
+                    {item.inStock !== false ? "Add to Cart" : "Unavailable"}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </TouchableOpacity>
@@ -374,70 +407,112 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     borderWidth: 1,
     borderColor: Colors.primaryLight,
+    minHeight: 235,
     shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 6,
     elevation: 2,
   },
-  medImage: {
-    width: "100%",
-    height: 100,
-    borderRadius: 12,
-    backgroundColor: Colors.lightGray,
+  medImageWrap: {
+    position: "relative",
     marginBottom: 8,
   },
-  outBadge: {
+  medImage: {
+    width: "100%",
+    height: 88,
+    borderRadius: 12,
+    backgroundColor: Colors.lightGray,
+  },
+  medBadgesRow: {
     position: "absolute",
-    top: 12,
-    left: 12,
-    backgroundColor: "rgba(239,68,68,0.9)",
+    left: 6,
+    top: 6,
+    right: 6,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+  },
+  medStockBadge: {
+    backgroundColor: "#22C55E",
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: 999,
   },
-  outText: { fontSize: 9, fontWeight: "700", color: "#fff" },
+  medStockBadgeText: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  medOutBadge: {
+    backgroundColor: "#991B1B",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  medOutBadgeText: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  medDiscountBadge: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  medDiscountBadgeText: {
+    fontSize: 9,
+    color: Colors.surface,
+    fontWeight: "800",
+  },
   medName: {
     fontSize: 13,
     fontWeight: "700",
     color: Colors.text,
-    marginBottom: 2,
-    lineHeight: 17,
-  },
-  medCat: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: Colors.textSecondary,
-    marginBottom: 8,
+    marginBottom: 4,
+    lineHeight: 16,
   },
   rxTag: {
     alignSelf: "flex-start",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 999,
     backgroundColor: "#FEF3C7",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   rxText: { fontSize: 10, fontWeight: "700", color: "#92400E" },
+  medMeta: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginBottom: 8,
+    lineHeight: 14,
+    fontWeight: "600",
+  },
   medBottom: {
+    marginTop: "auto",
+    gap: 6,
+  },
+  medPriceRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 5,
   },
-  medPrice: { fontSize: 15, fontWeight: "800", color: Colors.text },
+  medPrice: { fontSize: 14, fontWeight: "800", color: Colors.primary },
   mrpText: {
-    fontSize: 10,
+    fontSize: 11,
     color: Colors.textSecondary,
     textDecorationLine: "line-through",
   },
   addBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: "100%",
+    borderRadius: 10,
     backgroundColor: Colors.primary,
     alignItems: "center",
     justifyContent: "center",
+    paddingVertical: 8,
   },
+  addBtnText: { color: Colors.surface, fontSize: 12, fontWeight: "700" },
   emptyState: { flex: 1, alignItems: "center", paddingTop: 60 },
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
   loadingText: { marginTop: 8, color: Colors.textSecondary, fontSize: 13 },

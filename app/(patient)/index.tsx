@@ -59,6 +59,8 @@ const { width: W } = Dimensions.get("window");
 const CARD_GAP = Spacing.md;
 const ITEM_W = (W - 56) / 3;
 const FEATURED_CARD_WIDTH = (W - Spacing.screenH * 2 - Spacing.sm) / 2;
+const HOME_MED_CARD_GAP = Spacing.sm;
+const HOME_MED_CARD_WIDTH = (W - Spacing.screenH * 2 - HOME_MED_CARD_GAP) / 2;
 const HOME_PACKAGE_COL_GAP = Spacing.sm;
 const OFFERS_TOP_CARD_WIDTH = W * 0.82;
 const OFFERS_BOTTOM_CARD_WIDTH = W * 0.86;
@@ -432,32 +434,87 @@ const LabCard = memo(
 );
 
 const MedCard = memo(
-  ({ item, onPress }: { item: any; onPress: (id: string) => void }) => (
+  ({
+    item,
+    onPress,
+    onAdd,
+  }: {
+    item: any;
+    onPress: (id: string) => void;
+    onAdd: (item: any) => void;
+  }) => (
     <AnimatedCard
       style={styles.medCard}
       onPress={() => onPress(item.id || item._id)}
       withShadow
     >
-      <Image source={{ uri: item.image }} style={styles.medImage} />
+      <View style={styles.medImageWrap}>
+        <Image source={{ uri: item.image }} style={styles.medImage} />
+        <View style={styles.medBadgesRow}>
+          {item.inStock !== false ? (
+            <View style={styles.medStockBadge}>
+              <Text style={styles.medStockBadgeText}>In Stock</Text>
+            </View>
+          ) : (
+            <View style={styles.medOutBadge}>
+              <Text style={styles.medOutBadgeText}>Out of Stock</Text>
+            </View>
+          )}
+          {(Number(item.discountPercent || 0) > 0 ||
+            (Number(item.mrp || 0) > Number(item.price || 0) &&
+              Number(item.price || 0) > 0)) && (
+            <View style={styles.medDiscountBadge}>
+              <Text style={styles.medDiscountBadgeText}>
+                {Number(item.discountPercent || 0) > 0
+                  ? `${Math.round(Number(item.discountPercent))}% OFF`
+                  : `${Math.round(
+                      ((Number(item.mrp || 0) - Number(item.price || 0)) /
+                        Number(item.mrp || 1)) *
+                        100,
+                    )}% OFF`}
+              </Text>
+            </View>
+          )}
+        </View>
+      </View>
+
       <Text style={styles.medName} numberOfLines={2}>
         {item.name}
       </Text>
+
+      {item.prescriptionRequired ? (
+        <Text style={styles.medRxInline}>Rx Required</Text>
+      ) : null}
+
+      {(item.strength || item.dosageForm) && (
+        <Text style={styles.medMeta} numberOfLines={1}>
+          {[item.strength, item.dosageForm].filter(Boolean).join(" • ")}
+        </Text>
+      )}
+
       <View style={styles.medBottom}>
-        <Text style={styles.medPrice}>₹{item.price.toFixed(2)}</Text>
+        <View style={styles.medPriceRow}>
+          <Text style={styles.medPrice}>
+            ₹{Number(item.price || 0).toFixed(2)}
+          </Text>
+          {Number(item.mrp || 0) > Number(item.price || 0) ? (
+            <Text style={styles.medMrp}>
+              ₹{Number(item.mrp || 0).toFixed(2)}
+            </Text>
+          ) : null}
+        </View>
         <TouchableOpacity
           style={[
-            styles.medAddBtn,
-            !item.inStock && { backgroundColor: Colors.border },
+            styles.medAddToCartBtn,
+            !item.inStock && styles.medAddDisabled,
           ]}
+          onPress={() => onAdd(item)}
           disabled={!item.inStock}
+          activeOpacity={0.85}
         >
-          {item.inStock ? (
-            <Plus size={13} color={Colors.textInverse} />
-          ) : (
-            <Text style={{ fontSize: 8, color: Colors.textSecondary }}>
-              Out
-            </Text>
-          )}
+          <Text style={styles.medAddToCartText}>
+            {item.inStock ? "Add to Cart" : "Unavailable"}
+          </Text>
         </TouchableOpacity>
       </View>
     </AnimatedCard>
@@ -585,6 +642,7 @@ export default function PatientHomeScreen() {
   const { openDrawer } = useDrawerStore();
   const { toggleFavorite, isFavorite } = useFavoritesStore();
   const cartItems = useCartStore((s) => s.items);
+  const addItem = useCartStore((s) => s.addItem);
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -1273,10 +1331,14 @@ export default function PatientHomeScreen() {
               </View>
             ) : (
               <FlatList
-                data={medicines}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: Spacing.screenH }}
+                data={medicines.slice(0, 4)}
+                numColumns={2}
+                scrollEnabled={false}
+                contentContainerStyle={{
+                  paddingHorizontal: Spacing.screenH,
+                  paddingBottom: Spacing.xs,
+                }}
+                columnWrapperStyle={{ justifyContent: "space-between" }}
                 keyExtractor={(m) => String(m.id || m._id)}
                 renderItem={({ item }) => (
                   <MedCard
@@ -1285,6 +1347,18 @@ export default function PatientHomeScreen() {
                       router.push({
                         pathname: "/(patient)/medicine/[id]",
                         params: { id },
+                      })
+                    }
+                    onAdd={(medItem) =>
+                      addItem({
+                        id: medItem.id || medItem._id,
+                        name: medItem.name,
+                        price: medItem.price,
+                        image: medItem.image || "",
+                        category: medItem.category,
+                        prescriptionRequired: medItem.prescriptionRequired,
+                        mrp: medItem.mrp,
+                        deliveryEtaHours: medItem.deliveryEtaHours,
                       })
                     }
                   />
@@ -1324,31 +1398,32 @@ export default function PatientHomeScreen() {
           </FadeInSection>
 
           {/* ── AD BANNERS ── */}
-          <View style={styles.section}>
-            <View style={styles.pad}>
-              <SectionTitle title="Featured" />
-            </View>
-            {AD_BANNERS.map((ad) => (
-              <TouchableOpacity
-                key={ad.id}
-                style={styles.adBanner}
-                activeOpacity={0.85}
-              >
-                <Image
-                  source={{ uri: ad.image }}
-                  style={StyleSheet.absoluteFill}
-                  resizeMode="cover"
-                />
-                <View style={styles.adOverlay}>
-                  <View style={styles.adBadge}>
-                    <Text style={styles.adBadgeText}>{ad.badge}</Text>
+          <FadeInSection delay={720} style={[styles.pad, styles.section]}>
+            <SectionTitle title="Featured" />
+            <BannerCarousel
+              data={AD_BANNERS}
+              autoScrollInterval={3200}
+              renderItem={(ad) => (
+                <TouchableOpacity
+                  style={styles.adBannerSlide}
+                  activeOpacity={0.85}
+                >
+                  <Image
+                    source={{ uri: ad.image }}
+                    style={StyleSheet.absoluteFill}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.adOverlay}>
+                    <View style={styles.adBadge}>
+                      <Text style={styles.adBadgeText}>{ad.badge}</Text>
+                    </View>
+                    <Text style={styles.adTitle}>{ad.title}</Text>
+                    <Text style={styles.adSub}>{ad.subtitle}</Text>
                   </View>
-                  <Text style={styles.adTitle}>{ad.title}</Text>
-                  <Text style={styles.adSub}>{ad.subtitle}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
+                </TouchableOpacity>
+              )}
+            />
+          </FadeInSection>
 
           {/* ── TRUST SECTION ── */}
           <View style={[styles.pad, styles.section]}>
@@ -1973,43 +2048,137 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   medCard: {
-    width: 136,
+    width: HOME_MED_CARD_WIDTH,
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
     overflow: "hidden",
-    marginRight: Spacing.sm + 4,
     borderWidth: 1,
     borderColor: Colors.border,
-    padding: Spacing.sm + 2,
+    padding: Spacing.sm,
+    marginBottom: Spacing.sm + 2,
+    minHeight: 235,
+    ...Shadows.soft,
+  },
+  medImageWrap: {
+    position: "relative",
+    marginBottom: 8,
   },
   medImage: {
     width: "100%",
-    height: 82,
+    height: 88,
     borderRadius: Radius.sm,
     backgroundColor: Colors.lightGray,
-    marginBottom: Spacing.sm,
+  },
+  medBadgesRow: {
+    position: "absolute",
+    left: 6,
+    top: 6,
+    right: 6,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+  },
+  medStockBadge: {
+    backgroundColor: "#22C55E",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  medStockBadgeText: {
+    fontSize: 9,
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  medOutBadge: {
+    backgroundColor: "#991B1B",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  medOutBadgeText: {
+    fontSize: 9,
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  medDiscountBadge: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  medDiscountBadgeText: {
+    fontSize: 9,
+    color: Colors.textInverse,
+    fontWeight: "800",
   },
   medName: {
     ...Typography.caption,
     fontWeight: "700",
     fontSize: 13,
     color: Colors.text,
-    marginBottom: Spacing.sm,
+    marginBottom: 4,
     lineHeight: 16,
   },
+  medRxInline: {
+    alignSelf: "flex-start",
+    fontSize: 10,
+    color: "#92400E",
+    fontWeight: "700",
+    backgroundColor: "#FEF3C7",
+    borderRadius: Radius.full,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginBottom: 4,
+  },
+  medBrand: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginBottom: 2,
+    fontWeight: "600",
+  },
+  medCategory: {
+    fontSize: 11,
+    color: Colors.primary,
+    marginBottom: 2,
+    fontWeight: "600",
+  },
+  medMeta: {
+    fontSize: 11,
+    color: Colors.textTertiary,
+    marginBottom: 8,
+    lineHeight: 14,
+    fontWeight: "600",
+  },
   medBottom: {
+    marginTop: "auto",
+    gap: 6,
+  },
+  medPriceRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 5,
   },
-  medPrice: { fontSize: 13, fontWeight: "800", color: Colors.primary },
-  medAddBtn: {
-    width: 26,
-    height: 26,
-    borderRadius: Radius.full,
+  medPrice: { fontSize: 14, fontWeight: "800", color: Colors.primary },
+  medMrp: {
+    fontSize: 11,
+    color: Colors.textTertiary,
+    textDecorationLine: "line-through",
+  },
+  medAddToCartBtn: {
+    width: "100%",
+    borderRadius: Radius.md,
     backgroundColor: Colors.primary,
+    paddingVertical: 8,
     alignItems: "center",
     justifyContent: "center",
+  },
+  medAddToCartText: {
+    color: Colors.textInverse,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  medAddDisabled: {
+    backgroundColor: Colors.border,
   },
 
   // Articles
@@ -2065,6 +2234,12 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     overflow: "hidden",
     marginBottom: Spacing.sm + 4,
+    ...Shadows.soft,
+  },
+  adBannerSlide: {
+    height: 110,
+    borderRadius: Radius.lg,
+    overflow: "hidden",
     ...Shadows.soft,
   },
   adOverlay: {

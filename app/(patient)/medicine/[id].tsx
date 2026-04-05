@@ -27,43 +27,45 @@ import {
 import ActionModal from "../../../components/ActionModal";
 import ButtonPrimary from "../../../components/ButtonPrimary";
 import { Colors } from "../../../constants/Colors";
-import { getMedicineById } from "../../../services/api";
+import { getMedicineById, getMedicines } from "../../../services/api";
 import { useCartStore } from "../../../store/cartStore";
+
+function normalizeList(value: unknown): string[] {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item || "").trim()).filter(Boolean);
+  }
+  return String(value)
+    .split(/\n|,|;/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function hasValue(value: unknown) {
+  if (Array.isArray(value)) return value.length > 0;
+  return value !== undefined && value !== null && String(value).trim() !== "";
+}
 
 export default function MedicineDetailsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [med, setMed] = useState<any | null>(null);
+  const [allMedicines, setAllMedicines] = useState<any[]>([]);
   const { addItem } = useCartStore();
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const [activeTab, setActiveTab] = useState<"about" | "reviews">("about");
 
-  const reviews = [
-    {
-      id: "r1",
-      userName: "Rahul T.",
-      userImage: "https://avatar.iran.liara.run/public/12",
-      rating: 5,
-      comment: "Worked effectively and delivery was quick.",
-      date: "Oct 10, 2026",
-    },
-    {
-      id: "r2",
-      userName: "Ananya S.",
-      userImage: "https://avatar.iran.liara.run/public/64",
-      rating: 4,
-      comment: "Good quality medicine and proper packaging.",
-      date: "Sep 22, 2026",
-    },
-  ];
-
   useEffect(() => {
     const load = async () => {
       if (!id) return;
-      const response = await getMedicineById(id);
+      const [response, listResponse] = await Promise.all([
+        getMedicineById(id),
+        getMedicines(),
+      ]);
       if (response.data) setMed(response.data);
+      if (listResponse.data) setAllMedicines(listResponse.data);
     };
     load();
   }, [id]);
@@ -108,6 +110,33 @@ export default function MedicineDetailsScreen() {
 
   const medicineId = String(med.id || med._id);
   const isAboutTab = activeTab === "about";
+  const ratingValue = Number(med.rating || 0);
+  const reviewCount = Number(med.reviewsCount || 0);
+  const reviews = Array.isArray(med.reviews) ? med.reviews : [];
+  const discountPercent = Math.max(0, Number(med.discountPercent || 0));
+
+  const sideEffects = normalizeList(med.sideEffects);
+  const contraindications = normalizeList(med.contraindications);
+  const drugInteractions = normalizeList(med.drugInteractions);
+
+  const relatedMedicines = allMedicines
+    .filter((item) => String(item.id || item._id) !== medicineId)
+    .filter((item) => item.category && item.category === med.category)
+    .slice(0, 4);
+
+  const alternatives = allMedicines
+    .filter((item) => String(item.id || item._id) !== medicineId)
+    .filter(
+      (item) =>
+        (med.genericName && item.genericName === med.genericName) ||
+        (med.composition && item.composition === med.composition),
+    )
+    .slice(0, 4);
+
+  const frequentlyBoughtTogether = allMedicines
+    .filter((item) => String(item.id || item._id) !== medicineId)
+    .filter((item) => item.category === med.category)
+    .slice(0, 6);
 
   const handleAdd = () => {
     for (let i = 0; i < qty; i += 1) {
@@ -123,6 +152,26 @@ export default function MedicineDetailsScreen() {
       });
     }
     setAdded(true);
+  };
+
+  const renderMedicalSection = (title: string, value: unknown) => {
+    if (!hasValue(value)) return null;
+    const list = normalizeList(value);
+
+    return (
+      <View style={styles.medicalBlock}>
+        <Text style={styles.medicalBlockTitle}>{title}</Text>
+        {list.length > 1 ? (
+          list.map((item, index) => (
+            <Text key={`${title}-${index}`} style={styles.medicalBullet}>
+              {"\u2022"} {item}
+            </Text>
+          ))
+        ) : (
+          <Text style={styles.medicalParagraph}>{String(value)}</Text>
+        )}
+      </View>
+    );
   };
 
   return (
@@ -214,10 +263,13 @@ export default function MedicineDetailsScreen() {
                 key={s}
                 size={14}
                 color="#F59E0B"
-                fill={s <= 4 ? "#F59E0B" : "none"}
+                fill={s <= Math.round(ratingValue) ? "#F59E0B" : "none"}
               />
             ))}
-            <Text style={styles.ratingText}>4.2 (128 reviews)</Text>
+            <Text style={styles.ratingText}>
+              {ratingValue > 0 ? ratingValue.toFixed(1) : "No rating"}
+              {reviewCount > 0 ? ` (${reviewCount} reviews)` : ""}
+            </Text>
           </View>
 
           <Text style={styles.price}>
@@ -226,9 +278,41 @@ export default function MedicineDetailsScreen() {
           {med.mrp && Number(med.mrp) > Number(med.price) ? (
             <Text style={styles.mrp}>MRP Rs {Number(med.mrp).toFixed(2)}</Text>
           ) : null}
+          {discountPercent > 0 ? (
+            <Text style={styles.discountText}>Save {discountPercent}%</Text>
+          ) : null}
           <Text style={styles.perUnit}>
             {med.packSize || "Per unit"} · MRP inclusive of all taxes
           </Text>
+
+          {(hasValue(med.composition) ||
+            hasValue(med.strength) ||
+            hasValue(med.dosageForm) ||
+            hasValue(med.manufacturer)) && (
+            <View style={styles.quickInfoWrap}>
+              <Text style={styles.quickInfoTitle}>Quick Info</Text>
+              {!!med.composition && (
+                <Text style={styles.quickInfoItem}>
+                  Composition: {med.composition}
+                </Text>
+              )}
+              {!!med.strength && (
+                <Text style={styles.quickInfoItem}>
+                  Strength: {med.strength}
+                </Text>
+              )}
+              {!!med.dosageForm && (
+                <Text style={styles.quickInfoItem}>
+                  Dosage Form: {med.dosageForm}
+                </Text>
+              )}
+              {!!med.manufacturer && (
+                <Text style={styles.quickInfoItem}>
+                  Manufacturer: {med.manufacturer}
+                </Text>
+              )}
+            </View>
+          )}
 
           <View style={styles.tabs}>
             <TouchableOpacity
@@ -321,59 +405,173 @@ export default function MedicineDetailsScreen() {
                     `${med.name} is commonly used for ${med.category?.toLowerCase() ?? "general care"}. Please use only under medical advice.`}
                 </Text>
 
-                <View style={styles.metaList}>
-                  {!!med.composition && (
-                    <Text style={styles.metaItem}>
-                      Composition: {med.composition}
+                {(hasValue(med.usageInstructions) ||
+                  hasValue(med.indications) ||
+                  hasValue(med.dosageInstructions) ||
+                  sideEffects.length > 0 ||
+                  hasValue(med.precautions) ||
+                  drugInteractions.length > 0 ||
+                  contraindications.length > 0) && (
+                  <View style={styles.medicalSectionWrap}>
+                    <Text style={styles.descTitle}>Medical Details</Text>
+                    {renderMedicalSection(
+                      "Usage Instructions",
+                      med.usageInstructions,
+                    )}
+                    {renderMedicalSection("Indications", med.indications)}
+                    {renderMedicalSection(
+                      "Dosage Instructions",
+                      med.dosageInstructions,
+                    )}
+                    {renderMedicalSection("Side Effects", sideEffects)}
+                    {renderMedicalSection("Precautions", med.precautions)}
+                    {renderMedicalSection(
+                      "Drug Interactions",
+                      drugInteractions,
+                    )}
+                    {renderMedicalSection(
+                      "Contraindications",
+                      contraindications,
+                    )}
+                  </View>
+                )}
+
+                {(hasValue(med.storageInstructions) ||
+                  hasValue(med.expiryDate) ||
+                  hasValue(med.precautions)) && (
+                  <View style={styles.medicalSectionWrap}>
+                    <Text style={styles.descTitle}>Additional Info</Text>
+                    {!!med.storageInstructions && (
+                      <Text style={styles.metaItem}>
+                        Storage Conditions: {med.storageInstructions}
+                      </Text>
+                    )}
+                    {!!med.expiryDate && (
+                      <Text style={styles.metaItem}>
+                        Expiry Awareness: Check expiry date before use.
+                      </Text>
+                    )}
+                    {!!med.precautions && (
+                      <Text style={styles.metaItem}>
+                        Safety Advice: {med.precautions}
+                      </Text>
+                    )}
+                  </View>
+                )}
+
+                {relatedMedicines.length > 0 && (
+                  <View style={styles.relatedWrap}>
+                    <Text style={styles.descTitle}>Related Medicines</Text>
+                    {relatedMedicines.map((item) => (
+                      <TouchableOpacity
+                        key={`rel-${item._id || item.id}`}
+                        style={styles.relatedItem}
+                        onPress={() =>
+                          router.push({
+                            pathname: "/(patient)/medicine/[id]",
+                            params: { id: item._id || item.id },
+                          })
+                        }
+                      >
+                        <Text style={styles.relatedName}>{item.name}</Text>
+                        <Text style={styles.relatedPrice}>
+                          Rs {Number(item.price || 0).toFixed(2)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
+                {alternatives.length > 0 && (
+                  <View style={styles.relatedWrap}>
+                    <Text style={styles.descTitle}>Alternatives</Text>
+                    {alternatives.map((item) => (
+                      <TouchableOpacity
+                        key={`alt-${item._id || item.id}`}
+                        style={styles.relatedItem}
+                        onPress={() =>
+                          router.push({
+                            pathname: "/(patient)/medicine/[id]",
+                            params: { id: item._id || item.id },
+                          })
+                        }
+                      >
+                        <Text style={styles.relatedName}>{item.name}</Text>
+                        <Text style={styles.relatedPrice}>
+                          Rs {Number(item.price || 0).toFixed(2)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
+                {frequentlyBoughtTogether.length > 0 && (
+                  <View style={styles.relatedWrap}>
+                    <Text style={styles.descTitle}>
+                      Frequently Bought Together
                     </Text>
-                  )}
-                  {!!med.strength && (
-                    <Text style={styles.metaItem}>
-                      Strength: {med.strength}
-                    </Text>
-                  )}
-                  {!!med.dosageForm && (
-                    <Text style={styles.metaItem}>Form: {med.dosageForm}</Text>
-                  )}
-                  {!!med.manufacturer && (
-                    <Text style={styles.metaItem}>
-                      Manufacturer: {med.manufacturer}
-                    </Text>
-                  )}
-                  {!!med.usageInstructions && (
-                    <Text style={styles.metaItem}>
-                      Usage: {med.usageInstructions}
-                    </Text>
-                  )}
-                  {!!med.storageInstructions && (
-                    <Text style={styles.metaItem}>
-                      Storage: {med.storageInstructions}
-                    </Text>
-                  )}
-                </View>
+                    {frequentlyBoughtTogether.slice(0, 3).map((item) => (
+                      <TouchableOpacity
+                        key={`fbt-${item._id || item.id}`}
+                        style={styles.relatedItem}
+                        onPress={() =>
+                          router.push({
+                            pathname: "/(patient)/medicine/[id]",
+                            params: { id: item._id || item.id },
+                          })
+                        }
+                      >
+                        <Text style={styles.relatedName}>{item.name}</Text>
+                        <Text style={styles.relatedPrice}>
+                          Rs {Number(item.price || 0).toFixed(2)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
             </View>
           ) : (
             <View style={styles.tabContent}>
+              <View style={styles.reviewSummary}>
+                <Text style={styles.reviewSummaryTitle}>Ratings Snapshot</Text>
+                <Text style={styles.reviewSummaryText}>
+                  Average {ratingValue > 0 ? ratingValue.toFixed(1) : "0.0"} / 5
+                  {reviewCount > 0 ? ` from ${reviewCount} ratings` : ""}
+                </Text>
+              </View>
+
+              {reviews.length === 0 ? (
+                <View style={styles.reviewEmptyWrap}>
+                  <Text style={styles.reviewEmptyText}>No reviews yet.</Text>
+                </View>
+              ) : null}
+
               {reviews.map((review) => (
                 <View key={review.id} style={styles.reviewCard}>
                   <View style={styles.reviewHeader}>
                     <Image
-                      source={{ uri: review.userImage }}
+                      source={{ uri: review.userImage || med.image }}
                       style={styles.reviewAvatar}
                     />
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.reviewUser}>{review.userName}</Text>
-                      <Text style={styles.reviewDate}>{review.date}</Text>
+                      <Text style={styles.reviewUser}>
+                        {review.userName || review.name || "Verified User"}
+                      </Text>
+                      <Text style={styles.reviewDate}>
+                        {review.date || "Recently"}
+                      </Text>
                     </View>
                     <View style={styles.reviewRating}>
                       <Text style={styles.reviewStar}>★</Text>
                       <Text style={styles.reviewRatingText}>
-                        {review.rating}
+                        {review.rating || 0}
                       </Text>
                     </View>
                   </View>
-                  <Text style={styles.reviewComment}>{review.comment}</Text>
+                  <Text style={styles.reviewComment}>
+                    {review.comment || "Great product and timely delivery."}
+                  </Text>
                 </View>
               ))}
 
@@ -524,6 +722,12 @@ const styles = StyleSheet.create({
     textDecorationLine: "line-through",
     marginBottom: 2,
   },
+  discountText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: Colors.successPressed,
+    marginBottom: 2,
+  },
   tabs: {
     marginBottom: 14,
     flexDirection: "row",
@@ -542,6 +746,25 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 14, fontWeight: "600", color: Colors.textSecondary },
   tabTextActive: { color: Colors.primary, fontWeight: "700" },
   tabContent: { marginTop: 0 },
+  quickInfoWrap: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    backgroundColor: Colors.background,
+    padding: 12,
+    marginBottom: 14,
+  },
+  quickInfoTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.text,
+    marginBottom: 8,
+  },
+  quickInfoItem: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginBottom: 4,
+  },
   qtyRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -600,6 +823,32 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   descText: { fontSize: 14, color: Colors.textSecondary, lineHeight: 22 },
+  medicalSectionWrap: {
+    marginTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingTop: 12,
+  },
+  medicalBlock: {
+    marginBottom: 12,
+  },
+  medicalBlockTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: Colors.text,
+    marginBottom: 6,
+  },
+  medicalParagraph: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+  },
+  medicalBullet: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: 4,
+  },
   metaList: {
     marginTop: 12,
     paddingTop: 10,
@@ -607,6 +856,65 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.border,
   },
   metaItem: { fontSize: 12, color: Colors.text, marginBottom: 6 },
+  relatedWrap: {
+    marginTop: 16,
+  },
+  relatedItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    marginBottom: 8,
+    backgroundColor: Colors.surface,
+  },
+  relatedName: {
+    flex: 1,
+    fontSize: 13,
+    color: Colors.text,
+    fontWeight: "600",
+    marginRight: 8,
+  },
+  relatedPrice: {
+    fontSize: 13,
+    color: Colors.primary,
+    fontWeight: "700",
+  },
+  reviewSummary: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    backgroundColor: Colors.background,
+  },
+  reviewSummaryTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  reviewSummaryText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+  },
+  reviewEmptyWrap: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    backgroundColor: Colors.surface,
+    marginBottom: 12,
+  },
+  reviewEmptyText: {
+    color: Colors.textSecondary,
+    fontSize: 13,
+    fontWeight: "600",
+  },
   reviewCard: {
     marginBottom: 12,
     backgroundColor: Colors.surface,
