@@ -128,57 +128,57 @@ export default function PharmacySettingsRoutePage() {
             label="Pharmacy Name"
             value={form.pharmacyName}
             onChange={(value) => updateField("pharmacyName", value)}
-            placeholder="NiviDoc Pharmacy"
+            placeholder="Enter pharmacy name"
           />
           <Field
             label="Registration ID"
             value={form.registrationId}
-            placeholder="PHM-2024-0001"
+            placeholder="Registration ID"
             disabled
           />
           <Field
             label="Support Email"
             value={form.supportEmail}
             onChange={(value) => updateField("supportEmail", value)}
-            placeholder="support@nividoc.com"
+            placeholder="Enter support email"
           />
           <Field
             label="Support Phone"
             value={form.supportPhone}
             onChange={(value) => updateField("supportPhone", value)}
-            placeholder="+91 98765 43210"
+            placeholder="Enter support phone"
           />
           <Field
             label="Address"
             value={form.address}
             onChange={(value) => updateField("address", value)}
-            placeholder="Street, City, State"
+            placeholder="Enter street address"
           />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Field
               label="City"
               value={form.city}
               onChange={(value) => updateField("city", value)}
-              placeholder="Chennai"
+              placeholder="Enter city"
             />
             <Field
               label="State"
               value={form.state}
               onChange={(value) => updateField("state", value)}
-              placeholder="Tamil Nadu"
+              placeholder="Enter state"
             />
             <Field
               label="Pincode"
               value={form.pincode}
               onChange={(value) => updateField("pincode", value)}
-              placeholder="600017"
+              placeholder="Enter pincode"
             />
           </div>
           <Field
             label="Operational Hours"
             value={form.operationalHours}
             onChange={(value) => updateField("operationalHours", value)}
-            placeholder="9:00 AM - 9:00 PM"
+            placeholder="Enter operational hours"
           />
 
           <div className="rounded-xl border border-slate-200 p-4 space-y-3">

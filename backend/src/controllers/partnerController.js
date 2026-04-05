@@ -1019,10 +1019,6 @@ const getPharmacySettings = catchAsync(async (req, res) => {
   }).lean();
   if (!profile) throw new ApiError(404, "Pharmacy partner profile not found");
 
-  const addressLine =
-    profile.address ||
-    [profile.city, profile.state, profile.pincode].filter(Boolean).join(", ");
-
   return res.status(200).json(
     new ApiResponse(200, "Pharmacy settings fetched", {
       pharmacyName: profile.pharmacyName || req.user.name,
@@ -1031,7 +1027,7 @@ const getPharmacySettings = catchAsync(async (req, res) => {
         profile.supportEmail || profile.email || req.user.email || "",
       supportPhone:
         profile.supportPhone || profile.phone || req.user.phone || "",
-      address: addressLine || "",
+      address: profile.address || "",
       city: profile.city || "",
       state: profile.state || "",
       pincode: profile.pincode || "",
