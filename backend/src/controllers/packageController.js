@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Package = require("../models/Package");
 const PackageReview = require("../models/PackageReview");
+const PackageBooking = require("../models/PackageBooking");
 const LabPartnerProfile = require("../models/LabPartnerProfile");
 const cloudinary = require("../config/cloudinary");
 const { uploadBufferToCloudinary } = require("../utils/uploadToCloudinary");
@@ -509,6 +510,37 @@ const getPackageById = catchAsync(async (req, res) => {
     );
 });
 
+// ─── Bookings ─────────────────────────────────────────────────────────────────
+
+const createPackageBooking = catchAsync(async (req, res) => {
+  const pkg = await Package.findOne({
+    _id: req.params.id,
+    status: "APPROVED",
+    active: true,
+  }).select("price labId");
+
+  if (!pkg) throw new ApiError(404, "Package not found");
+
+  const amount = Number(
+    pkg.price?.final || pkg.price?.offer || pkg.price?.original || 0,
+  );
+  if (!(amount > 0)) throw new ApiError(400, "Invalid package amount");
+
+  const booking = await PackageBooking.create({
+    patient: req.user._id,
+    package: pkg._id,
+    labId: pkg.labId,
+    amount,
+    currency: "INR",
+    status: "booked",
+    paymentStatus: "pending",
+  });
+
+  return res
+    .status(201)
+    .json(new ApiResponse(201, "Package booking created", booking));
+});
+
 // ─── Reviews ────────────────────────────────────────────────────────────────────
 
 const addPackageReview = catchAsync(async (req, res) => {
@@ -559,6 +591,7 @@ module.exports = {
   rejectPackage,
   getApprovedPackages,
   getPackageById,
+  createPackageBooking,
   addPackageReview,
   getPackageReviews,
 };

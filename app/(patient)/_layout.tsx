@@ -125,6 +125,7 @@ export default function PatientLayout() {
         <Tabs.Screen name="review" options={hiddenScreenOptions} />
         <Tabs.Screen name="packages" options={hiddenScreenOptions} />
         <Tabs.Screen name="packages/[id]" options={hiddenScreenOptions} />
+        <Tabs.Screen name="packages/checkout" options={hiddenScreenOptions} />
       </Tabs>
       <SideDrawer />
     </View>

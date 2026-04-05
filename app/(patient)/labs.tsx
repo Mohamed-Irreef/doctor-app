@@ -22,7 +22,7 @@ import {
     useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { Colors } from "../../constants/Colors";
-import { getLabTests } from "../../services/api";
+import { getApprovedPackages, getLabTests } from "../../services/api";
 
 const CATEGORIES = [
   "All",
@@ -31,6 +31,7 @@ const CATEGORIES = [
   "Diabetes",
   "Lipid",
   "Full Body",
+  "Packages",
 ];
 const ROW_BATCH_SIZE = 4;
 
@@ -39,9 +40,14 @@ export default function LabsScreen() {
   const insets = useSafeAreaInsets();
   const [activeCategory, setActiveCategory] = useState("All");
   const [labTests, setLabTests] = useState<any[]>([]);
+  const [packages, setPackages] = useState<any[]>([]);
   const [visibleRows, setVisibleRows] = useState(ROW_BATCH_SIZE);
   const [loading, setLoading] = useState(true);
+  const [packagesLoading, setPackagesLoading] = useState(false);
   const [error, setError] = useState("");
+  const [packagesError, setPackagesError] = useState("");
+
+  const isPackageMode = activeCategory === "Packages";
 
   useEffect(() => {
     const load = async () => {
@@ -58,13 +64,14 @@ export default function LabsScreen() {
   }, []);
 
   const filteredTests = useMemo(() => {
+    if (isPackageMode) return [];
     if (activeCategory === "All") return labTests;
     return labTests.filter((item) =>
       String(item.category || "")
         .toLowerCase()
         .includes(activeCategory.toLowerCase()),
     );
-  }, [labTests, activeCategory]);
+  }, [labTests, activeCategory, isPackageMode]);
 
   const visibleTests = useMemo(
     () => filteredTests.slice(0, visibleRows),
@@ -74,6 +81,29 @@ export default function LabsScreen() {
   useEffect(() => {
     setVisibleRows(ROW_BATCH_SIZE);
   }, [activeCategory, labTests.length]);
+
+  useEffect(() => {
+    const loadPackages = async () => {
+      if (!isPackageMode) return;
+      if (packages.length > 0 || packagesLoading) return;
+
+      setPackagesLoading(true);
+      setPackagesError("");
+      const response = await getApprovedPackages({});
+      if (response.status === "error") {
+        setPackagesError(response.error || "Unable to load packages");
+      }
+      if (response.data) {
+        const list = Array.isArray(response.data)
+          ? response.data
+          : (response.data as any)?.packages || [];
+        setPackages(list);
+      }
+      setPackagesLoading(false);
+    };
+
+    loadPackages();
+  }, [isPackageMode, packages.length, packagesLoading]);
 
   return (
     <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
@@ -96,19 +126,35 @@ export default function LabsScreen() {
       </LinearGradient>
 
       <FlatList
-        data={visibleTests}
+        key={isPackageMode ? "packages" : "tests"}
+        data={isPackageMode ? packages : visibleTests}
+        numColumns={isPackageMode ? 2 : 1}
+        columnWrapperStyle={
+          isPackageMode
+            ? {
+                gap: 12,
+                paddingHorizontal: 16,
+              }
+            : undefined
+        }
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={() => (
           <View style={styles.emptyWrap}>
-            {loading ? (
+            {loading || packagesLoading ? (
               <>
                 <ActivityIndicator size="small" color={Colors.primary} />
-                <Text style={styles.emptyText}>Loading lab tests...</Text>
+                <Text style={styles.emptyText}>
+                  {isPackageMode
+                    ? "Loading packages..."
+                    : "Loading lab tests..."}
+                </Text>
               </>
             ) : (
               <Text style={styles.emptyText}>
-                {error || "No lab tests found for the selected category."}
+                {isPackageMode
+                  ? packagesError || "No packages found."
+                  : error || "No lab tests found for the selected category."}
               </Text>
             )}
           </View>
@@ -161,12 +207,14 @@ export default function LabsScreen() {
             </View>
 
             <Text style={styles.resultCount}>
-              {filteredTests.length} tests available
+              {isPackageMode
+                ? `${packages.length} package${packages.length !== 1 ? "s" : ""} available`
+                : `${filteredTests.length} tests available`}
             </Text>
           </>
         )}
         ListFooterComponent={() =>
-          visibleRows < filteredTests.length ? (
+          !isPackageMode && visibleRows < filteredTests.length ? (
             <TouchableOpacity
               style={styles.loadMoreBtn}
               onPress={() => setVisibleRows((count) => count + ROW_BATCH_SIZE)}
@@ -176,8 +224,78 @@ export default function LabsScreen() {
             </TouchableOpacity>
           ) : null
         }
-        keyExtractor={(t) => String(t.id || t._id)}
+        keyExtractor={(t) => String((t as any).id || (t as any)._id)}
         renderItem={({ item }) => {
+          if (isPackageMode) {
+            const originalPrice = Number((item as any)?.price?.original || 0);
+            const offerPrice = Number(
+              (item as any)?.price?.offer || originalPrice || 0,
+            );
+            const discount = Number((item as any)?.price?.discount || 0);
+            return (
+              <View style={styles.packageCard}>
+                <TouchableOpacity
+                  onPress={() =>
+                    router.push({
+                      pathname: "/(patient)/packages/[id]",
+                      params: { id: (item as any).id || (item as any)._id },
+                    })
+                  }
+                  activeOpacity={0.88}
+                >
+                  {(item as any).image ? (
+                    <Image
+                      source={{ uri: (item as any).image }}
+                      style={styles.packageImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={styles.packageImageFallback} />
+                  )}
+                  {discount > 0 ? (
+                    <View style={styles.packageDiscountBadge}>
+                      <Text style={styles.packageDiscountText}>
+                        {discount}% OFF
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  <View style={styles.packageBody}>
+                    <Text style={styles.packageName} numberOfLines={2}>
+                      {(item as any).name || "Package"}
+                    </Text>
+                    <Text style={styles.packageMeta}>
+                      Includes {(item as any).testCount || 0} tests
+                    </Text>
+                    <View style={styles.packagePriceRow}>
+                      <Text style={styles.packageOffer}>₹{offerPrice}</Text>
+                      {offerPrice !== originalPrice ? (
+                        <Text style={styles.packageStrike}>
+                          ₹{originalPrice}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
+                </TouchableOpacity>
+
+                <View style={styles.packageBodyBottom}>
+                  <TouchableOpacity
+                    style={styles.packageBookBtn}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/(patient)/packages/checkout",
+                        params: { id: (item as any).id || (item as any)._id },
+                      })
+                    }
+                    activeOpacity={0.9}
+                  >
+                    <Text style={styles.packageBookText}>Book Now</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            );
+          }
+
           const originalPrice = Number(item.originalPrice || item.price || 0);
           const offerPrice = Number(item.price || 0);
           const disc =
@@ -541,5 +659,75 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.textSecondary,
     textAlign: "center",
+  },
+
+  packageCard: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: "hidden",
+    marginBottom: 12,
+  },
+  packageImage: {
+    width: "100%",
+    height: 120,
+    backgroundColor: Colors.border,
+  },
+  packageImageFallback: {
+    width: "100%",
+    height: 120,
+    backgroundColor: Colors.border,
+  },
+  packageDiscountBadge: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    backgroundColor: Colors.success,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  packageDiscountText: {
+    fontSize: 9,
+    fontWeight: "800",
+    color: Colors.textInverse,
+  },
+  packageBody: { padding: 12 },
+  packageBodyBottom: {
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+  },
+  packageName: { fontSize: 13, fontWeight: "800", color: Colors.text },
+  packageMeta: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: Colors.textSecondary,
+    marginTop: 4,
+  },
+  packagePriceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 8,
+  },
+  packageOffer: { fontSize: 14, fontWeight: "900", color: Colors.primary },
+  packageStrike: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: Colors.textTertiary,
+    textDecorationLine: "line-through",
+  },
+  packageBookBtn: {
+    backgroundColor: Colors.primary,
+    borderRadius: 12,
+    paddingVertical: 9,
+    alignItems: "center",
+  },
+  packageBookText: {
+    color: Colors.textInverse,
+    fontSize: 12,
+    fontWeight: "800",
   },
 });

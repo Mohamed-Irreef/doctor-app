@@ -2,7 +2,14 @@ import * as Google from "expo-auth-session/providers/google";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { Lock, Mail, Stethoscope, UserRound } from "lucide-react-native";
+import {
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  Stethoscope,
+  UserRound,
+} from "lucide-react-native";
 import React, { useState } from "react";
 import {
     KeyboardAvoidingView,
@@ -84,6 +91,7 @@ export default function LoginScreen() {
   const { login } = useAuthStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Role>("patient");
   const [loading, setLoading] = useState(false);
   const [errorModal, setErrorModal] = useState(false);
@@ -274,8 +282,23 @@ export default function LoginScreen() {
             placeholder="Password"
             value={password}
             onChangeText={setPassword}
-            secureTextEntry
+            secureTextEntry={!showPassword}
             icon={<Lock color={Colors.textSecondary} size={20} />}
+            iconRight={
+              <TouchableOpacity
+                onPress={() => setShowPassword((v) => !v)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+                accessibilityHint="Toggles password visibility"
+              >
+                {showPassword ? (
+                  <EyeOff color={Colors.textSecondary} size={20} />
+                ) : (
+                  <Eye color={Colors.textSecondary} size={20} />
+                )}
+              </TouchableOpacity>
+            }
           />
 
           <TouchableOpacity style={styles.forgotPassword}>

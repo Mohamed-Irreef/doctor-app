@@ -2,6 +2,7 @@ const Payment = require("../models/Payment");
 const Appointment = require("../models/Appointment");
 const Slot = require("../models/Slot");
 const LabBooking = require("../models/LabBooking");
+const PackageBooking = require("../models/PackageBooking");
 const Order = require("../models/Order");
 const Subscription = require("../models/Subscription");
 const Notification = require("../models/Notification");
@@ -86,6 +87,23 @@ async function resolvePaymentTarget(type, relatedId, user) {
     }
 
     return { amount: order.amount, model: "Order", doc: order };
+  }
+
+  if (type === "package") {
+    const booking = await PackageBooking.findById(relatedId);
+    if (!booking) throw new ApiError(404, "Package booking not found");
+    if (String(booking.patient) !== String(user._id) && user.role !== "admin")
+      throw new ApiError(403, "Not allowed");
+
+    if (booking.status === "cancelled") {
+      throw new ApiError(400, "Cannot pay for a cancelled booking");
+    }
+
+    if (booking.paymentStatus === "paid") {
+      throw new ApiError(400, "Booking already paid");
+    }
+
+    return { amount: booking.amount, model: "PackageBooking", doc: booking };
   }
 
   if (type === "subscription") {
@@ -339,6 +357,36 @@ const verifyPayment = catchAsync(async (req, res) => {
         },
         writeOptions,
       );
+    } else if (paymentDoc.relatedModel === "PackageBooking") {
+      const booking = await PackageBooking.findByIdAndUpdate(
+        paymentDoc.relatedId,
+        {
+          payment: paymentDoc._id,
+          paymentStatus: "paid",
+          adminShare: Number(paymentDoc?.revenueSplit?.adminShare || 0),
+          labShare: Number(paymentDoc?.revenueSplit?.partnerShare || 0),
+          $push: {
+            statusTimeline: {
+              status: "booked",
+              note: "Payment completed and booking confirmed",
+              at: new Date(),
+            },
+          },
+        },
+        { ...writeOptions, new: true },
+      );
+
+      if (booking) {
+        await Notification.create({
+          title: "Package booking confirmed",
+          message: "Payment received. Your package booking is now confirmed.",
+          type: "package-payment-success",
+          audienceType: "single",
+          recipient: booking.patient,
+          targetEntityType: "PackageBooking",
+          targetEntityId: booking._id,
+        });
+      }
     }
 
     return { paymentDoc, appointmentForNotify, alreadyPaid: false };

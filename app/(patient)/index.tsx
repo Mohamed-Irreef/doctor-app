@@ -511,7 +511,15 @@ const OfferBannerCard = memo(
 );
 
 const PackageCard = memo(
-  ({ item, onPress }: { item: any; onPress: (id: string) => void }) => {
+  ({
+    item,
+    onPress,
+    onBookNow,
+  }: {
+    item: any;
+    onPress: (id: string) => void;
+    onBookNow: (id: string) => void;
+  }) => {
     const originalPrice = item.price?.original || 0;
     const offerPrice = item.price?.offer || originalPrice;
     const discount = item.price?.discount || 0;
@@ -546,6 +554,14 @@ const PackageCard = memo(
               <Text style={styles.packageCardStrike}>₹{originalPrice}</Text>
             )}
           </View>
+
+          <TouchableOpacity
+            style={styles.packageBookBtn}
+            onPress={() => onBookNow(item._id || item.id)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.packageBookText}>Book Now</Text>
+          </TouchableOpacity>
         </View>
       </AnimatedCard>
     );
@@ -617,6 +633,11 @@ export default function PatientHomeScreen() {
     const h = new Date().getHours();
     return h < 12 ? "Good Morning" : h < 17 ? "Good Afternoon" : "Good Evening";
   };
+
+  const isUpcomingAppointment = useCallback((appt: any) => {
+    const status = String(appt?.status || "").toLowerCase();
+    return status === "upcoming" || status === "pending";
+  }, []);
 
   const getDoctorId = useCallback((doctor: any) => {
     return String(doctor?.id ?? doctor?._id ?? "");
@@ -1215,6 +1236,12 @@ export default function PatientHomeScreen() {
                         params: { id },
                       })
                     }
+                    onBookNow={(id) =>
+                      router.push({
+                        pathname: "/(patient)/packages/checkout",
+                        params: { id },
+                      })
+                    }
                   />
                 )}
               />
@@ -1346,10 +1373,7 @@ export default function PatientHomeScreen() {
                 onSeeAll={() => router.push("/(patient)/appointments")}
               />
               {appointments
-                .filter((appt) => {
-                  const status = String(appt.status).toLowerCase();
-                  return status === "upcoming" || status === "pending";
-                })
+                .filter(isUpcomingAppointment)
                 .slice(0, 3)
                 .map((appt) => (
                   <View key={appt._id || appt.id} style={styles.apptCard}>
@@ -2259,5 +2283,18 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     textDecorationLine: "line-through",
+  },
+
+  packageBookBtn: {
+    marginTop: Spacing.sm,
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.md,
+    paddingVertical: 8,
+    alignItems: "center",
+  },
+  packageBookText: {
+    color: Colors.textInverse,
+    fontSize: 12,
+    fontWeight: "800",
   },
 });

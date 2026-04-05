@@ -15,6 +15,7 @@ async function calculateCommission(type, amount) {
   const keyMap = {
     appointment: "APPOINTMENT_COMMISSION_PERCENT",
     lab: "LAB_COMMISSION_PERCENT",
+    package: "LAB_COMMISSION_PERCENT",
     pharmacy: "PHARMACY_COMMISSION_PERCENT",
   };
 

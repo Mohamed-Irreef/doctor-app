@@ -18,6 +18,15 @@ import {
 import { Colors } from "../../../constants/Colors";
 import { getLabTestById, getLabTestReviews } from "../../../services/api";
 
+const INSTRUCTION_TABS = [
+  { key: "preparation", label: "Preparation" },
+  { key: "before", label: "Before Test" },
+  { key: "after", label: "After Test" },
+  { key: "collection", label: "Collection" },
+] as const;
+
+type InstructionTabKey = (typeof INSTRUCTION_TABS)[number]["key"];
+
 function formatDisplayDate(value?: string) {
   if (!value) return "";
   return new Date(value).toLocaleDateString("en-US", {
@@ -39,6 +48,8 @@ export default function LabTestDetailsScreen() {
   });
   const [selectedFlow, setSelectedFlow] = useState<"home" | "lab">("home");
   const [activeTab, setActiveTab] = useState<"about" | "reviews">("about");
+  const [activeInstructionTab, setActiveInstructionTab] =
+    useState<InstructionTabKey>("preparation");
   const discount = useMemo(() => {
     if (!test) return 0;
     if (!test.originalPrice) return 0;
@@ -65,6 +76,20 @@ export default function LabTestDetailsScreen() {
   useEffect(() => {
     loadLabDetails();
   }, [loadLabDetails]);
+
+  useEffect(() => {
+    if (!test) return;
+    const firstAvailable = (
+      [
+        test.preparationInstructions ? "preparation" : null,
+        test.beforeTestInstructions ? "before" : null,
+        test.afterTestInstructions ? "after" : null,
+        test.collectionInstructions ? "collection" : null,
+      ].filter(Boolean)[0] as InstructionTabKey | null | undefined
+    ) as InstructionTabKey | undefined;
+
+    if (firstAvailable) setActiveInstructionTab(firstAvailable);
+  }, [test]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -195,7 +220,6 @@ export default function LabTestDetailsScreen() {
           <View style={styles.tabContent}>
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <View style={styles.sectionAccent} />
                 <Text style={styles.sectionTitle}>Overview</Text>
               </View>
               {test.fullDescription ? (
@@ -227,7 +251,6 @@ export default function LabTestDetailsScreen() {
             {Array.isArray(test.parameters) && test.parameters.length ? (
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <View style={styles.sectionAccent} />
                   <Text style={styles.sectionTitle}>Parameters</Text>
                 </View>
                 <View style={styles.tableWrap}>
@@ -246,7 +269,6 @@ export default function LabTestDetailsScreen() {
 
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <View style={styles.sectionAccent} />
                 <Text style={styles.sectionTitle}>Sample</Text>
               </View>
               <View style={styles.infoStack}>
@@ -291,7 +313,6 @@ export default function LabTestDetailsScreen() {
             {test.method || test.department ? (
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <View style={styles.sectionAccent} />
                   <Text style={styles.sectionTitle}>Medical</Text>
                 </View>
                 <View style={styles.infoStack}>
@@ -317,42 +338,54 @@ export default function LabTestDetailsScreen() {
             test.collectionInstructions ? (
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <View style={styles.sectionAccent} />
                   <Text style={styles.sectionTitle}>Instructions</Text>
                 </View>
-                <View style={styles.infoStack}>
-                  {test.preparationInstructions ? (
-                    <View style={styles.blockCard}>
-                      <Text style={styles.blockTitle}>Preparation</Text>
-                      <Text style={styles.blockText}>
-                        {test.preparationInstructions}
+
+                <View style={styles.instructionTabsRow}>
+                  {INSTRUCTION_TABS.map((t) => (
+                    <TouchableOpacity
+                      key={t.key}
+                      style={[
+                        styles.instructionTabBtn,
+                        activeInstructionTab === t.key &&
+                          styles.instructionTabBtnActive,
+                      ]}
+                      onPress={() => setActiveInstructionTab(t.key)}
+                      activeOpacity={0.85}
+                    >
+                      <Text
+                        style={[
+                          styles.instructionTabText,
+                          activeInstructionTab === t.key &&
+                            styles.instructionTabTextActive,
+                        ]}
+                      >
+                        {t.label}
                       </Text>
-                    </View>
-                  ) : null}
-                  {test.beforeTestInstructions ? (
-                    <View style={styles.blockCard}>
-                      <Text style={styles.blockTitle}>Before Test</Text>
-                      <Text style={styles.blockText}>
-                        {test.beforeTestInstructions}
-                      </Text>
-                    </View>
-                  ) : null}
-                  {test.afterTestInstructions ? (
-                    <View style={styles.blockCard}>
-                      <Text style={styles.blockTitle}>After Test</Text>
-                      <Text style={styles.blockText}>
-                        {test.afterTestInstructions}
-                      </Text>
-                    </View>
-                  ) : null}
-                  {test.collectionInstructions ? (
-                    <View style={styles.blockCard}>
-                      <Text style={styles.blockTitle}>Collection</Text>
-                      <Text style={styles.blockText}>
-                        {test.collectionInstructions}
-                      </Text>
-                    </View>
-                  ) : null}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <View style={styles.blockCard}>
+                  <Text style={styles.blockTitle}>
+                    {activeInstructionTab === "preparation"
+                      ? "Preparation"
+                      : activeInstructionTab === "before"
+                        ? "Before Test"
+                        : activeInstructionTab === "after"
+                          ? "After Test"
+                          : "Collection"}
+                  </Text>
+                  <Text style={styles.blockText}>
+                    {(activeInstructionTab === "preparation"
+                      ? test.preparationInstructions
+                      : activeInstructionTab === "before"
+                        ? test.beforeTestInstructions
+                        : activeInstructionTab === "after"
+                          ? test.afterTestInstructions
+                          : test.collectionInstructions) ||
+                      "No instructions available."}
+                  </Text>
                 </View>
               </View>
             ) : null}
@@ -613,6 +646,32 @@ const styles = StyleSheet.create({
   },
   infoLabel: { fontSize: 12, color: Colors.textSecondary, fontWeight: "600" },
   infoValue: { fontSize: 13, color: Colors.text, fontWeight: "600" },
+
+  instructionTabsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 12,
+  },
+  instructionTabBtn: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  instructionTabBtnActive: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryUltraLight,
+  },
+  instructionTabText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: Colors.textSecondary,
+  },
+  instructionTabTextActive: { color: Colors.primary },
+
   blockCard: {
     borderWidth: 1,
     borderColor: Colors.border,

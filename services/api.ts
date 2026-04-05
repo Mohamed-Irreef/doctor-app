@@ -755,7 +755,7 @@ export async function getOrders(params?: { status?: string }) {
 }
 
 export async function createPaymentOrder(
-  type: "appointment" | "lab" | "pharmacy" | "subscription",
+  type: "appointment" | "lab" | "pharmacy" | "subscription" | "package",
   relatedId: string,
 ) {
   try {
@@ -996,6 +996,15 @@ export async function getApprovedPackages(params?: {
 export async function getPackageById(id: string) {
   try {
     const res = await API.get(`/packages/${id}`);
+    return ok(res.data?.data);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function createPackageBooking(id: string) {
+  try {
+    const res = await API.post(`/packages/${id}/bookings`);
     return ok(res.data?.data);
   } catch (error) {
     return fail(getErrorMessage(error));

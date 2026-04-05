@@ -117,7 +117,7 @@ const createOrderSchema = z.object({
 });
 
 const createPaymentOrderSchema = z.object({
-  type: z.enum(["appointment", "lab", "pharmacy", "subscription"]),
+  type: z.enum(["appointment", "lab", "pharmacy", "subscription", "package"]),
   relatedId: z.string(),
 });
 

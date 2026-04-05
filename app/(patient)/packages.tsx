@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { ChevronRight, Package, Search } from "lucide-react-native";
+import { ArrowLeft, Package, Search } from "lucide-react-native";
 import React, { memo, useCallback, useEffect, useState } from "react";
 import {
     Dimensions,
@@ -88,8 +88,8 @@ PackageCard.displayName = "PackageCard";
 
 function PackagesPage() {
   const router = useRouter();
-  const [packages, setPackages] = useState([]);
-  const [filteredPackages, setFilteredPackages] = useState([]);
+  const [packages, setPackages] = useState<any[]>([]);
+  const [filteredPackages, setFilteredPackages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -166,13 +166,17 @@ function PackagesPage() {
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Health Packages</Text>
           <TouchableOpacity
-            style={styles.iconBtn}
+            style={styles.backBtn}
             onPress={() => router.back()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <ChevronRight size={24} color={Colors.primary} />
+            <ArrowLeft size={22} color={Colors.textInverse} />
           </TouchableOpacity>
+
+          <Text style={styles.title}>Health Packages</Text>
+
+          <View style={{ width: 40 }} />
         </View>
 
         {/* Search */}
@@ -193,6 +197,8 @@ function PackagesPage() {
           showsHorizontalScrollIndicator={false}
           data={categories}
           contentContainerStyle={styles.categoryList}
+          ListHeaderComponent={<View style={{ width: Spacing.screenH }} />}
+          ListFooterComponent={<View style={{ width: Spacing.screenH }} />}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <TouchableOpacity
@@ -225,7 +231,7 @@ function PackagesPage() {
             numColumns={2}
             columnWrapperStyle={styles.gridWrapper}
             contentContainerStyle={styles.gridContent}
-            keyExtractor={(item) => item._id}
+            keyExtractor={(item) => String((item as any)._id)}
             renderItem={({ item }) => (
               <PackageCard
                 item={item}
@@ -264,15 +270,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: Spacing.screenH,
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.sm + 6,
     backgroundColor: Colors.primary,
   },
   title: {
     color: Colors.textInverse,
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "800",
   },
-  iconBtn: {
+  backBtn: {
     width: 40,
     height: 40,
     borderRadius: Radius.full,
@@ -286,8 +292,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: Spacing.sm,
     marginHorizontal: Spacing.screenH,
-    marginTop: Spacing.md,
-    marginBottom: Spacing.sm,
+    marginTop: Spacing.sm + 6,
+    marginBottom: Spacing.sm - 2,
     paddingHorizontal: Spacing.md,
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
@@ -301,17 +307,18 @@ const styles = StyleSheet.create({
   },
 
   categoryList: {
-    paddingHorizontal: Spacing.screenH,
-    paddingVertical: Spacing.sm,
+    paddingHorizontal: 0,
+    paddingVertical: 6,
   },
   categoryChip: {
+    height: 40,
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm - 2,
     marginRight: Spacing.sm,
     borderRadius: Radius.full,
     borderWidth: 1.5,
     borderColor: Colors.border,
     backgroundColor: Colors.surface,
+    justifyContent: "center",
   },
   categoryChipActive: {
     backgroundColor: Colors.primary,
@@ -328,8 +335,8 @@ const styles = StyleSheet.create({
   gridWrapper: { gap: Spacing.md, paddingHorizontal: Spacing.screenH },
   gridContent: {
     paddingHorizontal: 0,
-    paddingVertical: Spacing.md,
-    paddingBottom: Spacing.lg,
+    paddingTop: 2,
+    paddingBottom: Spacing.md,
   },
 
   packageCard: {
@@ -338,7 +345,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     ...Shadows.card,
   },
-  packageImage: { width: "100%", height: 180, backgroundColor: Colors.border },
+  packageImage: { width: "100%", height: 120, backgroundColor: Colors.border },
   offerBadge: {
     position: "absolute",
     top: Spacing.sm,
@@ -354,7 +361,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
   },
-  packageInfo: { padding: Spacing.md },
+  packageInfo: { padding: Spacing.sm + 6 },
   packageName: {
     ...Typography.subheading,
     color: Colors.text,
@@ -366,13 +373,13 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     color: Colors.textTertiary,
     fontSize: 12,
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs + 2,
   },
   priceRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.xs,
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
   },
   offerPrice: {
     color: Colors.text,
@@ -387,7 +394,7 @@ const styles = StyleSheet.create({
   },
   bookBtn: {
     backgroundColor: Colors.primary,
-    paddingVertical: Spacing.sm,
+    paddingVertical: 9,
     borderRadius: Radius.md,
     alignItems: "center",
   },

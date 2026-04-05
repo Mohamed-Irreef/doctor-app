@@ -1,16 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import {
-    CheckCircle,
-    XCircle
-} from "lucide-react-native";
+import { CheckCircle, XCircle } from "lucide-react-native";
 import React, { useEffect, useRef } from "react";
-import {
-    Animated,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View
-} from "react-native";
+import { Animated, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ButtonPrimary from "../../components/ButtonPrimary";
 import { Colors } from "../../constants/Colors";
@@ -32,6 +23,56 @@ export default function PaymentResultScreen() {
   const failureMessage = "Payment could not be completed. Please try again.";
   const scale = useRef(new Animated.Value(0.3)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+
+  const meta = React.useMemo(() => {
+    const ctx = String(context || "").toLowerCase();
+
+    if (ctx.includes("appointment")) {
+      return {
+        label: "View Appointments",
+        path: "/(patient)/appointments" as const,
+      };
+    }
+    if (ctx.includes("medicine") || ctx.includes("pharmacy")) {
+      return {
+        label: "View Orders",
+        path: "/(patient)/medicine-orders" as const,
+      };
+    }
+    if (ctx.includes("lab")) {
+      return {
+        label: "View Bookings",
+        path: "/(patient)/bookings" as const,
+      };
+    }
+    if (ctx.includes("package")) {
+      return {
+        label: "Browse Packages",
+        path: "/(patient)/packages" as const,
+      };
+    }
+
+    return { label: "Go Home", path: "/(patient)" as const };
+  }, [context]);
+
+  const now = React.useMemo(() => new Date(), []);
+  const displayDate = React.useMemo(
+    () =>
+      now.toLocaleDateString(undefined, {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }),
+    [now],
+  );
+  const displayTime = React.useMemo(
+    () =>
+      now.toLocaleTimeString(undefined, {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    [now],
+  );
 
   useEffect(() => {
     Animated.parallel([
@@ -61,7 +102,11 @@ export default function PaymentResultScreen() {
           <View
             style={[
               styles.iconBg,
-              { backgroundColor: isSuccess ? "#DCFCE7" : "#FEF2F2" },
+              {
+                backgroundColor: isSuccess
+                  ? Colors.successLight
+                  : Colors.errorLight,
+              },
             ]}
           >
             {isSuccess ? (
@@ -93,19 +138,19 @@ export default function PaymentResultScreen() {
             <View style={styles.receiptRow}>
               <Text style={Typography.body2}>Date</Text>
               <Text style={[Typography.body1, { fontWeight: "600" }]}>
-                Oct 24, 2026
+                {displayDate}
               </Text>
             </View>
             <View style={styles.receiptRow}>
               <Text style={Typography.body2}>Time</Text>
               <Text style={[Typography.body1, { fontWeight: "600" }]}>
-                10:30 AM
+                {displayTime}
               </Text>
             </View>
             <View style={[styles.receiptRow, { borderBottomWidth: 0 }]}>
               <Text style={Typography.body2}>Amount Paid</Text>
               <Text style={[Typography.h2, { color: Colors.success }]}>
-                ${amount ?? "150"}
+                ₹{amount ?? "0"}
               </Text>
             </View>
           </View>
@@ -116,8 +161,8 @@ export default function PaymentResultScreen() {
         {isSuccess ? (
           <>
             <ButtonPrimary
-              title="View Appointments"
-              onPress={() => router.replace("/(patient)/appointments")}
+              title={meta.label}
+              onPress={() => router.replace(meta.path)}
               style={{ marginBottom: 12 }}
             />
             <ButtonPrimary

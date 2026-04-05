@@ -10,7 +10,7 @@ const paymentSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["subscription", "appointment", "lab", "pharmacy"],
+      enum: ["subscription", "appointment", "lab", "pharmacy", "package"],
       required: true,
       index: true,
     },
@@ -36,7 +36,13 @@ const paymentSchema = new mongoose.Schema(
     razorpaySignature: { type: String },
     relatedModel: {
       type: String,
-      enum: ["Appointment", "LabBooking", "Order", "Subscription"],
+      enum: [
+        "Appointment",
+        "LabBooking",
+        "Order",
+        "Subscription",
+        "PackageBooking",
+      ],
       required: true,
     },
     relatedId: {

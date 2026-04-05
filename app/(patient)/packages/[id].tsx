@@ -2,15 +2,18 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
     ArrowLeft,
+    ChevronDown,
     FileText,
     Heart,
     MapPin,
     Phone,
     Share2,
+    Star,
     Users,
 } from "lucide-react-native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
+    ActivityIndicator,
     Alert,
     Image,
     Linking,
@@ -18,15 +21,23 @@ import {
     Share,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Colors } from "../../../constants/Colors";
 import { Shadows } from "../../../constants/Shadows";
 import { Radius, Spacing } from "../../../constants/Spacing";
 import { Typography } from "../../../constants/Typography";
-import { getPackageById } from "../../../services/api";
+import {
+    addPackageReview,
+    getPackageById,
+    getPackageReviews,
+} from "../../../services/api";
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: Colors.background },
@@ -236,10 +247,8 @@ const styles = StyleSheet.create({
   },
   stepDesc: { ...Typography.body2, color: Colors.textSecondary },
   bookBtn: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
     paddingHorizontal: Spacing.screenH,
     paddingVertical: Spacing.md,
     backgroundColor: Colors.surface,
@@ -279,16 +288,138 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     backgroundColor: Colors.surface,
   },
+
+  accordion: {
+    borderRadius: Radius.lg,
+    overflow: "hidden",
+    backgroundColor: Colors.surface,
+    marginBottom: Spacing.md,
+  },
+  accordionRow: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: Colors.surface,
+  },
+  accordionRowDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: Colors.border,
+    marginLeft: Spacing.md,
+  },
+  accordionTitle: {
+    ...Typography.subheading,
+    color: Colors.text,
+    fontWeight: "600",
+  },
+  accordionSubtitle: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  accordionChevron: {
+    color: Colors.textTertiary,
+  },
+  accordionItems: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.surface,
+  },
+  accordionItemText: {
+    ...Typography.body2,
+    color: Colors.text,
+    paddingVertical: 4,
+  },
+  accordionContentText: {
+    ...Typography.body2,
+    color: Colors.textSecondary,
+    lineHeight: 22,
+  },
+
+  reviewHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: Spacing.sm,
+  },
+  reviewSummary: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+  },
+  reviewInputWrap: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    ...Shadows.soft,
+  },
+  inputLabel: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+    marginBottom: 6,
+  },
+  starRow: { flexDirection: "row", gap: 6, marginBottom: Spacing.sm },
+  commentInput: {
+    minHeight: 90,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    color: Colors.text,
+    textAlignVertical: "top",
+    marginBottom: Spacing.sm,
+  },
+  submitBtn: {
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.sm,
+    alignItems: "center",
+  },
+  submitBtnDisabled: { opacity: 0.6 },
+  submitText: {
+    ...Typography.body2,
+    color: Colors.textInverse,
+    fontWeight: "700",
+  },
+  reviewCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    ...Shadows.soft,
+  },
+  reviewCardHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+  reviewUser: { ...Typography.body2, color: Colors.text, fontWeight: "600" },
+  reviewDate: { ...Typography.caption, color: Colors.textTertiary },
+  reviewStars: { ...Typography.caption, color: Colors.ratingGold },
+  reviewComment: {
+    ...Typography.body2,
+    color: Colors.textSecondary,
+    marginTop: 6,
+  },
 });
 
 export default function PackageDetailsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [pkg, setPkg] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
   >({});
+
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [myRating, setMyRating] = useState(0);
+  const [myComment, setMyComment] = useState("");
 
   const loadPackage = useCallback(async () => {
     try {
@@ -308,11 +439,35 @@ export default function PackageDetailsScreen() {
     loadPackage();
   }, [loadPackage]);
 
+  const loadReviews = useCallback(async () => {
+    try {
+      if (!id) return;
+      setLoadingReviews(true);
+      const res = await getPackageReviews(String(id));
+      if (Array.isArray(res.data)) setReviews(res.data);
+    } finally {
+      setLoadingReviews(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    loadReviews();
+  }, [loadReviews]);
+
   const toggleSection = (key: string) => {
     setExpandedSections((prev) => ({
       ...prev,
       [key]: !prev[key],
     }));
+  };
+
+  const formatDisplayDate = (value: any) => {
+    if (!value) return "";
+    try {
+      return new Date(value).toLocaleDateString();
+    } catch {
+      return "";
+    }
   };
 
   if (loading || !pkg) {
@@ -329,6 +484,33 @@ export default function PackageDetailsScreen() {
   const offerPrice = pkg.price?.offer || originalPrice;
   const discount = pkg.price?.discount || 0;
   const brochureHref = pkg.brochureUrl || pkg.brochure;
+  const includedTestsCount =
+    pkg.testCount ||
+    (Array.isArray(pkg.tests)
+      ? pkg.tests.reduce(
+          (sum: number, group: any) =>
+            sum + (Array.isArray(group?.tests) ? group.tests.length : 0),
+          0,
+        )
+      : 0);
+
+  const instructionSections = [
+    {
+      key: "instr-before",
+      title: "Before Test",
+      content: pkg.instructions?.before,
+    },
+    {
+      key: "instr-collection",
+      title: "Collection Instructions",
+      content: pkg.instructions?.collection,
+    },
+    {
+      key: "instr-after",
+      title: "After Test",
+      content: pkg.instructions?.after,
+    },
+  ].filter((s) => Boolean((s.content || "").trim()));
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -380,7 +562,7 @@ export default function PackageDetailsScreen() {
         <ScrollView
           style={styles.content}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingBottom: Spacing.lg }}
         >
           {/* ── PACKAGE INFO ── */}
           <View style={styles.section}>
@@ -636,35 +818,58 @@ export default function PackageDetailsScreen() {
           {pkg.tests && pkg.tests.length > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>
-                Tests Included ({pkg.testCount || 0})
+                Included {includedTestsCount} tests
               </Text>
-              <View style={styles.expandable}>
-                {pkg.tests.map((group: any, idx: number) => (
-                  <View key={idx}>
-                    <TouchableOpacity
-                      style={styles.expandableHeader}
-                      onPress={() => toggleSection(`test-${idx}`)}
-                    >
-                      <View>
-                        <Text style={styles.expandableTitle}>
-                          {group.category}
-                        </Text>
-                        <Text style={styles.testCount}>
-                          {group.tests?.length || 0} tests
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                    {expandedSections[`test-${idx}`] && (
-                      <View style={styles.expandableContent}>
-                        {group.tests?.map((test: string, testIdx: number) => (
-                          <Text key={testIdx} style={styles.testName}>
-                            {test}
+              <View style={styles.accordion}>
+                {pkg.tests.map((group: any, idx: number) => {
+                  const key = `test-${idx}`;
+                  const isOpen = Boolean(expandedSections[key]);
+
+                  return (
+                    <View key={key}>
+                      <TouchableOpacity
+                        style={styles.accordionRow}
+                        onPress={() => toggleSection(key)}
+                        activeOpacity={0.8}
+                      >
+                        <View style={{ flex: 1, paddingRight: Spacing.md }}>
+                          <Text style={styles.accordionTitle}>
+                            {group.category}
                           </Text>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-                ))}
+                          <Text style={styles.accordionSubtitle}>
+                            {group.tests?.length || 0} tests
+                          </Text>
+                        </View>
+                        <ChevronDown
+                          size={18}
+                          style={{
+                            transform: [{ rotate: isOpen ? "180deg" : "0deg" }],
+                          }}
+                          color={styles.accordionChevron.color}
+                        />
+                      </TouchableOpacity>
+
+                      {isOpen && (
+                        <View style={styles.accordionItems}>
+                          {(group.tests || []).map(
+                            (test: string, testIdx: number) => (
+                              <Text
+                                key={`${key}-item-${testIdx}`}
+                                style={styles.accordionItemText}
+                              >
+                                {test}
+                              </Text>
+                            ),
+                          )}
+                        </View>
+                      )}
+
+                      {idx < pkg.tests.length - 1 && (
+                        <View style={styles.accordionRowDivider} />
+                      )}
+                    </View>
+                  );
+                })}
               </View>
             </View>
           )}
@@ -705,77 +910,195 @@ export default function PackageDetailsScreen() {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Instructions</Text>
 
-              {pkg.instructions.before && (
-                <View style={styles.expandable}>
-                  <TouchableOpacity
-                    style={styles.expandableHeader}
-                    onPress={() => toggleSection("before")}
-                  >
-                    <Text style={styles.expandableTitle}>Before Test</Text>
-                  </TouchableOpacity>
-                  {expandedSections["before"] && (
-                    <View style={styles.expandableContent}>
-                      <Text style={styles.description}>
-                        {pkg.instructions.before}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              )}
+              <View style={styles.accordion}>
+                {instructionSections.map((section, idx) => {
+                  const isOpen = Boolean(expandedSections[section.key]);
+                  return (
+                    <View key={section.key}>
+                      <TouchableOpacity
+                        style={styles.accordionRow}
+                        onPress={() => toggleSection(section.key)}
+                        activeOpacity={0.8}
+                      >
+                        <View style={{ flex: 1, paddingRight: Spacing.md }}>
+                          <Text style={styles.accordionTitle}>
+                            {section.title}
+                          </Text>
+                        </View>
+                        <ChevronDown
+                          size={18}
+                          style={{
+                            transform: [{ rotate: isOpen ? "180deg" : "0deg" }],
+                          }}
+                          color={styles.accordionChevron.color}
+                        />
+                      </TouchableOpacity>
 
-              {pkg.instructions.collection && (
-                <View style={styles.expandable}>
-                  <TouchableOpacity
-                    style={styles.expandableHeader}
-                    onPress={() => toggleSection("collection")}
-                  >
-                    <Text style={styles.expandableTitle}>
-                      Collection Instructions
-                    </Text>
-                  </TouchableOpacity>
-                  {expandedSections["collection"] && (
-                    <View style={styles.expandableContent}>
-                      <Text style={styles.description}>
-                        {pkg.instructions.collection}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              )}
+                      {isOpen && (
+                        <View style={styles.accordionItems}>
+                          <Text style={styles.accordionContentText}>
+                            {section.content}
+                          </Text>
+                        </View>
+                      )}
 
-              {pkg.instructions.after && (
-                <View style={styles.expandable}>
-                  <TouchableOpacity
-                    style={styles.expandableHeader}
-                    onPress={() => toggleSection("after")}
-                  >
-                    <Text style={styles.expandableTitle}>After Test</Text>
-                  </TouchableOpacity>
-                  {expandedSections["after"] && (
-                    <View style={styles.expandableContent}>
-                      <Text style={styles.description}>
-                        {pkg.instructions.after}
-                      </Text>
+                      {idx < instructionSections.length - 1 && (
+                        <View style={styles.accordionRowDivider} />
+                      )}
                     </View>
-                  )}
-                </View>
-              )}
+                  );
+                })}
+              </View>
             </View>
           )}
+
+          {/* ── FEEDBACK ── */}
+          <View style={styles.section}>
+            <View style={styles.reviewHead}>
+              <Text style={styles.sectionTitle}>Feedback</Text>
+              <Text style={styles.reviewSummary}>
+                {Number(pkg.rating || 0).toFixed(1)} / 5 (
+                {pkg.reviewsCount || 0})
+              </Text>
+            </View>
+
+            <View style={styles.reviewInputWrap}>
+              <Text style={styles.inputLabel}>Rate this package</Text>
+              <View style={styles.starRow}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <TouchableOpacity
+                    key={star}
+                    onPress={() => setMyRating(star)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Star
+                      size={26}
+                      color={Colors.ratingGold}
+                      fill={star <= myRating ? Colors.ratingGold : "none"}
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <TextInput
+                value={myComment}
+                onChangeText={setMyComment}
+                placeholder="Write your feedback..."
+                placeholderTextColor={Colors.textSecondary}
+                multiline
+                style={styles.commentInput}
+              />
+
+              <TouchableOpacity
+                style={[
+                  styles.submitBtn,
+                  (!myRating || !myComment.trim() || submittingReview) &&
+                    styles.submitBtnDisabled,
+                ]}
+                onPress={async () => {
+                  if (!id) return;
+                  if (!myRating) {
+                    Alert.alert(
+                      "Rating required",
+                      "Please select a star rating.",
+                    );
+                    return;
+                  }
+                  if (!myComment.trim()) {
+                    Alert.alert(
+                      "Comment required",
+                      "Please write a short feedback message.",
+                    );
+                    return;
+                  }
+
+                  setSubmittingReview(true);
+                  const res = await addPackageReview(String(id), {
+                    rating: myRating,
+                    comment: myComment.trim(),
+                  });
+                  setSubmittingReview(false);
+
+                  if (res.status !== "success") {
+                    Alert.alert(
+                      "Unable to submit feedback",
+                      res.error || "Please try again later.",
+                    );
+                    return;
+                  }
+
+                  setMyRating(0);
+                  setMyComment("");
+                  await loadPackage();
+                  await loadReviews();
+                }}
+                disabled={!myRating || !myComment.trim() || submittingReview}
+              >
+                <Text style={styles.submitText}>
+                  {submittingReview ? "Submitting..." : "Submit"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {loadingReviews ? (
+              <View style={styles.card}>
+                <ActivityIndicator size="small" color={Colors.primary} />
+              </View>
+            ) : (
+              <View style={{ gap: 10 }}>
+                {reviews.length === 0 ? (
+                  <View style={styles.card}>
+                    <Text style={styles.description}>No feedback yet.</Text>
+                  </View>
+                ) : null}
+                {reviews.map((review) => (
+                  <View key={String(review._id)} style={styles.reviewCard}>
+                    <View style={styles.reviewCardHead}>
+                      <Text style={styles.reviewUser}>
+                        {review.name || "Patient"}
+                      </Text>
+                      <Text style={styles.reviewDate}>
+                        {formatDisplayDate(review.createdAt)}
+                      </Text>
+                    </View>
+                    <Text style={styles.reviewStars}>
+                      {"★".repeat(Number(review.rating || 0))}
+                    </Text>
+                    {review.comment ? (
+                      <Text style={styles.reviewComment}>{review.comment}</Text>
+                    ) : null}
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
         </ScrollView>
 
         {/* ── BOOK NOW BUTTON ── */}
-        <View style={styles.bookBtn}>
-          <LinearGradient
-            colors={[Colors.gradientStart, Colors.gradientEnd]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.bookBtnGradient}
+        <View
+          style={[
+            styles.bookBtn,
+            { paddingBottom: Spacing.md + Math.max(insets.bottom, 8) },
+          ]}
+        >
+          <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={() =>
+              router.push({
+                pathname: "/(patient)/packages/checkout",
+                params: { id: String(id) },
+              })
+            }
           >
-            <TouchableOpacity>
+            <LinearGradient
+              colors={[Colors.gradientStart, Colors.gradientEnd]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.bookBtnGradient}
+            >
               <Text style={styles.bookBtnText}>Book Now - ₹{offerPrice}</Text>
-            </TouchableOpacity>
-          </LinearGradient>
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
       </View>
     </SafeAreaView>

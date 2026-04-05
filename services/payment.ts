@@ -8,7 +8,7 @@ import {
     verifySubscriptionPayment,
 } from "./api";
 
-type PaymentType = "appointment" | "lab" | "pharmacy";
+type PaymentType = "appointment" | "lab" | "pharmacy" | "package";
 
 type PaymentResult = {
   status: "success" | "error";

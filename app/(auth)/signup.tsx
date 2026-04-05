@@ -6,7 +6,7 @@ import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 import InputField from '../../components/InputField';
 import ButtonPrimary from '../../components/ButtonPrimary';
-import { Mail, Lock, UserRound, Stethoscope, User } from 'lucide-react-native';
+import { Mail, Lock, UserRound, Stethoscope, User, Eye, EyeOff } from 'lucide-react-native';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -14,6 +14,7 @@ export default function SignupScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Role>('patient');
 
   const handleSignup = () => {
@@ -78,8 +79,23 @@ export default function SignupScreen() {
             placeholder="Password" 
             value={password} 
             onChangeText={setPassword}
-            secureTextEntry
+            secureTextEntry={!showPassword}
             icon={<Lock color={Colors.textSecondary} size={20} />}
+            iconRight={
+              <TouchableOpacity
+                onPress={() => setShowPassword((v) => !v)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+                accessibilityHint="Toggles password visibility"
+              >
+                {showPassword ? (
+                  <EyeOff color={Colors.textSecondary} size={20} />
+                ) : (
+                  <Eye color={Colors.textSecondary} size={20} />
+                )}
+              </TouchableOpacity>
+            }
           />
 
           <ButtonPrimary 
