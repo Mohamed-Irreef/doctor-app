@@ -8,6 +8,7 @@ import React, { useEffect, useState } from "react";
 import {
     Image,
     ScrollView,
+    StatusBar,
     StyleSheet,
     Text,
     TextInput,
@@ -189,6 +190,10 @@ export default function PatientProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryPressed}
+      />
       <ActionModal
         visible={errorModal}
         type="error"
@@ -361,7 +366,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    textAlign: "center",
+    textAlign: "left",
+    marginLeft: 12,
     fontSize: 17,
     fontWeight: "700",
     color: Colors.textInverse,

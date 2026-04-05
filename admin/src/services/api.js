@@ -778,6 +778,15 @@ export async function getPharmacyPartnerMedicines() {
   }
 }
 
+export async function getPharmacyPartnerMedicineCategories() {
+  try {
+    const res = await API.get("/partner/pharmacy/medicine-categories");
+    return ok(res.data?.data?.categories || []);
+  } catch (error) {
+    return fail(error);
+  }
+}
+
 export async function createPharmacyPartnerMedicine(payload) {
   try {
     const res = await API.post("/partner/pharmacy/medicines", payload);

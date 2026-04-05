@@ -5,6 +5,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     ScrollView,
+    StatusBar,
     StyleSheet,
     Text,
     TextInput,
@@ -26,6 +27,9 @@ import {
 
 const DATE_WINDOW_DAYS = 7;
 const SLOT_LOAD_BATCH_SIZE = 12;
+
+const SLOT_STATUS_BOOKED = "booked" as const;
+const SLOT_STATUS_HELD = "held" as const;
 
 function toISODateOnly(date: Date) {
   const year = date.getFullYear();
@@ -160,6 +164,10 @@ export default function LabHomeBookingScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryPressed}
+      />
       <ActionModal
         visible={errorModal}
         type="error"
@@ -256,7 +264,8 @@ export default function LabHomeBookingScreen() {
             <View style={styles.slotGrid}>
               {visibleSlots.map((slot) => {
                 const disabled =
-                  slot.status === "booked" || slot.status === "held";
+                  slot.status === SLOT_STATUS_BOOKED ||
+                  slot.status === SLOT_STATUS_HELD;
                 const selected = selectedSlot === slot.time;
                 return (
                   <TouchableOpacity
@@ -276,7 +285,9 @@ export default function LabHomeBookingScreen() {
                         disabled && styles.slotTextDisabled,
                       ]}
                     >
-                      {slot.status === "booked" ? "Booked" : slot.time}
+                      {slot.status === SLOT_STATUS_BOOKED
+                        ? "Booked"
+                        : slot.time}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -388,7 +399,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    textAlign: "center",
+    textAlign: "left",
+    marginLeft: 12,
     fontSize: 17,
     fontWeight: "700",
     color: Colors.textInverse,

@@ -719,6 +719,15 @@ export async function getMedicines(params?: { category?: string; q?: string }) {
   }
 }
 
+export async function getMedicineCategories() {
+  try {
+    const res = await API.get("/medicine-categories");
+    return ok(res.data?.data?.categories || []);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
 export async function getMedicineById(id: string) {
   try {
     const res = await API.get(`/medicines/${id}`);

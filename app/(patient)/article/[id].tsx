@@ -1,33 +1,34 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  ArrowLeft,
-  Bookmark,
-  Clock,
-  Eye,
-  Heart,
-  Share2,
-  Star,
+    ArrowLeft,
+    Bookmark,
+    Clock,
+    Eye,
+    Heart,
+    Share2,
+    Star,
 } from "lucide-react-native";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Image,
-  ScrollView,
-  Share,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Image,
+    ScrollView,
+    Share,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import Markdown from "react-native-markdown-display";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../../constants/Colors";
 import {
-  addArticleReview,
-  getArticleBySlug,
-  getArticleLikeStatus,
-  getArticleReviews,
-  toggleArticleLike,
+    addArticleReview,
+    getArticleBySlug,
+    getArticleLikeStatus,
+    getArticleReviews,
+    toggleArticleLike,
 } from "../../../services/api";
 
 function formatDisplayDate(value?: string) {
@@ -166,6 +167,7 @@ export default function ArticleDetailsScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}

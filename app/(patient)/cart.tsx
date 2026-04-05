@@ -1,4 +1,5 @@
 import * as DocumentPicker from "expo-document-picker";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Minus, Plus, Tag, Trash2 } from "lucide-react-native";
 import React from "react";
@@ -9,15 +10,20 @@ import {
     KeyboardAvoidingView,
     Linking,
     Platform,
+    StatusBar,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import ButtonPrimary from "../../components/ButtonPrimary";
 import { Colors } from "../../constants/Colors";
+import { Spacing } from "../../constants/Spacing";
 import { Typography } from "../../constants/Typography";
 import { createOrder, uploadFile } from "../../services/api";
 import { processEntityPayment } from "../../services/payment";
@@ -40,6 +46,9 @@ type CartFooterProps = {
   onRemovePrescription: () => void;
   onPreviewPrescription: (url: string) => void;
 };
+
+const BILL_LABEL_ITEM_TOTAL = "Item Total";
+const BILL_LABEL_DELIVERY_FEE = "Delivery Fee";
 
 const CartFooter = React.memo(function CartFooter({
   subtotal,
@@ -76,8 +85,11 @@ const CartFooter = React.memo(function CartFooter({
       <View style={styles.billCard}>
         <Text style={[Typography.h3, { marginBottom: 16 }]}>Bill Details</Text>
         {[
-          { label: "Item Total", value: `Rs ${subtotal.toFixed(2)}` },
-          { label: "Delivery Fee", value: `Rs ${delivery.toFixed(2)}` },
+          { label: BILL_LABEL_ITEM_TOTAL, value: `Rs ${subtotal.toFixed(2)}` },
+          {
+            label: BILL_LABEL_DELIVERY_FEE,
+            value: `Rs ${delivery.toFixed(2)}`,
+          },
         ].map((row, i) => (
           <View key={i} style={styles.billRow}>
             <Text style={Typography.body2}>{row.label}</Text>
@@ -166,6 +178,7 @@ const CartFooter = React.memo(function CartFooter({
 
 export default function CartScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { items, incrementQuantity, decrementQuantity, removeItem, clearCart } =
     useCartStore();
   const [loading, setLoading] = React.useState(false);
@@ -282,6 +295,7 @@ export default function CartScreen() {
         router.push("/(patient)/profile");
         return;
       }
+
       router.push({
         pathname: "/(patient)/payment-result",
         params: {
@@ -330,27 +344,41 @@ export default function CartScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryPressed}
+      />
       <KeyboardAvoidingView
         style={styles.keyboardWrap}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backBtn}
-          >
-            <ArrowLeft color={Colors.text} size={24} />
-          </TouchableOpacity>
-          <Text style={[Typography.h3, { flex: 1, textAlign: "center" }]}>
-            My Cart ({items.length})
-          </Text>
-          <View style={{ width: 40 }} />
-        </View>
+        <LinearGradient
+          colors={[Colors.primary, Colors.primaryPressed]}
+          style={[
+            styles.header,
+            { paddingTop: Math.max(insets.top, 8) + 8, paddingBottom: 12 },
+          ]}
+        >
+          <View style={styles.headerRow}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.headerIconBtn}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <ArrowLeft color={Colors.textInverse} size={22} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>My Cart ({items.length})</Text>
+            <View style={{ width: 40 }} />
+          </View>
+        </LinearGradient>
 
         <FlatList
           data={items}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: 120 + Math.max(insets.bottom, 10) },
+          ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
@@ -426,7 +454,12 @@ export default function CartScreen() {
           }
         />
 
-        <View style={styles.bottomBar}>
+        <View
+          style={[
+            styles.bottomBar,
+            { paddingBottom: 16 + Math.max(insets.bottom, 10) },
+          ]}
+        >
           <ButtonPrimary
             title={
               loading
@@ -449,24 +482,27 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   keyboardWrap: { flex: 1 },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    paddingHorizontal: Spacing.screenH,
   },
-  backBtn: {
+  headerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  headerIconBtn: {
     width: 40,
     height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 20,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "rgba(255,255,255,0.12)",
   },
-  listContent: { padding: 20, paddingBottom: 100 },
+  headerTitle: {
+    flex: 1,
+    textAlign: "left",
+    ...Typography.h3,
+    fontSize: 18,
+    color: Colors.textInverse,
+  },
+  listContent: { padding: 20 },
   cartItem: {
     flexDirection: "row",
     backgroundColor: Colors.surface,
@@ -621,7 +657,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     paddingHorizontal: 24,
     paddingTop: 16,
-    paddingBottom: 32,
+    paddingBottom: 16,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
   },

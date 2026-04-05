@@ -1,14 +1,16 @@
+import { useRouter } from "expo-router";
 import { ArrowLeft, Send, Sparkles } from "lucide-react-native";
 import React, { useMemo, useRef, useState } from "react";
 import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../constants/Colors";
@@ -18,6 +20,9 @@ type ChatItem = {
   role: "user" | "ai";
   text: string;
 };
+
+const ROLE_USER = "user" as const;
+const ROLE_AI = "ai" as const;
 
 function createAiReply(message: string) {
   const lower = message.toLowerCase();
@@ -31,6 +36,7 @@ function createAiReply(message: string) {
 }
 
 export default function AiChatScreen() {
+  const router = useRouter();
   const [messages, setMessages] = useState<ChatItem[]>([
     {
       id: "welcome",
@@ -49,12 +55,12 @@ export default function AiChatScreen() {
 
     const userMessage: ChatItem = {
       id: `u-${Date.now()}`,
-      role: "user",
+      role: ROLE_USER,
       text,
     };
     const aiMessage: ChatItem = {
       id: `a-${Date.now()}-${Math.random()}`,
-      role: "ai",
+      role: ROLE_AI,
       text: createAiReply(text),
     };
 
@@ -64,9 +70,17 @@ export default function AiChatScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
+    <SafeAreaView
+      style={styles.container}
+      edges={["top", "left", "right", "bottom"]}
+    >
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.surface} />
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => router.back()}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
           <ArrowLeft color={Colors.text} size={20} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
@@ -88,7 +102,7 @@ export default function AiChatScreen() {
           showsVerticalScrollIndicator={false}
         >
           {messages.map((item) => {
-            const isUser = item.role === "user";
+            const isUser = item.role === ROLE_USER;
             return (
               <View
                 key={item.id}
@@ -101,7 +115,10 @@ export default function AiChatScreen() {
                   ]}
                 >
                   <Text
-                    style={[styles.msgText, isUser ? styles.userText : styles.aiText]}
+                    style={[
+                      styles.msgText,
+                      isUser ? styles.userText : styles.aiText,
+                    ]}
                   >
                     {item.text}
                   </Text>
@@ -126,7 +143,10 @@ export default function AiChatScreen() {
             disabled={!canSend}
             activeOpacity={0.8}
           >
-            <Send color={canSend ? Colors.textInverse : Colors.textSecondary} size={18} />
+            <Send
+              color={canSend ? Colors.textInverse : Colors.textSecondary}
+              size={18}
+            />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

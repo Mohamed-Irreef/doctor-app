@@ -12,6 +12,7 @@ import {
     ActivityIndicator,
     FlatList,
     Image,
+    StatusBar,
     StyleSheet,
     Text,
     TextInput,
@@ -23,17 +24,8 @@ import {
     useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { Colors } from "../../constants/Colors";
-import { getMedicines } from "../../services/api";
+import { getMedicineCategories, getMedicines } from "../../services/api";
 import { useCartStore } from "../../store/cartStore";
-
-const CATS = [
-  "All",
-  "Pain Relief",
-  "Vitamins",
-  "Supplements",
-  "Allergy",
-  "Diabetes",
-];
 
 export default function PharmacyScreen() {
   const router = useRouter();
@@ -41,6 +33,7 @@ export default function PharmacyScreen() {
   const { items, addItem } = useCartStore();
   const cartCount = items.reduce((sum, i) => sum + i.quantity, 0);
   const [activeCategory, setActiveCategory] = useState("All");
+  const [categories, setCategories] = useState<string[]>(["All"]);
   const [query, setQuery] = useState("");
   const [medicines, setMedicines] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,12 +41,24 @@ export default function PharmacyScreen() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const response = await getMedicines();
+      const [response, categoriesResponse] = await Promise.all([
+        getMedicines(),
+        getMedicineCategories(),
+      ]);
       if (response.data) setMedicines(response.data);
+      if (categoriesResponse.data?.length) {
+        setCategories(categoriesResponse.data);
+      }
       setLoading(false);
     };
     load();
   }, []);
+
+  useEffect(() => {
+    if (!categories.includes(activeCategory)) {
+      setActiveCategory("All");
+    }
+  }, [categories, activeCategory]);
 
   const filtered = useMemo(
     () =>
@@ -68,6 +73,10 @@ export default function PharmacyScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryPressed}
+      />
       <LinearGradient
         colors={[Colors.primary, Colors.primaryPressed]}
         style={[
@@ -83,25 +92,27 @@ export default function PharmacyScreen() {
           <ArrowLeft color={Colors.textInverse} size={22} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Medicines</Text>
-        <TouchableOpacity
-          style={styles.cartBtn}
-          onPress={() => router.push("/(patient)/cart")}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <ShoppingCart color={Colors.textInverse} size={22} />
-          {cartCount > 0 && (
-            <View style={styles.cartBadge}>
-              <Text style={styles.cartBadgeText}>{cartCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.historyBtn}
-          onPress={() => router.push("/(patient)/medicine-orders")}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <ClipboardList color={Colors.textInverse} size={20} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.cartBtn}
+            onPress={() => router.push("/(patient)/cart")}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <ShoppingCart color={Colors.textInverse} size={22} />
+            {cartCount > 0 && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{cartCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.historyBtn}
+            onPress={() => router.push("/(patient)/medicine-orders")}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <ClipboardList color={Colors.textInverse} size={20} />
+          </TouchableOpacity>
+        </View>
       </LinearGradient>
 
       {loading ? (
@@ -141,7 +152,7 @@ export default function PharmacyScreen() {
 
               {/* Categories */}
               <FlatList
-                data={CATS}
+                data={categories}
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.catScroll}
@@ -275,11 +286,13 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    textAlign: "center",
+    textAlign: "left",
+    marginLeft: 12,
     fontSize: 17,
     fontWeight: "700",
     color: Colors.textInverse,
   },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 6 },
   cartBtn: {
     width: 40,
     height: 40,

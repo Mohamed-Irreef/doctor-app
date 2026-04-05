@@ -12,6 +12,7 @@ import {
     ActivityIndicator,
     FlatList,
     Image,
+    StatusBar,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -107,6 +108,10 @@ export default function LabsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryPressed}
+      />
       <LinearGradient
         colors={[Colors.primary, Colors.primaryPressed]}
         style={[
@@ -415,7 +420,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    textAlign: "center",
+    textAlign: "left",
+    marginLeft: 12,
     fontSize: 17,
     fontWeight: "700",
     color: Colors.textInverse,

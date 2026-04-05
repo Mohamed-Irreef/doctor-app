@@ -4,6 +4,7 @@ import { ArrowLeft, Heart } from "lucide-react-native";
 import React from "react";
 import {
     FlatList,
+    StatusBar,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -25,6 +26,10 @@ export default function FavoritesScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryPressed}
+      />
       <LinearGradient
         colors={[Colors.primary, Colors.primaryPressed]}
         style={[
@@ -105,7 +110,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    textAlign: "center",
+    textAlign: "left",
+    marginLeft: 12,
     color: Colors.textInverse,
   },
   backBtn: {

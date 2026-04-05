@@ -8,6 +8,7 @@ import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
+    StatusBar,
     StyleSheet,
     Text,
     TextInput,
@@ -207,6 +208,7 @@ export default function ConsultationChatScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.surface} />
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.iconBtn}

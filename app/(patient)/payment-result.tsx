@@ -1,14 +1,27 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { CheckCircle, XCircle } from "lucide-react-native";
+import { ArrowLeft, CheckCircle, XCircle } from "lucide-react-native";
 import React, { useEffect, useRef } from "react";
-import { Animated, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    Animated,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import ButtonPrimary from "../../components/ButtonPrimary";
 import { Colors } from "../../constants/Colors";
 import { Typography } from "../../constants/Typography";
 
 export default function PaymentResultScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { success, amount, doctorName, context, retryPath, reason } =
     useLocalSearchParams<{
       success: string;
@@ -91,7 +104,31 @@ export default function PaymentResultScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryPressed}
+      />
+      <LinearGradient
+        colors={[Colors.primary, Colors.primaryPressed]}
+        style={[
+          styles.header,
+          { paddingTop: Math.max(insets.top, 8) + 8, paddingBottom: 12 },
+        ]}
+      >
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <ArrowLeft color={Colors.textInverse} size={22} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Payment Status</Text>
+          <View style={{ width: 40 }} />
+        </View>
+      </LinearGradient>
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -157,7 +194,12 @@ export default function PaymentResultScreen() {
         )}
       </ScrollView>
 
-      <View style={styles.bottomActions}>
+      <View
+        style={[
+          styles.bottomActions,
+          { paddingBottom: Math.max(insets.bottom, 16) },
+        ]}
+      >
         {isSuccess ? (
           <>
             <ButtonPrimary
@@ -200,11 +242,31 @@ export default function PaymentResultScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  header: { paddingHorizontal: 24 },
+  headerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "rgba(255,255,255,0.12)",
+  },
+  headerTitle: {
+    flex: 1,
+    textAlign: "left",
+    marginLeft: 12,
+    fontSize: 17,
+    fontWeight: "700",
+    color: Colors.textInverse,
+  },
   scrollContent: {
     flexGrow: 1,
     alignItems: "center",
     padding: 24,
-    paddingTop: 60,
+    paddingTop: 24,
   },
   iconWrapper: { marginBottom: 32 },
   iconBg: {

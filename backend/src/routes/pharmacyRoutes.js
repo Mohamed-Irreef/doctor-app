@@ -2,6 +2,7 @@ const express = require("express");
 const { protectRoute, authorizeRoles } = require("../middlewares/auth");
 const validate = require("../middlewares/validate");
 const {
+  getMedicineCategories,
   getMedicines,
   getMedicineById,
   createOrder,
@@ -11,6 +12,7 @@ const { createOrderSchema } = require("../validators/businessValidators");
 
 const router = express.Router();
 
+router.get("/medicine-categories", getMedicineCategories);
 router.get("/medicines", getMedicines);
 router.get("/medicines/:id", getMedicineById);
 router.post(

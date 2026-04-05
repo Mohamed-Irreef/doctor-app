@@ -6,6 +6,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
     Image,
     ScrollView,
+    StatusBar,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -79,14 +80,14 @@ export default function LabTestDetailsScreen() {
 
   useEffect(() => {
     if (!test) return;
-    const firstAvailable = (
-      [
-        test.preparationInstructions ? "preparation" : null,
-        test.beforeTestInstructions ? "before" : null,
-        test.afterTestInstructions ? "after" : null,
-        test.collectionInstructions ? "collection" : null,
-      ].filter(Boolean)[0] as InstructionTabKey | null | undefined
-    ) as InstructionTabKey | undefined;
+    const firstAvailable = [
+      test.preparationInstructions ? "preparation" : null,
+      test.beforeTestInstructions ? "before" : null,
+      test.afterTestInstructions ? "after" : null,
+      test.collectionInstructions ? "collection" : null,
+    ].filter(Boolean)[0] as InstructionTabKey | null | undefined as
+      | InstructionTabKey
+      | undefined;
 
     if (firstAvailable) setActiveInstructionTab(firstAvailable);
   }, [test]);
@@ -116,6 +117,10 @@ export default function LabTestDetailsScreen() {
   const isAboutTab = activeTab === "about";
   return (
     <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryPressed}
+      />
       {/* Header */}
       <LinearGradient
         colors={[Colors.primary, Colors.primaryPressed]}
@@ -502,7 +507,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    textAlign: "center",
+    textAlign: "left",
+    marginLeft: 12,
     fontSize: 17,
     fontWeight: "700",
     color: Colors.textInverse,

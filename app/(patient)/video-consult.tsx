@@ -1,16 +1,21 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
 import { ArrowLeft, MessageSquare, Video } from "lucide-react-native";
 import React, { useCallback, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Image,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Colors } from "../../constants/Colors";
 import { createChat, getPatientAppointments } from "../../services/api";
 
@@ -19,13 +24,20 @@ type AppointmentItem = {
   id?: string;
   status?: string;
   type?: string;
-  doctor?: { _id?: string; id?: string; name?: string; image?: string; specialization?: string };
+  doctor?: {
+    _id?: string;
+    id?: string;
+    name?: string;
+    image?: string;
+    specialization?: string;
+  };
   date?: string;
   time?: string;
 };
 
 export default function PatientVideoConsultListScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
   const [appointments, setAppointments] = useState<AppointmentItem[]>([]);
 
@@ -69,7 +81,9 @@ export default function PatientVideoConsultListScreen() {
           doctorName: item?.doctor?.name || "Doctor",
           doctorImage: item?.doctor?.image || "",
           isBlocked: String(Boolean(response.data.isBlocked)),
-          blockedBy: response.data.blockedBy ? String(response.data.blockedBy) : "",
+          blockedBy: response.data.blockedBy
+            ? String(response.data.blockedBy)
+            : "",
         },
       });
     },
@@ -79,18 +93,37 @@ export default function PatientVideoConsultListScreen() {
   const openVideoConsult = (item: AppointmentItem) => {
     const id = String(item._id || item.id || "");
     if (!id) return;
-    router.push({ pathname: "/(patient)/appointment/video/[id]", params: { id } });
+    router.push({
+      pathname: "/(patient)/appointment/video/[id]",
+      params: { id },
+    });
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <ArrowLeft color={Colors.text} size={20} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Video Consult</Text>
-        <View style={{ width: 36 }} />
-      </View>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryPressed}
+      />
+      <LinearGradient
+        colors={[Colors.primary, Colors.primaryPressed]}
+        style={[
+          styles.header,
+          { paddingTop: Math.max(insets.top, 8) + 8, paddingBottom: 12 },
+        ]}
+      >
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => router.back()}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <ArrowLeft color={Colors.textInverse} size={20} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Video Consult</Text>
+          <View style={{ width: 36 }} />
+        </View>
+      </LinearGradient>
 
       {loading ? (
         <View style={styles.loadingWrap}>
@@ -103,7 +136,9 @@ export default function PatientVideoConsultListScreen() {
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
-              <Text style={styles.emptyTitle}>No Appointments Booked for Video consult</Text>
+              <Text style={styles.emptyTitle}>
+                No Appointments Booked for Video consult
+              </Text>
             </View>
           }
           renderItem={({ item }) => (
@@ -114,12 +149,15 @@ export default function PatientVideoConsultListScreen() {
                   style={styles.avatar}
                 />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.name}>{item.doctor?.name || "Doctor"}</Text>
+                  <Text style={styles.name}>
+                    {item.doctor?.name || "Doctor"}
+                  </Text>
                   <Text style={styles.spec}>
                     {item.doctor?.specialization || "Specialist"}
                   </Text>
                   <Text style={styles.timeText}>
-                    {item.date ? new Date(item.date).toLocaleDateString() : ""} {item.time || ""}
+                    {item.date ? new Date(item.date).toLocaleDateString() : ""}{" "}
+                    {item.time || ""}
                   </Text>
                 </View>
               </View>
@@ -131,7 +169,9 @@ export default function PatientVideoConsultListScreen() {
                   activeOpacity={0.8}
                 >
                   <MessageSquare color={Colors.primary} size={16} />
-                  <Text style={[styles.actionText, { color: Colors.primary }]}>Message</Text>
+                  <Text style={[styles.actionText, { color: Colors.primary }]}>
+                    Message
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.actionBtn, styles.videoBtn]}
@@ -139,7 +179,11 @@ export default function PatientVideoConsultListScreen() {
                   activeOpacity={0.8}
                 >
                   <Video color={Colors.textInverse} size={16} />
-                  <Text style={[styles.actionText, { color: Colors.textInverse }]}>Video Consult</Text>
+                  <Text
+                    style={[styles.actionText, { color: Colors.textInverse }]}
+                  >
+                    Video Consult
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -153,15 +197,9 @@ export default function PatientVideoConsultListScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
     paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    backgroundColor: Colors.surface,
   },
+  headerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   backBtn: {
     width: 36,
     height: 36,
@@ -169,9 +207,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "rgba(255,255,255,0.12)",
   },
-  headerTitle: { fontSize: 17, fontWeight: "800", color: Colors.text },
+  headerTitle: {
+    flex: 1,
+    textAlign: "left",
+    marginLeft: 12,
+    fontSize: 17,
+    fontWeight: "800",
+    color: Colors.textInverse,
+  },
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
   list: { padding: 14, gap: 12, paddingBottom: 28 },
   emptyWrap: {
@@ -180,7 +226,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 20,
   },
-  emptyTitle: { fontSize: 15, fontWeight: "700", color: Colors.textSecondary, textAlign: "center" },
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: Colors.textSecondary,
+    textAlign: "center",
+  },
   card: {
     backgroundColor: Colors.surface,
     borderRadius: 14,

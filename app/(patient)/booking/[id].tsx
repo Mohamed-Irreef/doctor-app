@@ -14,6 +14,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
     Pressable,
     ScrollView,
+    StatusBar,
     StyleSheet,
     Text,
     TextInput,
@@ -366,6 +367,10 @@ export default function BookingScreen() {
         style={styles.container}
         edges={["left", "right", "bottom"]}
       >
+        <StatusBar
+          barStyle="light-content"
+          backgroundColor={Colors.primaryPressed}
+        />
         <LinearGradient
           colors={[Colors.primary, Colors.primaryPressed]}
           style={[
@@ -397,6 +402,10 @@ export default function BookingScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryPressed}
+      />
       {/* Confirmation Modal */}
       <ActionModal
         visible={confirmModal}
@@ -944,14 +953,16 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
+    gap: 10,
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 0,
   },
   headerTitle: {
     flex: 1,
-    textAlign: "center",
+    textAlign: "left",
+    marginLeft: 12,
     color: Colors.textInverse,
   },
   backBtn: {

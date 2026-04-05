@@ -19,6 +19,7 @@ const {
   getLabSettings,
   updateLabSettings,
   getPharmacyDashboard,
+  getPartnerMedicineCategories,
   createMedicineByPartner,
   getPartnerMedicines,
   updatePartnerMedicine,
@@ -139,6 +140,12 @@ router.delete(
   deleteLabMasterDataItem,
 );
 
+router.get(
+  "/partner/pharmacy/medicine-categories",
+  protectRoute,
+  authorizeRoles("pharmacy_admin"),
+  getPartnerMedicineCategories,
+);
 router.get(
   "/partner/pharmacy/dashboard",
   protectRoute,

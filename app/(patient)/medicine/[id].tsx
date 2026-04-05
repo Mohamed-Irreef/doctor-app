@@ -1,26 +1,28 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  AlertTriangle,
-  ArrowLeft,
-  Minus,
-  Plus,
-  RefreshCcw,
-  ShieldCheck,
-  Star,
-  Truck,
+    AlertTriangle,
+    ArrowLeft,
+    Minus,
+    Plus,
+    RefreshCcw,
+    ShieldCheck,
+    Star,
+    Truck,
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Image,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import {
-  SafeAreaView,
-  useSafeAreaInsets,
+    SafeAreaView,
+    useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import ActionModal from "../../../components/ActionModal";
 import ButtonPrimary from "../../../components/ButtonPrimary";
@@ -68,18 +70,31 @@ export default function MedicineDetailsScreen() {
 
   if (!med) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.header}>
+      <SafeAreaView
+        style={styles.container}
+        edges={["left", "right", "bottom"]}
+      >
+        <StatusBar
+          barStyle="light-content"
+          backgroundColor={Colors.primaryPressed}
+        />
+        <LinearGradient
+          colors={[Colors.primary, Colors.primaryPressed]}
+          style={[
+            styles.header,
+            { paddingTop: Math.max(insets.top, 8) + 8, paddingBottom: 12 },
+          ]}
+        >
           <TouchableOpacity
             onPress={() => router.back()}
             style={styles.backBtn}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
-            <ArrowLeft color={Colors.text} size={22} />
+            <ArrowLeft color={Colors.textInverse} size={22} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Medicine Details</Text>
           <View style={{ width: 40 }} />
-        </View>
+        </LinearGradient>
         <View
           style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
         >
@@ -111,7 +126,11 @@ export default function MedicineDetailsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryPressed}
+      />
       <ActionModal
         visible={added}
         type="success"
@@ -126,17 +145,23 @@ export default function MedicineDetailsScreen() {
         onCancel={() => setAdded(false)}
       />
 
-      <View style={styles.header}>
+      <LinearGradient
+        colors={[Colors.primary, Colors.primaryPressed]}
+        style={[
+          styles.header,
+          { paddingTop: Math.max(insets.top, 8) + 8, paddingBottom: 12 },
+        ]}
+      >
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backBtn}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <ArrowLeft color={Colors.text} size={22} />
+          <ArrowLeft color={Colors.textInverse} size={22} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Medicine Details</Text>
         <View style={{ width: 40 }} />
-      </View>
+      </LinearGradient>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -406,11 +431,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    paddingHorizontal: 20,
   },
   backBtn: {
     width: 40,
@@ -423,10 +444,11 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    textAlign: "center",
+    textAlign: "left",
+    marginLeft: 12,
     fontSize: 17,
     fontWeight: "700",
-    color: Colors.text,
+    color: Colors.textInverse,
   },
   scroll: { paddingBottom: 120 },
   imageBg: {

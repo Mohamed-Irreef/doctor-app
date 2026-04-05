@@ -1,3 +1,4 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
     ArrowLeft,
@@ -10,20 +11,27 @@ import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     ScrollView,
+    StatusBar,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import ActionModal from "../../../components/ActionModal";
 import ButtonPrimary from "../../../components/ButtonPrimary";
 import { Colors } from "../../../constants/Colors";
 import { bookLab, getLabTestById } from "../../../services/api";
 import { processEntityPayment } from "../../../services/payment";
+const COLLECTION_HOME = "home" as const;
+const COLLECTION_LAB = "lab" as const;
 
 export default function LabBookingSummaryScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     id: string;
     date: string;
@@ -64,7 +72,7 @@ export default function LabBookingSummaryScreen() {
     setLoading(true);
     const bookingDate = new Date().toISOString();
     const homeAddress =
-      params.collectionType === "home"
+      params.collectionType === COLLECTION_HOME
         ? {
             flatHouse: params.addressFlatHouse || "",
             streetArea: params.addressStreetArea || "",
@@ -147,7 +155,11 @@ export default function LabBookingSummaryScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryPressed}
+      />
       <ActionModal
         visible={errorModal}
         type="error"
@@ -157,19 +169,32 @@ export default function LabBookingSummaryScreen() {
         onConfirm={() => setErrorModal(false)}
       />
 
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backBtn}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <ArrowLeft color={Colors.text} size={22} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Booking Summary</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <LinearGradient
+        colors={[Colors.primary, Colors.primaryPressed]}
+        style={[
+          styles.header,
+          { paddingTop: Math.max(insets.top, 8) + 8, paddingBottom: 12 },
+        ]}
+      >
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <ArrowLeft color={Colors.textInverse} size={22} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Booking Summary</Text>
+          <View style={{ width: 40 }} />
+        </View>
+      </LinearGradient>
 
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: 120 + insets.bottom },
+        ]}
+      >
         {!test ? (
           <View style={styles.loadingCard}>
             <ActivityIndicator size="small" color={Colors.primary} />
@@ -210,12 +235,12 @@ export default function LabBookingSummaryScreen() {
               <View style={styles.infoRow}>
                 <ShieldCheck size={16} color={Colors.primary} />
                 <Text style={styles.infoText}>
-                  {params.collectionType === "home"
+                  {params.collectionType === COLLECTION_HOME
                     ? "Home Collection"
                     : "Visit Lab"}
                 </Text>
               </View>
-              {params.collectionType === "home" ? (
+              {params.collectionType === COLLECTION_HOME ? (
                 <View style={styles.infoRow}>
                   <MapPin size={16} color={Colors.primary} />
                   <Text style={styles.infoText}>
@@ -248,7 +273,7 @@ export default function LabBookingSummaryScreen() {
                 <Text style={styles.breakdownLabel}>GST</Text>
                 <Text style={styles.breakdownValue}>Included</Text>
               </View>
-              {params.collectionType === "lab" ? (
+              {params.collectionType === COLLECTION_LAB ? (
                 <View style={styles.breakdownRow}>
                   <Text style={styles.breakdownLabel}>Delivery Cost</Text>
                   <Text style={styles.breakdownValue}>
@@ -260,7 +285,7 @@ export default function LabBookingSummaryScreen() {
                 <Text style={styles.breakdownLabel}>Total</Text>
                 <Text style={styles.breakdownValue}>
                   ₹
-                  {params.collectionType === "lab"
+                  {params.collectionType === COLLECTION_LAB
                     ? Number(test.price || 0) + Number(params.deliveryCost || 0)
                     : test.price}
                 </Text>
@@ -270,12 +295,17 @@ export default function LabBookingSummaryScreen() {
         )}
       </ScrollView>
 
-      <View style={styles.bottomBar}>
+      <View
+        style={[
+          styles.bottomBar,
+          { paddingBottom: Math.max(insets.bottom, 16) },
+        ]}
+      >
         <View>
           <Text style={styles.totalLabel}>Total Cost</Text>
           <Text style={styles.totalPrice}>
             ₹
-            {params.collectionType === "lab"
+            {params.collectionType === COLLECTION_LAB
               ? Number(test?.price || 0) + Number(params.deliveryCost || 0)
               : test?.price || 0}
           </Text>
@@ -293,15 +323,9 @@ export default function LabBookingSummaryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
+
+  header: { paddingHorizontal: 20 },
+  headerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   backBtn: {
     width: 40,
     height: 40,
@@ -309,16 +333,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "rgba(255,255,255,0.12)",
   },
   headerTitle: {
     flex: 1,
-    textAlign: "center",
+    textAlign: "left",
+    marginLeft: 12,
     fontSize: 17,
     fontWeight: "700",
-    color: Colors.text,
+    color: Colors.textInverse,
   },
-  scroll: { padding: 20, paddingBottom: 120 },
+
+  scroll: { padding: 20, gap: 16 },
   loadingCard: {
     borderRadius: 16,
     borderWidth: 1,
@@ -328,7 +355,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  loadingText: { fontSize: 12, fontWeight: "600", color: Colors.textSecondary },
+  loadingText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: Colors.textSecondary,
+  },
+
   summaryCard: {
     borderRadius: 20,
     borderWidth: 1,
@@ -350,6 +382,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textDecorationLine: "line-through",
   },
+
   infoCard: {
     marginTop: 16,
     borderRadius: 16,
@@ -361,6 +394,7 @@ const styles = StyleSheet.create({
   },
   infoRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   infoText: { fontSize: 13, fontWeight: "600", color: Colors.text },
+
   breakdownCard: {
     marginTop: 16,
     borderRadius: 16,
@@ -377,6 +411,7 @@ const styles = StyleSheet.create({
   },
   breakdownLabel: { fontSize: 12, color: Colors.textSecondary },
   breakdownValue: { fontSize: 12, fontWeight: "700", color: Colors.text },
+
   bottomBar: {
     position: "absolute",
     bottom: 0,
@@ -387,7 +422,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: 32,
+    paddingBottom: 16,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
     elevation: 10,

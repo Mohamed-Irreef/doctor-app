@@ -1,4 +1,7 @@
 const { z } = require("zod");
+const {
+  normalizeMedicineCategory,
+} = require("../constants/medicineCategories");
 
 const locationSchema = z.object({
   latitude: z.number(),
@@ -174,7 +177,14 @@ const createPartnerLabTestSchema = z.object({
 const createPartnerMedicineSchema = z.object({
   name: z.string().min(2),
   genericName: z.string().optional(),
-  category: z.string().min(2),
+  category: z
+    .string()
+    .min(2)
+    .refine(
+      (value) => Boolean(normalizeMedicineCategory(value)),
+      "Invalid medicine category",
+    )
+    .transform((value) => normalizeMedicineCategory(value)),
   subcategory: z.string().optional(),
   brand: z.string().min(1).optional(),
   composition: z.string().optional(),

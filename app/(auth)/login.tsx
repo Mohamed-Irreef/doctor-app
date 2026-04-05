@@ -3,12 +3,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import {
-  Eye,
-  EyeOff,
-  Lock,
-  Mail,
-  Stethoscope,
-  UserRound,
+    Eye,
+    EyeOff,
+    Lock,
+    Mail,
+    Stethoscope,
+    UserRound,
 } from "lucide-react-native";
 import React, { useState } from "react";
 import {
@@ -289,7 +289,9 @@ export default function LoginScreen() {
                 onPress={() => setShowPassword((v) => !v)}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 accessibilityRole="button"
-                accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+                accessibilityLabel={
+                  showPassword ? "Hide password" : "Show password"
+                }
                 accessibilityHint="Toggles password visibility"
               >
                 {showPassword ? (

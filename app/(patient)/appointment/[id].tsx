@@ -14,6 +14,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
     Image,
     ScrollView,
+    StatusBar,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -74,6 +75,10 @@ export default function AppointmentDetailsScreen() {
         style={styles.container}
         edges={["left", "right", "bottom"]}
       >
+        <StatusBar
+          barStyle="light-content"
+          backgroundColor={Colors.primaryPressed}
+        />
         <LinearGradient
           colors={[Colors.primary, Colors.primaryPressed]}
           style={[
@@ -115,6 +120,10 @@ export default function AppointmentDetailsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryPressed}
+      />
       {/* Cancel Confirmation */}
       <ActionModal
         visible={cancelModal}
@@ -399,7 +408,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    textAlign: "center",
+    textAlign: "left",
+    marginLeft: 12,
     fontSize: 17,
     fontWeight: "700",
     color: Colors.textInverse,

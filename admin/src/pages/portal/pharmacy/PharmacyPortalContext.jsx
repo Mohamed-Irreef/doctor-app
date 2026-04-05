@@ -5,11 +5,14 @@ import {
     createPharmacyPartnerMedicine,
     deletePharmacyPartnerMedicine,
     getPharmacyPartnerDashboard,
+    getPharmacyPartnerMedicineCategories,
     getPharmacyPartnerMedicines,
     getPharmacyPartnerOrders,
     updatePharmacyPartnerMedicine,
     updatePharmacyPartnerOrderStatus,
 } from "../../../services/api";
+
+const DEFAULT_MEDICINE_CATEGORY = "General Medicines";
 
 const ORDER_FLOW = [
   "placed",
@@ -23,7 +26,7 @@ const ORDER_FLOW = [
 const EMPTY_FORM = {
   name: "",
   genericName: "",
-  category: "",
+  category: DEFAULT_MEDICINE_CATEGORY,
   subcategory: "",
   brand: "",
   composition: "",
@@ -80,6 +83,7 @@ export function PharmacyPortalProvider({ children }) {
   const [dashboard, setDashboard] = useState({});
   const [medicines, setMedicines] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [medicineCategories, setMedicineCategories] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState("");
@@ -101,10 +105,11 @@ export function PharmacyPortalProvider({ children }) {
     setLoadingMedicines(true);
     setLoadingOrders(true);
 
-    const [d, m, o] = await Promise.all([
+    const [d, m, o, c] = await Promise.all([
       getPharmacyPartnerDashboard(),
       getPharmacyPartnerMedicines(),
       getPharmacyPartnerOrders(),
+      getPharmacyPartnerMedicineCategories(),
     ]);
 
     if (d.status === "success") {
@@ -126,6 +131,24 @@ export function PharmacyPortalProvider({ children }) {
     } else {
       setOrdersError(o.error || "Unable to load orders");
       setError((prev) => prev || o.error || "Unable to load orders");
+    }
+
+    if (c.status === "success") {
+      setMedicineCategories(c.data || []);
+      setForm((prev) => {
+        if (prev.category && (c.data || []).includes(prev.category))
+          return prev;
+        return {
+          ...prev,
+          category: (c.data || []).includes(DEFAULT_MEDICINE_CATEGORY)
+            ? DEFAULT_MEDICINE_CATEGORY
+            : c.data?.[0] || DEFAULT_MEDICINE_CATEGORY,
+        };
+      });
+    } else {
+      setError(
+        (prev) => prev || c.error || "Unable to load medicine categories",
+      );
     }
 
     setLoadingDashboard(false);
@@ -159,6 +182,7 @@ export function PharmacyPortalProvider({ children }) {
     setForm({
       ...EMPTY_FORM,
       ...item,
+      category: item.category || DEFAULT_MEDICINE_CATEGORY,
       price: Number(item.price || 0),
       mrp: Number(item.mrp || item.price || 0),
       stock: Number(item.stock || 0),
@@ -190,6 +214,11 @@ export function PharmacyPortalProvider({ children }) {
   const submitMedicine = async (event) => {
     event.preventDefault();
     setError("");
+
+    if (!form.category || !medicineCategories.includes(form.category)) {
+      setError("Please select a valid medicine category.");
+      return false;
+    }
 
     const payload = {
       name: form.name,
@@ -318,6 +347,7 @@ export function PharmacyPortalProvider({ children }) {
     load,
     lowStockItems,
     pendingOrders,
+    medicineCategories,
     selectMedicine,
     resetForm,
     submitMedicine,

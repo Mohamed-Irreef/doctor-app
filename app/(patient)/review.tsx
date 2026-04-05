@@ -1,3 +1,4 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, Star } from "lucide-react-native";
 import React, { useState } from "react";
@@ -5,13 +6,17 @@ import {
     Alert,
     Image,
     ScrollView,
+    StatusBar,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import ActionModal from "../../components/ActionModal";
 import ButtonPrimary from "../../components/ButtonPrimary";
 import { Colors } from "../../constants/Colors";
@@ -24,6 +29,7 @@ import {
 
 export default function ReviewScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const {
     doctorId,
     appointmentId,
@@ -162,7 +168,7 @@ export default function ReviewScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
       <ActionModal
         visible={submitted}
         type="success"
@@ -176,15 +182,29 @@ export default function ReviewScreen() {
         onConfirm={() => router.back()}
       />
 
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <ArrowLeft color={Colors.text} size={24} />
-        </TouchableOpacity>
-        <Text style={[Typography.h3, { flex: 1, textAlign: "center" }]}>
-          {titleByType}
-        </Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryPressed}
+      />
+      <LinearGradient
+        colors={[Colors.primary, Colors.primaryPressed]}
+        style={[
+          styles.header,
+          { paddingTop: Math.max(insets.top, 8) + 8, paddingBottom: 12 },
+        ]}
+      >
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <ArrowLeft color={Colors.textInverse} size={20} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{titleByType}</Text>
+          <View style={{ width: 36 }} />
+        </View>
+      </LinearGradient>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -267,14 +287,9 @@ export default function ReviewScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
   },
+  headerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   backBtn: {
     width: 40,
     height: 40,
@@ -282,7 +297,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "rgba(255,255,255,0.12)",
+  },
+  headerTitle: {
+    ...Typography.h3,
+    flex: 1,
+    textAlign: "left",
+    marginLeft: 12,
+    color: Colors.textInverse,
   },
   scrollContent: { padding: 24, paddingBottom: 60 },
   doctorCard: {

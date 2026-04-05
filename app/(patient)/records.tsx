@@ -14,6 +14,7 @@ import {
     Alert,
     FlatList,
     Linking,
+    StatusBar,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -102,6 +103,10 @@ export default function RecordsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryPressed}
+      />
       <LinearGradient
         colors={[Colors.primary, Colors.primaryPressed]}
         style={[

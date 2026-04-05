@@ -25,6 +25,10 @@ const { logAuditEvent } = require("../services/auditLogService");
 const { logError } = require("../utils/logger");
 const { uploadBufferToCloudinary } = require("../utils/uploadToCloudinary");
 const { emitToUser } = require("../realtime/socket");
+const {
+  MEDICINE_DB_CATEGORIES,
+  normalizeMedicineCategory,
+} = require("../constants/medicineCategories");
 
 const MASTER_GROUPS = [
   "categories",
@@ -1007,17 +1011,31 @@ const getPharmacyDashboard = catchAsync(async (req, res) => {
   );
 });
 
+const getPartnerMedicineCategories = catchAsync(async (req, res) => {
+  ensureRole(req.user, "pharmacy_admin");
+  return res.status(200).json(
+    new ApiResponse(200, "Medicine categories fetched", {
+      categories: MEDICINE_DB_CATEGORIES,
+    }),
+  );
+});
+
 const createMedicineByPartner = catchAsync(async (req, res) => {
   ensureRole(req.user, "pharmacy_admin");
 
   const price = Number(req.body.price);
   const mrp = Number(req.body.mrp || price);
   const stock = Number(req.body.stock || 0);
+  const category = normalizeMedicineCategory(req.body.category);
+  if (!category) {
+    throw new ApiError(400, "Invalid medicine category");
+  }
   const uploadedMedia = await resolveMedicineMedia(req);
 
   const med = await Medicine.create({
     ...req.body,
     ...uploadedMedia,
+    category,
     price,
     mrp,
     stock,
@@ -1060,6 +1078,14 @@ const updatePartnerMedicine = catchAsync(async (req, res) => {
 
   const uploadedMedia = await resolveMedicineMedia(req);
   Object.assign(med, req.body, uploadedMedia);
+
+  if (req.body.category !== undefined) {
+    const category = normalizeMedicineCategory(req.body.category);
+    if (!category) {
+      throw new ApiError(400, "Invalid medicine category");
+    }
+    med.category = category;
+  }
 
   if (req.body.price !== undefined) med.price = Number(req.body.price);
   if (req.body.mrp !== undefined) med.mrp = Number(req.body.mrp);
@@ -1266,6 +1292,7 @@ module.exports = {
   getLabSettings,
   updateLabSettings,
   getPharmacyDashboard,
+  getPartnerMedicineCategories,
   createMedicineByPartner,
   getPartnerMedicines,
   updatePartnerMedicine,

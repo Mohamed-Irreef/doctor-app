@@ -1,31 +1,48 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Package, Search } from "lucide-react-native";
-import React, { memo, useCallback, useEffect, useState } from "react";
+import React, {
+    memo,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 import {
-    Dimensions,
     FlatList,
     Image,
     RefreshControl,
+    StatusBar,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
+    useWindowDimensions,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import AnimatedCard from "../../components/AnimatedCard";
-import { ListSkeleton } from "../../components/SkeletonLoader";
 import { Colors } from "../../constants/Colors";
 import { Shadows } from "../../constants/Shadows";
 import { Radius, Spacing } from "../../constants/Spacing";
 import { Typography } from "../../constants/Typography";
 import { getApprovedPackages } from "../../services/api";
 
-const { width: W } = Dimensions.get("window");
-const CARD_WIDTH = (W - Spacing.screenH * 2 - Spacing.md) / 2;
+const SIDE_PADDING = 16;
+const SECTION_SPACING = 14;
+const TABS_BOTTOM_GAP = 22;
+const GRID_COLUMN_GAP = 12;
+const GRID_ROW_GAP = 14;
+const CARD_MIN_HEIGHT = 292;
 
-const categories = [
-  { id: "All", label: "All" },
+const CATEGORY_ALL = "All";
+
+const categoryTabs = [
+  { id: CATEGORY_ALL, label: "All" },
   { id: "General", label: "General" },
   { id: "Women", label: "Women" },
   { id: "Senior", label: "Senior" },
@@ -35,224 +52,318 @@ const categories = [
   { id: "Full Body", label: "Full Body" },
 ];
 
+type PackageItem = {
+  _id?: string;
+  id?: string;
+  name?: string;
+  image?: string;
+  testCount?: number;
+  ageRange?: { min?: number; max?: number };
+  shortDescription?: string;
+  category?: string;
+  price?: {
+    offer?: number;
+    original?: number;
+    discount?: number;
+  };
+};
+
 const PackageCard = memo(
-  ({ item, onPress }: { item: any; onPress: (id: string) => void }) => (
-    <AnimatedCard
-      style={[styles.packageCard, { width: CARD_WIDTH }]}
-      onPress={() => onPress(item._id)}
-    >
-      {item.image && (
-        <Image
-          source={{ uri: item.image }}
-          style={styles.packageImage}
-          resizeMode="cover"
-        />
-      )}
+  ({
+    item,
+    width,
+    onPress,
+  }: {
+    item: PackageItem;
+    width: number;
+    onPress: (id: string) => void;
+  }) => {
+    const id = String(item._id || item.id || "");
+    const offerPrice = Number(item.price?.offer || 0);
+    const originalPrice = Number(item.price?.original || 0);
+    const discount = Number(item.price?.discount || 0);
 
-      {item.price?.discount > 0 && (
-        <View style={styles.offerBadge}>
-          <Text style={styles.offerText}>{item.price.discount}% off</Text>
-        </View>
-      )}
-
-      <View style={styles.packageInfo}>
-        <Text style={styles.packageName} numberOfLines={2}>
-          {item.name}
-        </Text>
-
-        <Text style={styles.packageMeta}>
-          {item.testCount} tests • {item.ageRange?.min || "Any"}-
-          {item.ageRange?.max || "100"} yrs
-        </Text>
-
-        <View style={styles.priceRow}>
-          <Text style={styles.offerPrice}>₹{item.price?.offer}</Text>
-          {item.price?.original > item.price?.offer && (
-            <Text style={styles.originalPrice}>₹{item.price?.original}</Text>
+    return (
+      <AnimatedCard
+        style={[styles.card, { width }]}
+        onPress={() => onPress(id)}
+      >
+        <View style={styles.imageWrap}>
+          {item.image ? (
+            <Image
+              source={{ uri: item.image }}
+              style={styles.image}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.imageFallback} />
           )}
+          {discount > 0 ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{discount}% off</Text>
+            </View>
+          ) : null}
         </View>
 
-        <TouchableOpacity
-          style={styles.bookBtn}
-          onPress={() => onPress(item._id)}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.bookBtnText}>Book Now</Text>
-        </TouchableOpacity>
-      </View>
-    </AnimatedCard>
-  ),
+        <View style={styles.cardBody}>
+          <Text style={styles.cardTitle} numberOfLines={2}>
+            {item.name || "Health Package"}
+          </Text>
+
+          <Text style={styles.cardMeta} numberOfLines={1}>
+            {item.testCount || 0} tests • {item.ageRange?.min ?? "Any"}-
+            {item.ageRange?.max ?? "100"} yrs
+          </Text>
+
+          <View style={styles.priceRow}>
+            <Text style={styles.offerPrice}>₹{offerPrice}</Text>
+            {originalPrice > offerPrice ? (
+              <Text style={styles.originalPrice}>₹{originalPrice}</Text>
+            ) : null}
+          </View>
+
+          <TouchableOpacity
+            style={styles.bookButton}
+            onPress={() => onPress(id)}
+            activeOpacity={0.86}
+          >
+            <Text style={styles.bookButtonText}>Book Now</Text>
+          </TouchableOpacity>
+        </View>
+      </AnimatedCard>
+    );
+  },
 );
 
 PackageCard.displayName = "PackageCard";
 
 function PackagesPage() {
   const router = useRouter();
-  const [packages, setPackages] = useState<any[]>([]);
-  const [filteredPackages, setFilteredPackages] = useState<any[]>([]);
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const listRef = useRef<FlatList<PackageItem>>(null);
+
+  const [allPackages, setAllPackages] = useState<PackageItem[]>([]);
+  const [visiblePackages, setVisiblePackages] = useState<PackageItem[]>([]);
+  const [activeTab, setActiveTab] = useState(CATEGORY_ALL);
+  const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [searchText, setSearchText] = useState("");
 
-  const filterPackages = useCallback(
-    (items: any[], category: string, search: string) => {
-      let filtered: any[] = items;
+  const cardWidth = useMemo(
+    () => (width - SIDE_PADDING * 2 - GRID_COLUMN_GAP) / 2,
+    [width],
+  );
 
-      if (category !== "All") {
-        filtered = filtered.filter((pkg) => pkg.category === category);
+  const runFilters = useCallback(
+    (items: PackageItem[], tab: string, searchTerm: string) => {
+      let next = items;
+
+      if (tab !== CATEGORY_ALL) {
+        next = next.filter((pkg) => pkg.category === tab);
       }
 
-      if (search.trim()) {
-        const searchLower = search.toLowerCase();
-        filtered = filtered.filter(
-          (pkg) =>
-            pkg.name.toLowerCase().includes(searchLower) ||
-            pkg.shortDescription?.toLowerCase().includes(searchLower),
-        );
+      const normalizedSearch = searchTerm.trim().toLowerCase();
+      if (normalizedSearch.length > 0) {
+        next = next.filter((pkg) => {
+          const name = (pkg.name || "").toLowerCase();
+          const desc = (pkg.shortDescription || "").toLowerCase();
+          return (
+            name.includes(normalizedSearch) || desc.includes(normalizedSearch)
+          );
+        });
       }
 
-      setFilteredPackages(filtered);
+      setVisiblePackages(next);
     },
     [],
   );
 
-  const loadPackages = useCallback(async () => {
+  const fetchPackages = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await getApprovedPackages({ limit: 100 });
-      if (res.status === "success") {
-        const data = Array.isArray(res.data)
-          ? res.data
-          : res.data?.packages || [];
-        setPackages(data);
-        filterPackages(data, selectedCategory, searchText);
+      const response = await getApprovedPackages({ limit: 100 });
+      if (response.status === "success") {
+        const data = Array.isArray(response.data)
+          ? response.data
+          : response.data?.packages || [];
+        setAllPackages(data);
+        runFilters(data, activeTab, query);
       }
-    } catch (err) {
-      console.error("Failed to load packages:", err);
+    } catch (error) {
+      console.error("Failed to fetch packages", error);
     } finally {
       setLoading(false);
     }
-  }, [selectedCategory, searchText, filterPackages]);
+  }, [activeTab, query, runFilters]);
 
   useEffect(() => {
-    loadPackages();
-  }, [loadPackages]);
+    fetchPackages();
+  }, [fetchPackages]);
+
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: false });
+    });
+  }, [activeTab, query, visiblePackages.length]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadPackages();
+    await fetchPackages();
     setRefreshing(false);
-  }, [loadPackages]);
+  }, [fetchPackages]);
 
-  const handleCategoryChange = useCallback(
-    (category: string) => {
-      setSelectedCategory(category);
-      filterPackages(packages, category, searchText);
+  const onChangeTab = useCallback(
+    (tab: string) => {
+      setActiveTab(tab);
+      runFilters(allPackages, tab, query);
     },
-    [packages, searchText, filterPackages],
+    [allPackages, query, runFilters],
   );
 
-  const handleSearch = useCallback(
+  const onSearch = useCallback(
     (text: string) => {
-      setSearchText(text);
-      filterPackages(packages, selectedCategory, text);
+      setQuery(text);
+      runFilters(allPackages, activeTab, text);
     },
-    [packages, selectedCategory, filterPackages],
+    [allPackages, activeTab, runFilters],
+  );
+
+  const openPackage = useCallback(
+    (id: string) => {
+      if (!id) return;
+      router.push({ pathname: "/(patient)/packages/[id]", params: { id } });
+    },
+    [router],
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backBtn}
-            onPress={() => router.back()}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <ArrowLeft size={22} color={Colors.textInverse} />
-          </TouchableOpacity>
+    <SafeAreaView style={styles.safeArea} edges={["left", "right", "bottom"]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryPressed}
+      />
 
-          <Text style={styles.title}>Health Packages</Text>
+      <View style={styles.screen}>
+        <LinearGradient
+          colors={[Colors.primary, Colors.primaryPressed]}
+          style={[
+            styles.header,
+            { paddingTop: Math.max(insets.top, 8) + 8, paddingBottom: 12 },
+          ]}
+        >
+          <View style={styles.headerRow}>
+            <TouchableOpacity
+              style={styles.backIconButton}
+              onPress={() => router.back()}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <ArrowLeft size={20} color={Colors.textInverse} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Health Packages</Text>
+            <View style={styles.headerRightPlaceholder} />
+          </View>
+        </LinearGradient>
 
-          <View style={{ width: 40 }} />
+        <View style={styles.searchSection}>
+          <View style={styles.searchField}>
+            <Search size={18} color={Colors.textTertiary} />
+            <TextInput
+              value={query}
+              onChangeText={onSearch}
+              placeholder="Search packages..."
+              placeholderTextColor={Colors.textTertiary}
+              style={styles.searchInput}
+            />
+          </View>
         </View>
 
-        {/* Search */}
-        <View style={styles.searchBox}>
-          <Search size={18} color={Colors.textTertiary} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search packages..."
-            placeholderTextColor={Colors.textTertiary}
-            value={searchText}
-            onChangeText={handleSearch}
+        <View style={styles.tabsSection}>
+          <FlatList
+            horizontal
+            data={categoryTabs}
+            keyExtractor={(item) => item.id}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabsListContent}
+            ItemSeparatorComponent={() => <View style={styles.tabGap} />}
+            renderItem={({ item }) => {
+              const selected = item.id === activeTab;
+              return (
+                <TouchableOpacity
+                  style={[styles.tabPill, selected && styles.tabPillActive]}
+                  onPress={() => onChangeTab(item.id)}
+                  activeOpacity={0.88}
+                >
+                  <Text
+                    style={[styles.tabLabel, selected && styles.tabLabelActive]}
+                  >
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            }}
           />
         </View>
 
-        {/* Category Filter */}
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={categories}
-          contentContainerStyle={styles.categoryList}
-          ListHeaderComponent={<View style={{ width: Spacing.screenH }} />}
-          ListFooterComponent={<View style={{ width: Spacing.screenH }} />}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.categoryChip,
-                selectedCategory === item.id && styles.categoryChipActive,
-              ]}
-              onPress={() => handleCategoryChange(item.id)}
-            >
-              <Text
+        {loading ? (
+          <FlatList
+            data={Array.from({ length: 6 }, (_, idx) => `sk-${idx}`)}
+            numColumns={2}
+            keyExtractor={(item) => item}
+            columnWrapperStyle={styles.gridRow}
+            contentContainerStyle={[
+              styles.gridContent,
+              { paddingBottom: Math.max(insets.bottom, Spacing.md) },
+            ]}
+            renderItem={({ index }) => (
+              <View
                 style={[
-                  styles.categoryText,
-                  selectedCategory === item.id && styles.categoryTextActive,
+                  styles.skeletonCard,
+                  { width: cardWidth },
+                  index % 2 === 0 ? styles.leftCell : styles.rightCell,
+                ]}
+              />
+            )}
+          />
+        ) : visiblePackages.length > 0 ? (
+          <FlatList
+            ref={listRef}
+            data={visiblePackages}
+            numColumns={2}
+            keyExtractor={(item) => String(item._id || item.id)}
+            columnWrapperStyle={styles.gridRow}
+            contentContainerStyle={[
+              styles.gridContent,
+              { paddingBottom: Math.max(insets.bottom, Spacing.md) },
+            ]}
+            renderItem={({ item, index }) => (
+              <View
+                style={[
+                  styles.cardCell,
+                  { width: cardWidth },
+                  index % 2 === 0 ? styles.leftCell : styles.rightCell,
                 ]}
               >
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          )}
-        />
-
-        {/* Packages Grid */}
-        {loading ? (
-          <View style={styles.skeletonContainer}>
-            <ListSkeleton count={4} type="doctor" />
-          </View>
-        ) : filteredPackages.length > 0 ? (
-          <FlatList
-            data={filteredPackages}
-            numColumns={2}
-            columnWrapperStyle={styles.gridWrapper}
-            contentContainerStyle={styles.gridContent}
-            keyExtractor={(item) => String((item as any)._id)}
-            renderItem={({ item }) => (
-              <PackageCard
-                item={item}
-                onPress={(id) =>
-                  router.push({
-                    pathname: "/(patient)/packages/[id]",
-                    params: { id },
-                  })
-                }
-              />
+                <PackageCard
+                  item={item}
+                  width={cardWidth}
+                  onPress={openPackage}
+                />
+              </View>
             )}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
+            showsVerticalScrollIndicator={false}
           />
         ) : (
           <View style={styles.emptyState}>
-            <Package size={48} color={Colors.textTertiary} />
-            <Text style={styles.emptyStateText}>No packages found</Text>
-            <Text style={styles.emptyStateSubtext}>
-              Try adjusting your filters
+            <View style={styles.emptyIconArea}>
+              <Package size={28} color={Colors.primary} />
+            </View>
+            <Text style={styles.emptyTitle}>No packages found</Text>
+            <Text style={styles.emptySubtitle}>
+              Try a different tab or keyword.
             </Text>
           </View>
         )}
@@ -262,128 +373,183 @@ function PackagesPage() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: Colors.primary },
-  container: { flex: 1, backgroundColor: Colors.background },
+  safeArea: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  screen: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
 
   header: {
+    paddingHorizontal: SIDE_PADDING,
+  },
+  headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: Spacing.screenH,
-    paddingVertical: Spacing.sm + 6,
-    backgroundColor: Colors.primary,
+    gap: 10,
   },
-  title: {
-    color: Colors.textInverse,
-    fontSize: 20,
-    fontWeight: "800",
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.full,
-    backgroundColor: "rgba(255,255,255,0.15)",
+  backIconButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "rgba(255,255,255,0.12)",
     alignItems: "center",
     justifyContent: "center",
   },
+  headerTitle: {
+    ...Typography.h3,
+    flex: 1,
+    color: Colors.textInverse,
+    textAlign: "left",
+    marginLeft: 2,
+  },
+  headerRightPlaceholder: {
+    width: 38,
+  },
 
-  searchBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.sm,
-    marginHorizontal: Spacing.screenH,
-    marginTop: Spacing.sm + 6,
-    marginBottom: Spacing.sm - 2,
-    paddingHorizontal: Spacing.md,
-    backgroundColor: Colors.surface,
+  searchSection: {
+    paddingHorizontal: SIDE_PADDING,
+    marginTop: SECTION_SPACING,
+    marginBottom: SECTION_SPACING,
+  },
+  searchField: {
+    height: 46,
     borderRadius: Radius.lg,
     borderWidth: 1,
     borderColor: Colors.border,
-    height: 44,
+    backgroundColor: Colors.surface,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: Spacing.md,
+    gap: Spacing.sm,
   },
   searchInput: {
     flex: 1,
     ...Typography.body2,
+    color: Colors.text,
   },
 
-  categoryList: {
-    paddingHorizontal: 0,
-    paddingVertical: 6,
+  tabsSection: {
+    marginBottom: TABS_BOTTOM_GAP,
   },
-  categoryChip: {
+  tabsListContent: {
+    paddingHorizontal: SIDE_PADDING,
+  },
+  tabGap: {
+    width: 8,
+  },
+  tabPill: {
     height: 40,
-    paddingHorizontal: Spacing.md,
-    marginRight: Spacing.sm,
-    borderRadius: Radius.full,
-    borderWidth: 1.5,
+    borderRadius: 20,
+    borderWidth: 1,
     borderColor: Colors.border,
     backgroundColor: Colors.surface,
+    paddingHorizontal: Spacing.md,
+    alignItems: "center",
     justifyContent: "center",
   },
-  categoryChipActive: {
-    backgroundColor: Colors.primary,
+  tabPillActive: {
     borderColor: Colors.primary,
+    backgroundColor: Colors.primary,
   },
-  categoryText: {
+  tabLabel: {
     ...Typography.label,
     color: Colors.text,
     fontSize: 12,
     fontWeight: "600",
   },
-  categoryTextActive: { color: Colors.textInverse },
-
-  gridWrapper: { gap: Spacing.md, paddingHorizontal: Spacing.screenH },
-  gridContent: {
-    paddingHorizontal: 0,
-    paddingTop: 2,
-    paddingBottom: Spacing.md,
+  tabLabelActive: {
+    color: Colors.textInverse,
   },
 
-  packageCard: {
-    backgroundColor: Colors.surface,
+  gridContent: {
+    paddingHorizontal: SIDE_PADDING,
+    paddingTop: 4,
+    paddingBottom: Spacing.lg,
+  },
+  gridRow: {
+    justifyContent: "flex-start",
+  },
+  cardCell: {
+    marginBottom: GRID_ROW_GAP,
+  },
+  leftCell: {
+    marginRight: GRID_COLUMN_GAP,
+  },
+  rightCell: {
+    marginRight: 0,
+  },
+
+  card: {
+    minHeight: CARD_MIN_HEIGHT,
     borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
     overflow: "hidden",
     ...Shadows.card,
   },
-  packageImage: { width: "100%", height: 120, backgroundColor: Colors.border },
-  offerBadge: {
-    position: "absolute",
-    top: Spacing.sm,
-    left: Spacing.sm,
-    backgroundColor: Colors.success,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: Radius.full,
-    zIndex: 10,
+  imageWrap: {
+    width: "100%",
+    height: 122,
+    backgroundColor: Colors.border,
   },
-  offerText: {
+  image: {
+    width: "100%",
+    height: "100%",
+  },
+  imageFallback: {
+    flex: 1,
+    backgroundColor: Colors.border,
+  },
+  badge: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: Colors.success,
+  },
+  badgeText: {
     color: Colors.textInverse,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "800",
   },
-  packageInfo: { padding: Spacing.sm + 6 },
-  packageName: {
+
+  cardBody: {
+    flex: 1,
+    paddingHorizontal: 10,
+    paddingTop: 10,
+    paddingBottom: 12,
+  },
+  cardTitle: {
     ...Typography.subheading,
     color: Colors.text,
-    fontSize: 14,
-    fontWeight: "700",
-    marginBottom: Spacing.xs,
+    fontSize: 15,
+    lineHeight: 21,
+    minHeight: 42,
   },
-  packageMeta: {
+  cardMeta: {
     ...Typography.caption,
-    color: Colors.textTertiary,
+    color: Colors.textSecondary,
     fontSize: 12,
-    marginBottom: Spacing.xs + 2,
+    marginTop: 6,
   },
   priceRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: Spacing.xs,
-    marginBottom: Spacing.sm,
+    gap: 6,
+    marginTop: 10,
+    marginBottom: 10,
   },
   offerPrice: {
     color: Colors.text,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "800",
   },
   originalPrice: {
@@ -392,37 +558,53 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textDecorationLine: "line-through",
   },
-  bookBtn: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 9,
+  bookButton: {
+    marginTop: "auto",
+    height: 40,
     borderRadius: Radius.md,
+    backgroundColor: Colors.primary,
     alignItems: "center",
+    justifyContent: "center",
   },
-  bookBtnText: {
+  bookButtonText: {
     color: Colors.textInverse,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
   },
 
-  skeletonContainer: {
-    paddingHorizontal: Spacing.screenH,
-    marginTop: Spacing.md,
+  skeletonCard: {
+    height: CARD_MIN_HEIGHT,
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: GRID_ROW_GAP,
   },
+
   emptyState: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: Spacing.screenH,
+    paddingHorizontal: SIDE_PADDING,
   },
-  emptyStateText: {
-    ...Typography.subheading,
+  emptyIconArea: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.primaryLight,
+  },
+  emptyTitle: {
+    ...Typography.h3,
     color: Colors.text,
-    marginTop: Spacing.md,
+    marginTop: 10,
   },
-  emptyStateSubtext: {
-    ...Typography.caption,
-    color: Colors.textTertiary,
-    marginTop: Spacing.xs,
+  emptySubtitle: {
+    ...Typography.body2,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    marginTop: 4,
   },
 });
 

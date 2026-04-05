@@ -11,6 +11,7 @@ import React, { useCallback, useState } from "react";
 import {
     FlatList,
     Image,
+    StatusBar,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -200,6 +201,10 @@ export default function AppointmentsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryPressed}
+      />
       {/* Header */}
       <LinearGradient
         colors={[Colors.primary, Colors.primaryPressed]}
@@ -272,7 +277,12 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     borderBottomWidth: 0,
   },
-  headerTitle: { ...Typography.h3, fontSize: 20, color: Colors.textInverse },
+  headerTitle: {
+    ...Typography.h3,
+    fontSize: 18,
+    color: Colors.textInverse,
+    textAlign: "left",
+  },
 
   tabContainer: {
     flexDirection: "row",

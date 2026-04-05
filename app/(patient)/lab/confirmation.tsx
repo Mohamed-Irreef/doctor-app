@@ -1,13 +1,26 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { CheckCircle2, Download, Home, MapPin } from "lucide-react-native";
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import ButtonPrimary from "../../../components/ButtonPrimary";
 import { Colors } from "../../../constants/Colors";
 
+const COLLECTION_HOME = "home" as const;
+const COLLECTION_LAB = "lab" as const;
+
 export default function LabBookingConfirmationScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     bookingId?: string;
     testName?: string;
@@ -27,7 +40,9 @@ export default function LabBookingConfirmationScreen() {
   }>();
 
   const statusLabel =
-    params.collectionType === "lab" ? "Awaiting Visit" : "Collection Pending";
+    params.collectionType === COLLECTION_LAB
+      ? "Awaiting Visit"
+      : "Collection Pending";
 
   const addressText = [
     params.addressFlatHouse,
@@ -41,6 +56,7 @@ export default function LabBookingConfirmationScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.background} />
       <View style={styles.card}>
         <CheckCircle2 size={56} color={Colors.successPressed} />
         <Text style={styles.title}>Booking Confirmed</Text>
@@ -66,29 +82,31 @@ export default function LabBookingConfirmationScreen() {
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Collection</Text>
           <View style={styles.detailInline}>
-            {params.collectionType === "home" ? (
+            {params.collectionType === COLLECTION_HOME ? (
               <Home size={14} color={Colors.primary} />
             ) : (
               <MapPin size={14} color={Colors.primary} />
             )}
             <Text style={styles.detailValue}>
-              {params.collectionType === "home" ? addressText : params.labName}
+              {params.collectionType === COLLECTION_HOME
+                ? addressText
+                : params.labName}
             </Text>
           </View>
         </View>
-        {params.collectionType === "lab" && params.labAddress ? (
+        {params.collectionType === COLLECTION_LAB && params.labAddress ? (
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Lab Address</Text>
             <Text style={styles.detailValue}>{params.labAddress}</Text>
           </View>
         ) : null}
-        {params.collectionType === "lab" && params.distanceKm ? (
+        {params.collectionType === COLLECTION_LAB && params.distanceKm ? (
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Distance</Text>
             <Text style={styles.detailValue}>{params.distanceKm} km</Text>
           </View>
         ) : null}
-        {params.collectionType === "lab" && params.deliveryCost ? (
+        {params.collectionType === COLLECTION_LAB && params.deliveryCost ? (
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Delivery Cost</Text>
             <Text style={styles.detailValue}>₹{params.deliveryCost}</Text>
@@ -101,7 +119,12 @@ export default function LabBookingConfirmationScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.bottomBar}>
+      <View
+        style={[
+          styles.bottomBar,
+          { paddingBottom: 16 + Math.max(insets.bottom, 8) },
+        ]}
+      >
         <ButtonPrimary
           title="Go to Bookings"
           onPress={() => router.push("/(patient)/bookings")}

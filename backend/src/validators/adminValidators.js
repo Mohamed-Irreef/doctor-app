@@ -1,4 +1,5 @@
 const { z } = require("zod");
+const { MEDICINE_DB_CATEGORIES } = require("../constants/medicineCategories");
 
 const approveDoctorSchema = z.object({
   doctorUserId: z.string(),
@@ -19,7 +20,7 @@ const createLabSchema = z.object({
 
 const createMedicineSchema = z.object({
   name: z.string().min(2),
-  category: z.string().min(2),
+  category: z.enum(MEDICINE_DB_CATEGORIES),
   description: z.string().optional(),
   image: z.string().url().optional(),
   price: z.number().min(0),

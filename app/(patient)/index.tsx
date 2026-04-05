@@ -59,6 +59,7 @@ const { width: W } = Dimensions.get("window");
 const CARD_GAP = Spacing.md;
 const ITEM_W = (W - 56) / 3;
 const FEATURED_CARD_WIDTH = (W - Spacing.screenH * 2 - Spacing.sm) / 2;
+const HOME_PACKAGE_COL_GAP = Spacing.sm;
 const OFFERS_TOP_CARD_WIDTH = W * 0.82;
 const OFFERS_BOTTOM_CARD_WIDTH = W * 0.86;
 const DEFAULT_BANNER_WIDTH = W - Spacing.screenH * 2;
@@ -528,7 +529,7 @@ const PackageCard = memo(
       <AnimatedCard
         style={[
           styles.packageCard,
-          { width: (W - Spacing.screenH * 2 - Spacing.sm) / 2 },
+          { width: (W - Spacing.screenH * 2 - HOME_PACKAGE_COL_GAP) / 2 },
         ]}
         onPress={() => onPress(item._id || item.id)}
         withShadow
@@ -1222,8 +1223,8 @@ export default function PatientHomeScreen() {
                 data={packages.slice(0, 4)}
                 numColumns={2}
                 columnWrapperStyle={{
-                  gap: Spacing.sm,
                   paddingHorizontal: Spacing.screenH,
+                  justifyContent: "space-between",
                 }}
                 scrollEnabled={false}
                 keyExtractor={(p) => String(p._id || p.id)}
@@ -1245,6 +1246,16 @@ export default function PatientHomeScreen() {
                   />
                 )}
               />
+
+              <View style={styles.packageLoadMoreWrap}>
+                <TouchableOpacity
+                  style={styles.packageLoadMoreBtn}
+                  activeOpacity={0.85}
+                  onPress={() => router.push("/(patient)/packages")}
+                >
+                  <Text style={styles.packageLoadMoreText}>Load More</Text>
+                </TouchableOpacity>
+              </View>
             </FadeInSection>
           )}
 
@@ -2229,6 +2240,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
     overflow: "hidden",
+    marginBottom: Spacing.sm + 2,
     ...Shadows.soft,
   },
   packageCardImage: {
@@ -2296,5 +2308,24 @@ const styles = StyleSheet.create({
     color: Colors.textInverse,
     fontSize: 12,
     fontWeight: "800",
+  },
+
+  packageLoadMoreWrap: {
+    paddingHorizontal: Spacing.screenH,
+    marginTop: Spacing.md,
+  },
+  packageLoadMoreBtn: {
+    width: "100%",
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  packageLoadMoreText: {
+    color: Colors.text,
+    fontSize: 14,
+    fontWeight: "700",
   },
 });

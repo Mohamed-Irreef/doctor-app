@@ -1,22 +1,28 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Search } from "lucide-react-native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
     FlatList,
+    StatusBar,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import ArticleCard from "../../../components/articles/ArticleCard";
 import { Colors } from "../../../constants/Colors";
 import { getArticles } from "../../../services/api";
 
 export default function ArticlesListScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [query, setQuery] = useState("");
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,18 +61,30 @@ export default function ArticlesListScreen() {
   }, [load]);
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.iconBtn}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <ArrowLeft color={Colors.text} size={22} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Health Articles</Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryPressed}
+      />
+      <LinearGradient
+        colors={[Colors.primary, Colors.primaryPressed]}
+        style={[
+          styles.header,
+          { paddingTop: Math.max(insets.top, 8) + 8, paddingBottom: 12 },
+        ]}
+      >
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.iconBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <ArrowLeft color={Colors.textInverse} size={22} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Health Articles</Text>
+          <View style={{ width: 40 }} />
+        </View>
+      </LinearGradient>
 
       <View style={styles.searchWrap}>
         <Search size={16} color={Colors.textSecondary} />
@@ -128,14 +146,9 @@ export default function ArticlesListScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    backgroundColor: Colors.surface,
   },
+  headerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   iconBtn: {
     width: 40,
     height: 40,
@@ -143,14 +156,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "rgba(255,255,255,0.12)",
   },
   headerTitle: {
     flex: 1,
-    textAlign: "center",
+    textAlign: "left",
     fontSize: 18,
     fontWeight: "800",
-    color: Colors.text,
+    color: Colors.textInverse,
+    marginLeft: 12,
   },
   searchWrap: {
     margin: 16,

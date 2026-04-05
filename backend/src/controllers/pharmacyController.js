@@ -10,6 +10,18 @@ const {
   normalizePharmacyOrderStatus,
 } = require("../services/pharmacyOrderStateMachine");
 const { logError } = require("../utils/logger");
+const {
+  MEDICINE_FILTER_CATEGORIES,
+  normalizeMedicineCategory,
+} = require("../constants/medicineCategories");
+
+const getMedicineCategories = catchAsync(async (_req, res) => {
+  return res.status(200).json(
+    new ApiResponse(200, "Medicine categories fetched", {
+      categories: MEDICINE_FILTER_CATEGORIES,
+    }),
+  );
+});
 
 const getMedicines = catchAsync(async (req, res) => {
   const query = req.sanitizedQuery || req.query;
@@ -18,7 +30,14 @@ const getMedicines = catchAsync(async (req, res) => {
     approvalStatus: "approved",
     isApproved: true,
   };
-  if (query.category) filter.category = query.category;
+  if (query.category) {
+    const category = normalizeMedicineCategory(query.category, {
+      allowAll: true,
+    });
+    if (category && category !== "All") {
+      filter.category = category;
+    }
+  }
   if (query.q) filter.$text = { $search: query.q };
 
   const medicines = await Medicine.find(filter).sort({ createdAt: -1 }).lean();
@@ -191,6 +210,7 @@ const getOrders = catchAsync(async (req, res) => {
 });
 
 module.exports = {
+  getMedicineCategories,
   getMedicines,
   getMedicineById,
   createOrder,

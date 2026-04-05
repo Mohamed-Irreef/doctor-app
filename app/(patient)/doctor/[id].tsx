@@ -12,6 +12,7 @@ import React, { useEffect, useState } from "react";
 import {
     Image,
     ScrollView,
+    StatusBar,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -129,6 +130,7 @@ export default function DoctorProfileScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[

@@ -16,6 +16,7 @@ import {
     Modal,
     Pressable,
     ScrollView,
+    StatusBar,
     StyleSheet,
     Text,
     TextInput,
@@ -196,6 +197,10 @@ export default function SearchDoctorScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryPressed}
+      />
       {/* Header */}
       <LinearGradient
         colors={[Colors.primary, Colors.primaryPressed]}
@@ -416,7 +421,7 @@ const styles = StyleSheet.create({
     flex: 1,
     ...Typography.subheading,
     color: Colors.textInverse,
-    textAlign: "center",
+    textAlign: "left",
   },
   sortBtn: {
     width: 38,

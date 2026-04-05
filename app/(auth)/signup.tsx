@@ -1,83 +1,143 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useAuth, Role } from '../../context/AuthContext';
-import { Colors } from '../../constants/Colors';
-import { Typography } from '../../constants/Typography';
-import InputField from '../../components/InputField';
-import ButtonPrimary from '../../components/ButtonPrimary';
-import { Mail, Lock, UserRound, Stethoscope, User, Eye, EyeOff } from 'lucide-react-native';
+import { useRouter } from "expo-router";
+import {
+    Eye,
+    EyeOff,
+    Lock,
+    Mail,
+    Stethoscope,
+    User,
+    UserRound,
+} from "lucide-react-native";
+import React, { useState } from "react";
+import {
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import ButtonPrimary from "../../components/ButtonPrimary";
+import InputField from "../../components/InputField";
+import { Colors } from "../../constants/Colors";
+import { Typography } from "../../constants/Typography";
+import { Role, useAuth } from "../../context/AuthContext";
 
 export default function SignupScreen() {
   const router = useRouter();
   const { login } = useAuth();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<Role>('patient');
+  const [selectedRole, setSelectedRole] = useState<Role>("patient");
 
   const handleSignup = () => {
     // Mock signup
     if (name && email && password) {
       login(selectedRole);
     } else {
-      alert('Please fill out all fields');
+      alert("Please fill out all fields");
     }
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Image 
-          source={{ uri: 'https://images.unsplash.com/photo-1551076805-e1869033e561?auto=format&fit=crop&q=80&w=800' }} 
-          style={styles.headerImage} 
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <Image
+          source={{
+            uri: "https://images.unsplash.com/photo-1551076805-e1869033e561?auto=format&fit=crop&q=80&w=800",
+          }}
+          style={styles.headerImage}
         />
-        
+
         <View style={styles.formContainer}>
           <Text style={[Typography.h1, styles.title]}>Create Account</Text>
-          <Text style={[Typography.body1, styles.subtitle]}>Sign up to get started</Text>
+          <Text style={[Typography.body1, styles.subtitle]}>
+            Sign up to get started
+          </Text>
 
           <View style={styles.roleContainer}>
-            <TouchableOpacity 
-              style={[styles.roleCard, selectedRole === 'patient' && styles.roleCardActive]}
-              onPress={() => setSelectedRole('patient')}
+            <TouchableOpacity
+              style={[
+                styles.roleCard,
+                selectedRole === "patient" && styles.roleCardActive,
+              ]}
+              onPress={() => setSelectedRole("patient")}
             >
-              <UserRound color={selectedRole === 'patient' ? Colors.primary : Colors.textSecondary} size={24} />
-              <Text style={[Typography.body2, styles.roleText, selectedRole === 'patient' && styles.roleTextActive]}>Patient</Text>
+              <UserRound
+                color={
+                  selectedRole === "patient"
+                    ? Colors.primary
+                    : Colors.textSecondary
+                }
+                size={24}
+              />
+              <Text
+                style={[
+                  Typography.body2,
+                  styles.roleText,
+                  selectedRole === "patient" && styles.roleTextActive,
+                ]}
+              >
+                Patient
+              </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[styles.roleCard, selectedRole === 'doctor' && styles.roleCardActive]}
-              onPress={() => setSelectedRole('doctor')}
+            <TouchableOpacity
+              style={[
+                styles.roleCard,
+                selectedRole === "doctor" && styles.roleCardActive,
+              ]}
+              onPress={() => setSelectedRole("doctor")}
             >
-              <Stethoscope color={selectedRole === 'doctor' ? Colors.primary : Colors.textSecondary} size={24} />
-              <Text style={[Typography.body2, styles.roleText, selectedRole === 'doctor' && styles.roleTextActive]}>Doctor</Text>
+              <Stethoscope
+                color={
+                  selectedRole === "doctor"
+                    ? Colors.primary
+                    : Colors.textSecondary
+                }
+                size={24}
+              />
+              <Text
+                style={[
+                  Typography.body2,
+                  styles.roleText,
+                  selectedRole === "doctor" && styles.roleTextActive,
+                ]}
+              >
+                Doctor
+              </Text>
             </TouchableOpacity>
           </View>
 
-          <InputField 
-            placeholder="Full Name" 
-            value={name} 
+          <InputField
+            placeholder="Full Name"
+            value={name}
             onChangeText={setName}
             icon={<User color={Colors.textSecondary} size={20} />}
           />
 
-          <InputField 
-            placeholder="Email Address" 
-            value={email} 
+          <InputField
+            placeholder="Email Address"
+            value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
             icon={<Mail color={Colors.textSecondary} size={20} />}
           />
 
-          <InputField 
-            placeholder="Password" 
-            value={password} 
+          <InputField
+            placeholder="Password"
+            value={password}
             onChangeText={setPassword}
             secureTextEntry={!showPassword}
             icon={<Lock color={Colors.textSecondary} size={20} />}
@@ -86,7 +146,9 @@ export default function SignupScreen() {
                 onPress={() => setShowPassword((v) => !v)}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 accessibilityRole="button"
-                accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+                accessibilityLabel={
+                  showPassword ? "Hide password" : "Show password"
+                }
                 accessibilityHint="Toggles password visibility"
               >
                 {showPassword ? (
@@ -98,16 +160,23 @@ export default function SignupScreen() {
             }
           />
 
-          <ButtonPrimary 
-            title="Sign Up" 
-            onPress={handleSignup} 
+          <ButtonPrimary
+            title="Sign Up"
+            onPress={handleSignup}
             style={styles.signupBtn}
           />
 
           <View style={styles.footer}>
             <Text style={Typography.body2}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
-              <Text style={[Typography.body2, { color: Colors.primary, fontWeight: '600' }]}>Login</Text>
+            <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
+              <Text
+                style={[
+                  Typography.body2,
+                  { color: Colors.primary, fontWeight: "600" },
+                ]}
+              >
+                Login
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -125,7 +194,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   headerImage: {
-    width: '100%',
+    width: "100%",
     height: 250,
   },
   formContainer: {
@@ -149,15 +218,15 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   roleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 24,
   },
   roleCard: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     padding: 16,
     borderRadius: 16,
     borderWidth: 1.5,
@@ -171,7 +240,7 @@ const styles = StyleSheet.create({
   },
   roleText: {
     marginLeft: 8,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   roleTextActive: {
     color: Colors.primary,
@@ -181,9 +250,9 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 24,
   },
 });

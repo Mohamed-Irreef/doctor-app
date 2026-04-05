@@ -1,11 +1,13 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { Download, FlaskConical } from "lucide-react-native";
+import { useRouter } from "expo-router";
+import { ArrowLeft, Download, FlaskConical } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     FlatList,
     Linking,
     ScrollView,
+    StatusBar,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -60,6 +62,7 @@ function normalizeStatus(value?: string) {
 }
 
 export default function PatientBookingsScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const [bookings, setBookings] = useState<LabBooking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,6 +107,10 @@ export default function PatientBookingsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryPressed}
+      />
       <LinearGradient
         colors={[Colors.primary, Colors.primaryPressed]}
         style={[
@@ -111,7 +118,17 @@ export default function PatientBookingsScreen() {
           { paddingTop: Math.max(insets.top, 8) + 8, paddingBottom: 12 },
         ]}
       >
-        <Text style={styles.headerTitle}>My Lab Bookings</Text>
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <ArrowLeft color={Colors.textInverse} size={22} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>My Lab Bookings</Text>
+          <View style={{ width: 40 }} />
+        </View>
         <Text style={styles.subtitle}>
           Track every step from booking to report completion.
         </Text>
@@ -260,8 +277,22 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 10,
   },
+  headerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "rgba(255,255,255,0.12)",
+  },
   headerTitle: {
     ...Typography.h2,
+    flex: 1,
+    textAlign: "left",
+    marginLeft: 12,
     color: Colors.textInverse,
   },
   subtitle: {

@@ -19,6 +19,7 @@ const SCHEDULE_TYPES = ["otc", "h", "h1", "x"];
 export default function PharmacyProductsRoutePage() {
   const {
     medicines,
+    medicineCategories,
     form,
     setForm,
     editingId,
@@ -283,12 +284,13 @@ export default function PharmacyProductsRoutePage() {
                   onChange={(value) => updateField("brand", value)}
                   placeholder="Brand"
                 />
-                <Field
+                <SelectField
                   label="Category"
                   required
                   value={form.category}
                   onChange={(value) => updateField("category", value)}
-                  placeholder="Antibiotic"
+                  options={medicineCategories}
+                  placeholder="Select category"
                 />
                 <Field
                   label="Subcategory"
@@ -672,19 +674,28 @@ function TextArea({ label, helper, value, onChange }) {
   );
 }
 
-function SelectField({ label, value, onChange, options }) {
+function SelectField({
+  label,
+  value,
+  onChange,
+  options,
+  required,
+  placeholder = "Select",
+}) {
   return (
     <label className="space-y-2 text-sm font-semibold text-slate-700">
-      <span>{label}</span>
+      <span>
+        {label} {required ? <span className="text-rose-500">*</span> : null}
+      </span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
       >
-        <option value="">Select</option>
+        <option value="">{placeholder}</option>
         {options.map((option) => (
           <option key={option} value={option}>
-            {String(option).toUpperCase()}
+            {String(option)}
           </option>
         ))}
       </select>

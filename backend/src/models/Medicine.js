@@ -1,4 +1,9 @@
 const mongoose = require("mongoose");
+const {
+  MEDICINE_DB_CATEGORIES,
+  DEFAULT_MEDICINE_CATEGORY,
+  normalizeMedicineCategory,
+} = require("../constants/medicineCategories");
 
 const medicineSchema = new mongoose.Schema(
   {
@@ -9,7 +14,15 @@ const medicineSchema = new mongoose.Schema(
     },
     name: { type: String, required: true, index: true },
     genericName: { type: String },
-    category: { type: String, required: true, index: true },
+    category: {
+      type: String,
+      required: true,
+      index: true,
+      enum: MEDICINE_DB_CATEGORIES,
+      default: DEFAULT_MEDICINE_CATEGORY,
+      set: (value) =>
+        normalizeMedicineCategory(value) || DEFAULT_MEDICINE_CATEGORY,
+    },
     subcategory: { type: String },
     description: { type: String },
     image: { type: String },

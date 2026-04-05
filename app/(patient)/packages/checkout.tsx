@@ -1,15 +1,20 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, MapPin } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     ScrollView,
+    StatusBar,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import ButtonPrimary from "../../../components/ButtonPrimary";
 import { Colors } from "../../../constants/Colors";
 import { Radius, Spacing } from "../../../constants/Spacing";
@@ -19,6 +24,7 @@ import { processEntityPayment } from "../../../services/payment";
 
 export default function PackageCheckoutScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [pkg, setPkg] = useState<any | null>(null);
@@ -109,18 +115,30 @@ export default function PackageCheckoutScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backBtn}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <ArrowLeft color={Colors.text} size={22} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Checkout</Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryPressed}
+      />
+      <LinearGradient
+        colors={[Colors.primary, Colors.primaryPressed]}
+        style={[
+          styles.header,
+          { paddingTop: Math.max(insets.top, 8) + 8, paddingBottom: 12 },
+        ]}
+      >
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <ArrowLeft color={Colors.textInverse} size={22} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Checkout</Text>
+          <View style={{ width: 40 }} />
+        </View>
+      </LinearGradient>
 
       <ScrollView contentContainerStyle={styles.scroll}>
         {loading || !pkg ? (
@@ -154,7 +172,12 @@ export default function PackageCheckoutScreen() {
         )}
       </ScrollView>
 
-      <View style={styles.bottomBar}>
+      <View
+        style={[
+          styles.bottomBar,
+          { paddingBottom: Math.max(insets.bottom, Spacing.md) },
+        ]}
+      >
         <ButtonPrimary
           title={submitting ? "Processing..." : `Confirm & Pay ₹${amount || 0}`}
           onPress={handleConfirm}
@@ -169,24 +192,26 @@ export default function PackageCheckoutScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
     paddingHorizontal: Spacing.screenH,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    backgroundColor: Colors.surface,
   },
+  headerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   backBtn: {
     width: 40,
     height: 40,
     borderRadius: Radius.full,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "rgba(255,255,255,0.12)",
   },
-  headerTitle: { ...Typography.h2, color: Colors.text },
+  headerTitle: {
+    ...Typography.h2,
+    color: Colors.textInverse,
+    flex: 1,
+    textAlign: "left",
+    marginLeft: 12,
+  },
   scroll: {
     padding: Spacing.screenH,
     paddingBottom: 24,

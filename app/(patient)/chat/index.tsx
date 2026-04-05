@@ -6,6 +6,7 @@ import {
     ActivityIndicator,
     FlatList,
     Image,
+    StatusBar,
     StyleSheet,
     Text,
     TextInput,
@@ -98,6 +99,10 @@ export default function PatientChatListScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryPressed}
+      />
       <LinearGradient
         colors={[Colors.primary, Colors.primaryPressed]}
         style={[
@@ -105,7 +110,11 @@ export default function PatientChatListScreen() {
           { paddingTop: Math.max(insets.top, 8) + 8, paddingBottom: 12 },
         ]}
       >
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => router.back()}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
           <ArrowLeft color={Colors.textInverse} size={20} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Chat with Doctor</Text>
@@ -191,7 +200,8 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
+    gap: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderBottomWidth: 0,
@@ -206,7 +216,14 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.24)",
     backgroundColor: "rgba(255,255,255,0.16)",
   },
-  headerTitle: { fontSize: 17, fontWeight: "700", color: Colors.textInverse },
+  headerTitle: {
+    flex: 1,
+    textAlign: "left",
+    marginLeft: 12,
+    fontSize: 17,
+    fontWeight: "700",
+    color: Colors.textInverse,
+  },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",

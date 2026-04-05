@@ -52,6 +52,10 @@ export default function PatientLayout() {
     tabBarStyle: { display: "none" },
   } as const;
 
+  const hiddenButKeepTabBarOptions = {
+    href: null,
+  } as const;
+
   return (
     <View style={{ flex: 1 }}>
       <StatusBar style="light" backgroundColor={Colors.primary} />
@@ -123,7 +127,7 @@ export default function PatientLayout() {
         <Tabs.Screen name="notifications" options={hiddenScreenOptions} />
         <Tabs.Screen name="payment-result" options={hiddenScreenOptions} />
         <Tabs.Screen name="review" options={hiddenScreenOptions} />
-        <Tabs.Screen name="packages" options={hiddenScreenOptions} />
+        <Tabs.Screen name="packages" options={hiddenButKeepTabBarOptions} />
         <Tabs.Screen name="packages/[id]" options={hiddenScreenOptions} />
         <Tabs.Screen name="packages/checkout" options={hiddenScreenOptions} />
       </Tabs>

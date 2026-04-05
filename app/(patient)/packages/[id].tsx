@@ -19,6 +19,7 @@ import {
     Linking,
     ScrollView,
     Share,
+    StatusBar,
     StyleSheet,
     Text,
     TextInput,
@@ -514,6 +515,10 @@ export default function PackageDetailsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryPressed}
+      />
       <View style={styles.container}>
         {/* ── HEADER WITH IMAGE ── */}
         <View style={styles.header}>
