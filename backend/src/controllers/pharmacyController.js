@@ -1,4 +1,5 @@
 const Medicine = require("../models/Medicine");
+const PharmacyPartnerProfile = require("../models/PharmacyPartnerProfile");
 const Order = require("../models/Order");
 const Notification = require("../models/Notification");
 const ApiError = require("../utils/ApiError");
@@ -54,9 +55,41 @@ const getMedicineById = catchAsync(async (req, res) => {
     isApproved: true,
   }).lean();
   if (!medicine) throw new ApiError(404, "Medicine not found");
+
+  let pharmacy = null;
+  if (medicine.owner) {
+    const profile = await PharmacyPartnerProfile.findOne({
+      user: medicine.owner,
+    })
+      .select(
+        "pharmacyName companyLogo profilePhoto supportPhone supportEmail address city state pincode licenseNumber operationalHours",
+      )
+      .lean();
+
+    if (profile) {
+      pharmacy = {
+        pharmacyName: profile.pharmacyName || "",
+        logo: profile.companyLogo || profile.profilePhoto || "",
+        supportPhone: profile.supportPhone || "",
+        supportEmail: profile.supportEmail || "",
+        registrationId: profile.licenseNumber || "",
+        address: profile.address || "",
+        city: profile.city || "",
+        state: profile.state || "",
+        pincode: profile.pincode || "",
+        operationalHours: profile.operationalHours || "",
+      };
+    }
+  }
+
+  const payload = {
+    ...medicine,
+    pharmacy,
+  };
+
   return res
     .status(200)
-    .json(new ApiResponse(200, "Medicine fetched", medicine));
+    .json(new ApiResponse(200, "Medicine fetched", payload));
 });
 
 const createOrder = catchAsync(async (req, res) => {

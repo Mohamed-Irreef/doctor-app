@@ -318,6 +318,18 @@ const updateLabSettingsSchema = z.object({
     .optional(),
 });
 
+const updatePharmacySettingsSchema = z.object({
+  pharmacyName: z.string().min(2).optional(),
+  supportEmail: z.string().email().optional(),
+  supportPhone: z.string().min(8).optional(),
+  address: z.string().min(4).optional(),
+  city: z.string().min(2).optional(),
+  state: z.string().min(2).optional(),
+  pincode: z.string().min(4).optional(),
+  operationalHours: z.string().min(3).optional(),
+  logo: z.string().url().optional(),
+});
+
 module.exports = {
   registerLabPartnerSchema,
   registerPharmacyPartnerSchema,
@@ -329,4 +341,5 @@ module.exports = {
   listOrdersQuerySchema,
   updateOrderStatusV1Schema,
   updateLabSettingsSchema,
+  updatePharmacySettingsSchema,
 };

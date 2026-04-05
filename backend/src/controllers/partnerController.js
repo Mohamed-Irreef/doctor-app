@@ -4,6 +4,7 @@ const LabBooking = require("../models/LabBooking");
 const Order = require("../models/Order");
 const Payment = require("../models/Payment");
 const LabPartnerProfile = require("../models/LabPartnerProfile");
+const PharmacyPartnerProfile = require("../models/PharmacyPartnerProfile");
 const LabMasterData = require("../models/LabMasterData");
 const Notification = require("../models/Notification");
 const ApiError = require("../utils/ApiError");
@@ -1011,6 +1012,86 @@ const getPharmacyDashboard = catchAsync(async (req, res) => {
   );
 });
 
+const getPharmacySettings = catchAsync(async (req, res) => {
+  ensureRole(req.user, "pharmacy_admin");
+  const profile = await PharmacyPartnerProfile.findOne({
+    user: req.user._id,
+  }).lean();
+  if (!profile) throw new ApiError(404, "Pharmacy partner profile not found");
+
+  const addressLine =
+    profile.address ||
+    [profile.city, profile.state, profile.pincode].filter(Boolean).join(", ");
+
+  return res.status(200).json(
+    new ApiResponse(200, "Pharmacy settings fetched", {
+      pharmacyName: profile.pharmacyName || req.user.name,
+      registrationId: profile.licenseNumber || "",
+      supportEmail:
+        profile.supportEmail || profile.email || req.user.email || "",
+      supportPhone:
+        profile.supportPhone || profile.phone || req.user.phone || "",
+      address: addressLine || "",
+      city: profile.city || "",
+      state: profile.state || "",
+      pincode: profile.pincode || "",
+      operationalHours: profile.operationalHours || "",
+      logo: profile.companyLogo || "",
+    }),
+  );
+});
+
+const updatePharmacySettings = catchAsync(async (req, res) => {
+  ensureRole(req.user, "pharmacy_admin");
+  const profile = await PharmacyPartnerProfile.findOne({ user: req.user._id });
+  if (!profile) throw new ApiError(404, "Pharmacy partner profile not found");
+
+  if (req.body.pharmacyName !== undefined) {
+    profile.pharmacyName = req.body.pharmacyName;
+  }
+  if (req.body.supportEmail !== undefined) {
+    profile.supportEmail = req.body.supportEmail;
+  }
+  if (req.body.supportPhone !== undefined) {
+    profile.supportPhone = req.body.supportPhone;
+  }
+  if (req.body.address !== undefined) {
+    profile.address = req.body.address;
+  }
+  if (req.body.city !== undefined) {
+    profile.city = req.body.city;
+  }
+  if (req.body.state !== undefined) {
+    profile.state = req.body.state;
+  }
+  if (req.body.pincode !== undefined) {
+    profile.pincode = req.body.pincode;
+  }
+  if (req.body.operationalHours !== undefined) {
+    profile.operationalHours = req.body.operationalHours;
+  }
+  if (req.body.logo !== undefined) {
+    profile.companyLogo = req.body.logo;
+  }
+
+  await profile.save();
+
+  return res.status(200).json(
+    new ApiResponse(200, "Pharmacy settings updated", {
+      pharmacyName: profile.pharmacyName,
+      registrationId: profile.licenseNumber,
+      supportEmail: profile.supportEmail,
+      supportPhone: profile.supportPhone,
+      address: profile.address,
+      city: profile.city || "",
+      state: profile.state || "",
+      pincode: profile.pincode || "",
+      operationalHours: profile.operationalHours || "",
+      logo: profile.companyLogo || "",
+    }),
+  );
+});
+
 const getPartnerMedicineCategories = catchAsync(async (req, res) => {
   ensureRole(req.user, "pharmacy_admin");
   return res.status(200).json(
@@ -1292,6 +1373,8 @@ module.exports = {
   getLabSettings,
   updateLabSettings,
   getPharmacyDashboard,
+  getPharmacySettings,
+  updatePharmacySettings,
   getPartnerMedicineCategories,
   createMedicineByPartner,
   getPartnerMedicines,

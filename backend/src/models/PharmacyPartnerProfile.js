@@ -22,6 +22,7 @@ const pharmacyPartnerProfileSchema = new mongoose.Schema(
     email: { type: String, required: true, lowercase: true, trim: true },
     phone: { type: String, required: true, trim: true },
     profilePhoto: { type: String },
+    companyLogo: { type: String },
     pharmacyName: { type: String, required: true, trim: true, index: true },
     licenseNumber: {
       type: String,
@@ -48,6 +49,7 @@ const pharmacyPartnerProfileSchema = new mongoose.Schema(
     },
     supportPhone: { type: String, required: true },
     supportEmail: { type: String, required: true, lowercase: true, trim: true },
+    operationalHours: { type: String, trim: true },
     drugLicense: documentSchema,
     gstCertificate: documentSchema,
     ownerIdProof: documentSchema,

@@ -19,6 +19,8 @@ const {
   getLabSettings,
   updateLabSettings,
   getPharmacyDashboard,
+  getPharmacySettings,
+  updatePharmacySettings,
   getPartnerMedicineCategories,
   createMedicineByPartner,
   getPartnerMedicines,
@@ -33,6 +35,7 @@ const {
   updateLabBookingStatusSchema,
   updateOrderStatusSchema,
   updateLabSettingsSchema,
+  updatePharmacySettingsSchema,
 } = require("../validators/ecosystemValidators");
 
 const router = express.Router();
@@ -151,6 +154,19 @@ router.get(
   protectRoute,
   authorizeRoles("pharmacy_admin"),
   getPharmacyDashboard,
+);
+router.get(
+  "/partner/pharmacy/settings",
+  protectRoute,
+  authorizeRoles("pharmacy_admin"),
+  getPharmacySettings,
+);
+router.put(
+  "/partner/pharmacy/settings",
+  protectRoute,
+  authorizeRoles("pharmacy_admin"),
+  validate(updatePharmacySettingsSchema),
+  updatePharmacySettings,
 );
 router.get(
   "/partner/pharmacy/medicines",

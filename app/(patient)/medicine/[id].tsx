@@ -3,7 +3,9 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import {
     AlertTriangle,
     ArrowLeft,
+    MapPin,
     Minus,
+    Phone,
     Plus,
     RefreshCcw,
     ShieldCheck,
@@ -13,6 +15,7 @@ import {
 import React, { useEffect, useState } from "react";
 import {
     Image,
+    Linking,
     ScrollView,
     StatusBar,
     StyleSheet,
@@ -114,6 +117,14 @@ export default function MedicineDetailsScreen() {
   const reviewCount = Number(med.reviewsCount || 0);
   const reviews = Array.isArray(med.reviews) ? med.reviews : [];
   const discountPercent = Math.max(0, Number(med.discountPercent || 0));
+  const pharmacy = med.pharmacy || null;
+  const pharmacyAddress = [
+    pharmacy?.address,
+    [pharmacy?.city, pharmacy?.state].filter(Boolean).join(", "),
+    pharmacy?.pincode,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   const sideEffects = normalizeList(med.sideEffects);
   const contraindications = normalizeList(med.contraindications);
@@ -396,6 +407,78 @@ export default function MedicineDetailsScreen() {
                   <Text style={styles.highlightText}>Easy 7-day returns</Text>
                 </View>
               </View>
+
+              {pharmacy ? (
+                <View style={styles.providerSection}>
+                  <Text style={styles.descTitle}>Provided by</Text>
+                  <View style={styles.providerCard}>
+                    <View style={styles.providerTopRow}>
+                      {pharmacy.logo ? (
+                        <Image
+                          source={{ uri: pharmacy.logo }}
+                          style={styles.providerLogo}
+                        />
+                      ) : (
+                        <View style={styles.providerLogoFallback}>
+                          <Text style={styles.providerLogoFallbackText}>
+                            {String(pharmacy.pharmacyName || "Pharmacy").charAt(
+                              0,
+                            )}
+                          </Text>
+                        </View>
+                      )}
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.providerName} numberOfLines={1}>
+                          {pharmacy.pharmacyName || "Pharmacy Partner"}
+                        </Text>
+                        {!!pharmacy.registrationId && (
+                          <Text style={styles.providerMeta} numberOfLines={1}>
+                            Reg: {pharmacy.registrationId}
+                          </Text>
+                        )}
+                      </View>
+                      {!!pharmacy.supportPhone && (
+                        <TouchableOpacity
+                          style={styles.callBtn}
+                          onPress={() =>
+                            Linking.openURL(`tel:${pharmacy.supportPhone}`)
+                          }
+                          activeOpacity={0.85}
+                        >
+                          <Phone size={16} color={Colors.textInverse} />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+
+                    {!!pharmacyAddress && (
+                      <View style={styles.providerRow}>
+                        <MapPin size={14} color={Colors.textSecondary} />
+                        <Text style={styles.providerText}>
+                          {pharmacyAddress}
+                        </Text>
+                      </View>
+                    )}
+
+                    {!!pharmacy.supportPhone && (
+                      <Text style={styles.providerText}>
+                        Contact: {pharmacy.supportPhone}
+                      </Text>
+                    )}
+
+                    {!!pharmacy.supportEmail && (
+                      <Text style={styles.providerText}>
+                        Email: {pharmacy.supportEmail}
+                      </Text>
+                    )}
+
+                    {!!pharmacy.operationalHours && (
+                      <Text style={styles.providerText}>
+                        Hours: {pharmacy.operationalHours}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              ) : null}
 
               {/* Description */}
               <View style={styles.descSection}>
@@ -816,6 +899,70 @@ const styles = StyleSheet.create({
   },
   highlightText: { fontSize: 13, color: Colors.text, fontWeight: "500" },
   descSection: {},
+  providerSection: {
+    marginBottom: 18,
+  },
+  providerCard: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 14,
+    padding: 12,
+    backgroundColor: Colors.surface,
+    gap: 8,
+  },
+  providerTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  providerLogo: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    backgroundColor: Colors.lightGray,
+  },
+  providerLogoFallback: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.primaryLight,
+  },
+  providerLogoFallbackText: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: Colors.primary,
+  },
+  providerName: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: Colors.text,
+  },
+  providerMeta: {
+    marginTop: 2,
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  callBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  providerRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+  },
+  providerText: {
+    flex: 1,
+    fontSize: 12,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
   descTitle: {
     fontSize: 16,
     fontWeight: "700",

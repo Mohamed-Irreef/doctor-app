@@ -769,6 +769,24 @@ export async function getPharmacyPartnerDashboard() {
   }
 }
 
+export async function getPharmacyPartnerSettings() {
+  try {
+    const res = await API.get("/partner/pharmacy/settings");
+    return ok(res.data?.data || {});
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function updatePharmacyPartnerSettings(payload) {
+  try {
+    const res = await API.put("/partner/pharmacy/settings", payload);
+    return ok(res.data?.data || {});
+  } catch (error) {
+    return fail(error);
+  }
+}
+
 export async function getPharmacyPartnerMedicines() {
   try {
     const res = await API.get("/partner/pharmacy/medicines");
