@@ -47,6 +47,7 @@ import {
     getLabTests,
     getMedicines,
     getPatientAppointments,
+    getApprovedPackages,
 } from "../../services/api";
 import { useAuthStore } from "../../store/authStore";
 import { useCartStore } from "../../store/cartStore";
@@ -509,10 +510,50 @@ const OfferBannerCard = memo(
   ),
 );
 
+const PackageCard = memo(
+  ({ item, onPress }: { item: any; onPress: (id: string) => void }) => {
+    const originalPrice = item.price?.original || 0;
+    const offerPrice = item.price?.offer || originalPrice;
+    const discount = item.price?.discount || 0;
+
+    return (
+      <AnimatedCard
+        style={[styles.packageCard, { width: (W - Spacing.screenH * 2 - Spacing.sm) / 2 }]}
+        onPress={() => onPress(item._id || item.id)}
+        withShadow
+      >
+        {item.image && (
+          <Image source={{ uri: item.image }} style={styles.packageCardImage} />
+        )}
+        {discount > 0 && (
+          <View style={styles.packageOfferBadge}>
+            <Text style={styles.packageOfferText}>{discount}% off</Text>
+          </View>
+        )}
+        <View style={styles.packageCardContent}>
+          <Text style={styles.packageCardName} numberOfLines={2}>
+            {item.name}
+          </Text>
+          <Text style={styles.packageCardTests}>
+            Includes {item.testCount || 0} tests
+          </Text>
+          <View style={styles.packageCardPrice}>
+            <Text style={styles.packageCardOffer}>₹{offerPrice}</Text>
+            {offerPrice !== originalPrice && (
+              <Text style={styles.packageCardStrike}>₹{originalPrice}</Text>
+            )}
+          </View>
+        </View>
+      </AnimatedCard>
+    );
+  },
+);
+
 BannerSlide.displayName = "BannerSlide";
 SectionTitle.displayName = "SectionTitle";
 DoctorHCard.displayName = "DoctorHCard";
 LabCard.displayName = "LabCard";
+PackageCard.displayName = "PackageCard";
 MedCard.displayName = "MedCard";
 ArticleHCard.displayName = "ArticleHCard";
 OfferBannerCard.displayName = "OfferBannerCard";
@@ -529,6 +570,7 @@ export default function PatientHomeScreen() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
   const [labs, setLabs] = useState<any[]>([]);
+  const [packages, setPackages] = useState<any[]>([]);
   const [medicines, setMedicines] = useState<any[]>([]);
   const [appointments, setAppointments] = useState<any[]>([]);
   const [featuredIndex, setFeaturedIndex] = useState(0);
@@ -538,16 +580,18 @@ export default function PatientHomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = useCallback(async () => {
-    const [dr, ar, lr, mr, pr] = await Promise.all([
+    const [dr, ar, lr, pkg, mr, pr] = await Promise.all([
       getDoctors(),
       getFeaturedArticles(8),
       getLabTests(),
+      getApprovedPackages({ limit: 10 }),
       getMedicines(),
       getPatientAppointments(),
     ]);
     if (dr.data) setDoctors(dr.data);
     if (ar.data) setArticles(ar.data as Article[]);
     if (lr.data) setLabs(lr.data);
+    if (pkg.data) setPackages(Array.isArray(pkg.data) ? pkg.data : pkg.data?.packages || []);
     if (mr.data) setMedicines(mr.data);
     if (pr.data) setAppointments(pr.data);
     setLoading(false);
@@ -1137,6 +1181,39 @@ export default function PatientHomeScreen() {
               />
             )}
           </FadeInSection>
+
+          {/* ── POPULAR HEALTH CHECKUP PACKAGES ── */}
+          {packages.length > 0 && (
+            <FadeInSection delay={520} style={styles.section}>
+              <View style={styles.pad}>
+                <SectionTitle
+                  title="Popular Health Checkup Packages"
+                  onSeeAll={() => router.push("/(patient)/packages")}
+                />
+              </View>
+              <FlatList
+                data={packages.slice(0, 4)}
+                numColumns={2}
+                columnWrapperStyle={{
+                  gap: Spacing.sm,
+                  paddingHorizontal: Spacing.screenH,
+                }}
+                scrollEnabled={false}
+                keyExtractor={(p) => String(p._id || p.id)}
+                renderItem={({ item }) => (
+                  <PackageCard
+                    item={item}
+                    onPress={(id) =>
+                      router.push({
+                        pathname: "/(patient)/packages/[id]",
+                        params: { id },
+                      })
+                    }
+                  />
+                )}
+              />
+            </FadeInSection>
+          )}
 
           {/* ── PHARMACY ── */}
           <FadeInSection delay={600} style={styles.section}>
@@ -2115,5 +2192,66 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.8)",
     fontSize: 12,
     lineHeight: 16,
+  },
+
+  // Package Cards
+  packageCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    overflow: "hidden",
+    ...Shadows.soft,
+  },
+  packageCardImage: {
+    width: "100%",
+    height: 140,
+    backgroundColor: Colors.border,
+  },
+  packageOfferBadge: {
+    position: "absolute",
+    top: Spacing.xs,
+    left: Spacing.xs,
+    backgroundColor: Colors.success,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: Radius.full,
+    zIndex: 10,
+  },
+  packageOfferText: {
+    color: Colors.textInverse,
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  packageCardContent: {
+    padding: Spacing.sm,
+  },
+  packageCardName: {
+    ...Typography.subheading,
+    color: Colors.text,
+    fontSize: 13,
+    fontWeight: "700",
+    marginBottom: 4,
+    lineHeight: 16,
+  },
+  packageCardTests: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+    fontSize: 12,
+    marginBottom: Spacing.xs,
+  },
+  packageCardPrice: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
+  },
+  packageCardOffer: {
+    color: Colors.primary,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  packageCardStrike: {
+    color: Colors.textTertiary,
+    fontSize: 11,
+    fontWeight: "600",
+    textDecorationLine: "line-through",
   },
 });

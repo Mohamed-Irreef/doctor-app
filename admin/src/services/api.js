@@ -916,4 +916,84 @@ export async function deleteAdminArticle(id) {
   }
 }
 
+// ─── Package Management (Lab Portal) ──────────────────────────────────────────
+
+export async function getLabPartnerPackages() {
+  try {
+    const res = await API.get("/partner/lab/packages");
+    return ok(res.data?.data);
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function createLabPartnerPackage(data, files) {
+  try {
+    const formData = new FormData();
+    formData.append("data", JSON.stringify(data));
+    if (files?.packageImageFile) formData.append("packageImageFile", files.packageImageFile);
+    if (files?.brochureFile) formData.append("brochureFile", files.brochureFile);
+    if (files?.thumbnailFile) formData.append("thumbnailFile", files.thumbnailFile);
+    const res = await API.post("/partner/lab/packages", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return ok(res.data?.data);
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function updateLabPartnerPackage(id, data, files) {
+  try {
+    const formData = new FormData();
+    formData.append("data", JSON.stringify(data));
+    if (files?.packageImageFile) formData.append("packageImageFile", files.packageImageFile);
+    if (files?.brochureFile) formData.append("brochureFile", files.brochureFile);
+    const res = await API.put(`/partner/lab/packages/${id}`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return ok(res.data?.data);
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function deleteLabPartnerPackage(id) {
+  try {
+    const res = await API.delete(`/partner/lab/packages/${id}`);
+    return ok(res.data?.data);
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+// ─── Package Approvals (Admin) ─────────────────────────────────────────────────
+
+export async function getAdminPendingPackages() {
+  try {
+    const res = await API.get("/admin/packages?status=PENDING_APPROVAL");
+    return ok(res.data?.data);
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function approveAdminPackage(id) {
+  try {
+    const res = await API.patch(`/admin/packages/${id}/approve`);
+    return ok(res.data?.data);
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function rejectAdminPackage(id, reason) {
+  try {
+    const res = await API.patch(`/admin/packages/${id}/reject`, { reason });
+    return ok(res.data?.data);
+  } catch (error) {
+    return fail(error);
+  }
+}
+
 export default API;

@@ -2,13 +2,16 @@ import { Eye, FileText } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import Modal from "../components/Modal";
 import {
+    approveAdminPackage,
     decideAdminLabApproval,
     decideAdminLabContent,
     decideAdminMedicineContent,
     decideAdminPharmacyApproval,
     getAdminLabApprovalRequests,
     getAdminPendingContent,
+    getAdminPendingPackages,
     getAdminPharmacyApprovalRequests,
+    rejectAdminPackage,
 } from "../services/api";
 
 const TABS = {
@@ -16,6 +19,7 @@ const TABS = {
   PHARMACIES: "pharmacies",
   CONTENT_LABS: "content-labs",
   CONTENT_MEDICINES: "content-medicines",
+  PACKAGES: "packages",
 };
 
 function Field({ label, value }) {
@@ -153,6 +157,7 @@ export default function ApprovalHubPage() {
   const [labs, setLabs] = useState([]);
   const [pharmacies, setPharmacies] = useState([]);
   const [content, setContent] = useState({ labTests: [], medicines: [] });
+  const [packages, setPackages] = useState([]);
   const [busyKey, setBusyKey] = useState("");
   const [message, setMessage] = useState({ type: "", text: "" });
 
@@ -161,6 +166,8 @@ export default function ApprovalHubPage() {
   const [contentDetailOpen, setContentDetailOpen] = useState(false);
   const [selectedContent, setSelectedContent] = useState(null);
   const [selectedContentKind, setSelectedContentKind] = useState("lab-content");
+  const [packageDetailOpen, setPackageDetailOpen] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState(null);
 
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
@@ -177,16 +184,18 @@ export default function ApprovalHubPage() {
   );
 
   const load = async () => {
-    const [l, p, c] = await Promise.all([
+    const [l, p, c, pk] = await Promise.all([
       getAdminLabApprovalRequests(),
       getAdminPharmacyApprovalRequests(),
       getAdminPendingContent(),
+      getAdminPendingPackages(),
     ]);
     if (l.status === "success") setLabs(l.data || []);
     if (p.status === "success") setPharmacies(p.data || []);
     if (c.status === "success") {
       setContent(c.data || { labTests: [], medicines: [] });
     }
+    if (pk.status === "success") setPackages(pk.data || []);
   };
 
   useEffect(() => {
@@ -420,6 +429,16 @@ export default function ApprovalHubPage() {
         >
           Medicine Approvals
         </button>
+        <button
+          className={`rounded-lg px-3 py-1.5 text-sm font-bold ${
+            activeTab === TABS.PACKAGES
+              ? "bg-blue-600 text-white"
+              : "text-slate-600 hover:bg-slate-50"
+          }`}
+          onClick={() => setActiveTab(TABS.PACKAGES)}
+        >
+          Package Approvals
+        </button>
       </div>
 
       {message.text ? (
@@ -493,6 +512,119 @@ export default function ApprovalHubPage() {
           </div>
         </section>
       )}
+
+      {activeTab === TABS.PACKAGES && (
+        <section className="panel-card p-5">
+          <h2 className="text-lg font-extrabold">Package Approvals</h2>
+          <div className="mt-2 space-y-2">
+            {packages.length ? (
+              packages.map((pkg) => {
+                const id = pkg._id;
+                const approveKey = `pkg-${id}-approve`;
+                const rejectKey = `pkg-${id}-reject`;
+                return (
+                  <div
+                    key={id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 p-3 text-sm"
+                  >
+                    <div className="flex items-center gap-3">
+                      {pkg.image && (
+                        <img src={pkg.image} alt={pkg.name} className="h-14 w-14 rounded-lg object-cover border border-slate-200" />
+                      )}
+                      <div>
+                        <p className="font-bold text-slate-900">{pkg.name}</p>
+                        <p className="text-slate-500">{pkg.labName} • {pkg.category}</p>
+                        <p className="text-slate-500">
+                          {pkg.testCount} tests • ₹{pkg.price?.offer}
+                          {pkg.price?.discount > 0 && <span className="ml-1 text-emerald-600 font-semibold">{pkg.price.discount}% off</span>}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                        onClick={() => { setSelectedPackage(pkg); setPackageDetailOpen(true); }}
+                      >
+                        <span className="inline-flex items-center gap-1"><Eye size={14} /> View</span>
+                      </button>
+                      <button
+                        disabled={busyKey === approveKey}
+                        className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                        onClick={async () => {
+                          setBusyKey(approveKey);
+                          setMessage({ type: "", text: "" });
+                          const r = await approveAdminPackage(id);
+                          setBusyKey("");
+                          setMessage({ type: r.status === "success" ? "success" : "error", text: r.status === "success" ? "Package approved successfully." : r.error || "Failed." });
+                          await load();
+                        }}
+                      >
+                        {busyKey === approveKey ? "…" : "Approve"}
+                      </button>
+                      <button
+                        disabled={busyKey === rejectKey}
+                        className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-700 disabled:opacity-50"
+                        onClick={() => openRejectModal({
+                          fn: (pkgId, payload) => rejectAdminPackage(pkgId, payload.reason),
+                          id,
+                          listKey: "pkg",
+                        })}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-sm text-slate-500">No pending packages.</p>
+            )}
+          </div>
+        </section>
+      )}
+
+      <Modal
+        isOpen={packageDetailOpen}
+        onClose={() => setPackageDetailOpen(false)}
+        title="Package Details"
+        className="max-w-4xl"
+      >
+        {selectedPackage && (
+          <div className="space-y-4">
+            {selectedPackage.image && (
+              <div className="overflow-hidden rounded-xl border border-slate-200">
+                <img src={selectedPackage.image} alt={selectedPackage.name} className="max-h-64 w-full object-cover" />
+              </div>
+            )}
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+              <Field label="Package Name" value={selectedPackage.name} />
+              <Field label="Code" value={selectedPackage.code} />
+              <Field label="Category" value={selectedPackage.category} />
+              <Field label="Lab" value={selectedPackage.labName} />
+              <Field label="Offer Price" value={selectedPackage.price?.offer ? `INR ${selectedPackage.price.offer}` : "-"} />
+              <Field label="Original Price" value={selectedPackage.price?.original ? `INR ${selectedPackage.price.original}` : "-"} />
+              <Field label="Discount" value={selectedPackage.price?.discount ? `${selectedPackage.price.discount}%` : "-"} />
+              <Field label="GST %" value={selectedPackage.price?.gst ? `${selectedPackage.price.gst}%` : "-"} />
+              <Field label="Final Price" value={selectedPackage.price?.final ? `INR ${selectedPackage.price.final}` : "-"} />
+              <Field label="Total Tests" value={selectedPackage.testCount} />
+              <Field label="Age Range" value={selectedPackage.ageRange ? `${selectedPackage.ageRange.min}-${selectedPackage.ageRange.max} yrs` : "-"} />
+              <Field label="Gender" value={selectedPackage.gender} />
+              <Field label="Short Description" value={selectedPackage.shortDescription} />
+              <Field label="Tags" value={Array.isArray(selectedPackage.tags) ? selectedPackage.tags.join(", ") : "-"} />
+              <Field label="Status" value={selectedPackage.status} />
+            </div>
+            {selectedPackage.brochure && (
+              <div>
+                <h3 className="mb-2 text-sm font-extrabold text-slate-900">Brochure</h3>
+                <a href={selectedPackage.brochure} target="_blank" rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-sm font-semibold text-blue-700 hover:bg-blue-50">
+                  <FileText size={15} /> Download Brochure
+                </a>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
 
       <Modal
         isOpen={rejectOpen}

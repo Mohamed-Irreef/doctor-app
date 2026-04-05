@@ -978,4 +978,46 @@ export async function toggleArticleLike(articleId: string) {
   }
 }
 
+// ─── PACKAGES (Health Checkup) ──────────────────────────────────────────────
+
+export async function getApprovedPackages(params?: {
+  category?: string;
+  limit?: number;
+  page?: number;
+}) {
+  try {
+    const res = await API.get("/packages", { params });
+    return ok(res.data?.data || { packages: [], total: 0, page: 1 });
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function getPackageById(id: string) {
+  try {
+    const res = await API.get(`/packages/${id}`);
+    return ok(res.data?.data);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function addPackageReview(id: string, payload: { rating: number; comment: string }) {
+  try {
+    const res = await API.post(`/packages/${id}/reviews`, payload);
+    return ok(res.data?.data || null);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function getPackageReviews(id: string, params?: { limit?: number }) {
+  try {
+    const res = await API.get(`/packages/${id}/reviews`, { params });
+    return ok(Array.isArray(res.data?.data) ? res.data.data : []);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
 export default API;

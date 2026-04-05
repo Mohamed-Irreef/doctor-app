@@ -6,6 +6,7 @@ import {
     Settings,
     TestTube2,
     Wallet,
+    Package,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -23,11 +24,13 @@ import {
 } from "../../services/api";
 import AdminBookingsPage from "../admin/bookings";
 import OrdersCalendarPage from "../lab/OrdersCalendar";
+import PackagesPage from "./PackagesPage";
 
 const menuItems = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { key: "tests", label: "Test Management", icon: TestTube2 },
   { key: "test-list", label: "Test List", icon: ListChecks },
+  { key: "packages", label: "Package Management", icon: Package },
   { key: "bookings", label: "Bookings", icon: ClipboardList },
   { key: "orders-calendar", label: "Orders Calendar", icon: CalendarDays },
   { key: "reports", label: "Reports", icon: ClipboardList },
@@ -1754,6 +1757,8 @@ function SettingsPage() {
   const [labName, setLabName] = useState("");
   const [address, setAddress] = useState("");
   const [supportPhone, setSupportPhone] = useState("");
+  const [labLogo, setLabLogo] = useState("");
+  const [logoFile, setLogoFile] = useState(null);
   const [costPerKm, setCostPerKm] = useState("0");
   const [minCharge, setMinCharge] = useState("0");
   const [maxServiceRadiusKm, setMaxServiceRadiusKm] = useState("0");
@@ -1768,6 +1773,7 @@ function SettingsPage() {
       setLabName(data.labName || "");
       setAddress(data.address || "");
       setSupportPhone(data.supportPhone || "");
+      setLabLogo(data.logo || "");
       setCostPerKm(String(data.deliveryPricing?.costPerKm ?? 0));
       setMinCharge(String(data.deliveryPricing?.minCharge ?? 0));
       setMaxServiceRadiusKm(
@@ -1780,10 +1786,22 @@ function SettingsPage() {
   const saveSettings = async () => {
     setSaving(true);
     setMessage("");
+    
+    let logoUrl = labLogo;
+    if (logoFile) {
+      const formData = new FormData();
+      formData.append("file", logoFile);
+      const uploadRes = await uploadLabReportFile(formData);
+      if (uploadRes.status === "success") {
+        logoUrl = uploadRes.data?.url || labLogo;
+      }
+    }
+
     const response = await updateLabPartnerSettings({
       labName,
       address,
       supportPhone,
+      logo: logoUrl,
       deliveryPricing: {
         costPerKm: Number(costPerKm || 0),
         minCharge: Number(minCharge || 0),
@@ -1793,6 +1811,7 @@ function SettingsPage() {
     setSaving(false);
     if (response.status === "success") {
       setMessage("Settings saved.");
+      setLogoFile(null);
     } else {
       setMessage(response.error || "Unable to save settings.");
     }
@@ -1820,6 +1839,36 @@ function SettingsPage() {
           onChange={(e) => setSupportPhone(e.target.value)}
           placeholder="Support phone"
         />
+
+        <div className="rounded-xl border border-[#E2E8F0] p-4 space-y-3">
+          <h4 className="text-sm font-bold text-[#0F172A]">Lab Logo</h4>
+          {labLogo && (
+            <div className="mb-3">
+              <img
+                src={labLogo}
+                alt="Lab Logo"
+                className="h-20 w-20 rounded-lg object-cover"
+              />
+            </div>
+          )}
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                setLogoFile(file);
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  setLabLogo(reader.result);
+                };
+                reader.readAsDataURL(file);
+              }
+            }}
+            className="w-full rounded-lg border border-[#E2E8F0] px-3 py-2"
+            placeholder="Upload lab logo"
+          />
+        </div>
 
         <div className="rounded-xl border border-[#E2E8F0] p-4 space-y-3">
           <h4 className="text-sm font-bold text-[#0F172A]">
@@ -2050,6 +2099,7 @@ export default function LabPortalPage() {
               onUpdateTest={updateTest}
             />
           )}
+          {activeTab === "packages" && <PackagesPage />}
           {activeTab === "bookings" && <AdminBookingsPage />}
           {activeTab === "orders-calendar" && <OrdersCalendarPage />}
           {activeTab === "reports" && <ReportsPage bookings={bookings} />}
