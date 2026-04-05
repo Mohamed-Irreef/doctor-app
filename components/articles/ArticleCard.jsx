@@ -59,7 +59,7 @@ export default function ArticleCard({ item, onPress }) {
 
 const styles = StyleSheet.create({
   card: {
-    width: 280,
+    width: "100%",
     borderRadius: 18,
     borderWidth: 1,
     borderColor: Colors.border,

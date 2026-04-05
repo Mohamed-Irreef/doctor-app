@@ -278,7 +278,7 @@ export default function ArticleDetailsScreen() {
                 fill={liked ? Colors.error : "none"}
               />
               <Text style={styles.actionText}>
-                {liked ? "❤️ Liked" : "❤️ Like"} ({article.likes || 0})
+                {liked ? "Liked" : "Like"} ({article.likes || 0})
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -286,7 +286,7 @@ export default function ArticleDetailsScreen() {
               onPress={() => Share.share({ message: article.title })}
             >
               <Share2 color={Colors.textSecondary} size={16} />
-              <Text style={styles.actionText}>🔗 Share</Text>
+              <Text style={styles.actionText}>Share</Text>
             </TouchableOpacity>
           </View>
 

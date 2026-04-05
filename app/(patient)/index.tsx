@@ -1330,41 +1330,81 @@ export default function PatientHomeScreen() {
                 <ListSkeleton count={3} type="article" />
               </View>
             ) : (
-              <FlatList
-                data={medicines.slice(0, 4)}
-                numColumns={2}
-                scrollEnabled={false}
-                contentContainerStyle={{
-                  paddingHorizontal: Spacing.screenH,
-                  paddingBottom: Spacing.xs,
-                }}
-                columnWrapperStyle={{ justifyContent: "space-between" }}
-                keyExtractor={(m) => String(m.id || m._id)}
-                renderItem={({ item }) => (
-                  <MedCard
-                    item={item}
-                    onPress={(id) =>
-                      router.push({
-                        pathname: "/(patient)/medicine/[id]",
-                        params: { id },
-                      })
-                    }
-                    onAdd={(medItem) =>
-                      addItem({
-                        id: medItem.id || medItem._id,
-                        name: medItem.name,
-                        price: medItem.price,
-                        image: medItem.image || "",
-                        category: medItem.category,
-                        prescriptionRequired: medItem.prescriptionRequired,
-                        mrp: medItem.mrp,
-                        deliveryEtaHours: medItem.deliveryEtaHours,
-                      })
-                    }
-                  />
-                )}
-              />
+              <>
+                <FlatList
+                  data={medicines.slice(0, 4)}
+                  numColumns={2}
+                  scrollEnabled={false}
+                  contentContainerStyle={{
+                    paddingHorizontal: Spacing.screenH,
+                    paddingBottom: Spacing.xs,
+                  }}
+                  columnWrapperStyle={{ justifyContent: "space-between" }}
+                  keyExtractor={(m) => String(m.id || m._id)}
+                  renderItem={({ item }) => (
+                    <MedCard
+                      item={item}
+                      onPress={(id) =>
+                        router.push({
+                          pathname: "/(patient)/medicine/[id]",
+                          params: { id },
+                        })
+                      }
+                      onAdd={(medItem) =>
+                        addItem({
+                          id: medItem.id || medItem._id,
+                          name: medItem.name,
+                          price: medItem.price,
+                          image: medItem.image || "",
+                          category: medItem.category,
+                          prescriptionRequired: medItem.prescriptionRequired,
+                          mrp: medItem.mrp,
+                          deliveryEtaHours: medItem.deliveryEtaHours,
+                        })
+                      }
+                    />
+                  )}
+                />
+
+                <View style={styles.packageLoadMoreWrap}>
+                  <TouchableOpacity
+                    style={styles.packageLoadMoreBtn}
+                    activeOpacity={0.85}
+                    onPress={() => router.push("/(patient)/pharmacy")}
+                  >
+                    <Text style={styles.packageLoadMoreText}>Load More</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
             )}
+          </FadeInSection>
+
+          {/* ── AD BANNERS ── */}
+          <FadeInSection delay={720} style={[styles.pad, styles.section]}>
+            <SectionTitle title="Featured" />
+            <BannerCarousel
+              data={AD_BANNERS}
+              autoScrollInterval={3200}
+              renderItem={(ad) => (
+                <TouchableOpacity
+                  style={styles.adBannerSlide}
+                  activeOpacity={0.85}
+                >
+                  <Image
+                    source={{ uri: ad.image }}
+                    style={StyleSheet.absoluteFill}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.adOverlay}>
+                    <View style={styles.adBadge}>
+                      <Text style={styles.adBadgeText}>{ad.badge}</Text>
+                    </View>
+                    <Text style={styles.adTitle}>{ad.title}</Text>
+                    <Text style={styles.adSub}>{ad.subtitle}</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+            />
           </FadeInSection>
 
           {/* ── HEALTH ARTICLES ── */}
@@ -1395,34 +1435,6 @@ export default function PatientHomeScreen() {
                 )}
               />
             )}
-          </FadeInSection>
-
-          {/* ── AD BANNERS ── */}
-          <FadeInSection delay={720} style={[styles.pad, styles.section]}>
-            <SectionTitle title="Featured" />
-            <BannerCarousel
-              data={AD_BANNERS}
-              autoScrollInterval={3200}
-              renderItem={(ad) => (
-                <TouchableOpacity
-                  style={styles.adBannerSlide}
-                  activeOpacity={0.85}
-                >
-                  <Image
-                    source={{ uri: ad.image }}
-                    style={StyleSheet.absoluteFill}
-                    resizeMode="cover"
-                  />
-                  <View style={styles.adOverlay}>
-                    <View style={styles.adBadge}>
-                      <Text style={styles.adBadgeText}>{ad.badge}</Text>
-                    </View>
-                    <Text style={styles.adTitle}>{ad.title}</Text>
-                    <Text style={styles.adSub}>{ad.subtitle}</Text>
-                  </View>
-                </TouchableOpacity>
-              )}
-            />
           </FadeInSection>
 
           {/* ── TRUST SECTION ── */}
