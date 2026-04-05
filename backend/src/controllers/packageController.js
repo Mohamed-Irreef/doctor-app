@@ -21,6 +21,72 @@ function buildLabAddress(labProfile) {
   return parts.join(", ");
 }
 
+function parseCloudinaryAsset(url) {
+  if (!url || typeof url !== "string") return null;
+
+  const cleanedUrl = url.split("?")[0];
+  const match = cleanedUrl.match(
+    /res\.cloudinary\.com\/[^/]+\/([^/]+)\/([^/]+)\/(?:v\d+\/)?(.+)$/,
+  );
+
+  if (!match) return null;
+
+  const resourceType = match[1] || "image";
+  const deliveryType = match[2] || "upload";
+  const pathWithExt = match[3] || "";
+  const lastDotIndex = pathWithExt.lastIndexOf(".");
+
+  if (lastDotIndex === -1) {
+    return {
+      publicId: pathWithExt,
+      format: undefined,
+      resourceType,
+      deliveryType,
+    };
+  }
+
+  return {
+    publicId: pathWithExt.slice(0, lastDotIndex),
+    format: pathWithExt.slice(lastDotIndex + 1).toLowerCase(),
+    resourceType,
+    deliveryType,
+  };
+}
+
+function buildSignedViewerUrl(url) {
+  const parsed = parseCloudinaryAsset(url);
+  if (!parsed?.publicId) return url;
+
+  const expiresAt = Math.floor(Date.now() / 1000) + 60 * 60; // 1 hour
+
+  try {
+    if ((parsed.deliveryType || "") === "private") {
+      const privateUrl = cloudinary.utils.private_download_url(
+        parsed.publicId,
+        parsed.format,
+        {
+          resource_type: parsed.resourceType || "raw",
+          type: "private",
+          expires_at: expiresAt,
+          attachment: false,
+        },
+      );
+      if (privateUrl) return privateUrl;
+    }
+  } catch {
+    // fall through
+  }
+
+  return cloudinary.url(parsed.publicId, {
+    secure: true,
+    sign_url: true,
+    resource_type: parsed.resourceType || "raw",
+    type: parsed.deliveryType || "authenticated",
+    format: parsed.format,
+    expires_at: expiresAt,
+  });
+}
+
 function validateUploadedFile(file, { kind }) {
   if (!file) return;
   const mime = (file.mimetype || "").toLowerCase();
@@ -82,6 +148,7 @@ const createPackage = catchAsync(async (req, res) => {
   delete body.image;
   delete body.brochure;
   delete body.thumbnailImage;
+  delete body.brochureUrl;
 
   // Server-managed fields / relationships
   delete body._id;
@@ -118,6 +185,7 @@ const createPackage = catchAsync(async (req, res) => {
     const result = await uploadBufferToCloudinary(
       req.files.brochureFile[0].buffer,
       "nividoc/packages/brochures",
+      { resource_type: "raw" },
     );
     body.brochure = result?.secure_url;
   }
@@ -188,12 +256,19 @@ const getLabPackages = catchAsync(async (req, res) => {
   const labProfile = await LabPartnerProfile.findOne({ user: req.user._id });
   if (!labProfile) throw new ApiError(404, "Lab profile not found");
 
-  const packages = await Package.find({ labId: labProfile._id }).sort({
+  const items = await Package.find({ labId: labProfile._id }).sort({
     createdAt: -1,
   });
-  return res
-    .status(200)
-    .json(new ApiResponse(200, "Packages fetched", packages));
+
+  const packages = items.map((p) => {
+    const obj = p.toObject();
+    return {
+      ...obj,
+      brochureUrl: obj.brochure ? buildSignedViewerUrl(obj.brochure) : obj.brochure,
+    };
+  });
+
+  return res.status(200).json(new ApiResponse(200, "Packages fetched", packages));
 });
 
 const updatePackage = catchAsync(async (req, res) => {
@@ -218,6 +293,7 @@ const updatePackage = catchAsync(async (req, res) => {
   delete body.image;
   delete body.brochure;
   delete body.thumbnailImage;
+  delete body.brochureUrl;
   // Do not allow lab admins to self-approve/reject
   delete body.approvedBy;
   delete body.approvedAt;
@@ -250,6 +326,7 @@ const updatePackage = catchAsync(async (req, res) => {
     const result = await uploadBufferToCloudinary(
       req.files.brochureFile[0].buffer,
       "nividoc/packages/brochures",
+      { resource_type: "raw" },
     );
     body.brochure = result?.secure_url;
   }
@@ -328,7 +405,15 @@ const deletePackage = catchAsync(async (req, res) => {
 
 const getPendingPackages = catchAsync(async (req, res) => {
   const { status = "PENDING_APPROVAL" } = req.query;
-  const packages = await Package.find({ status }).sort({ createdAt: -1 });
+  const items = await Package.find({ status }).sort({ createdAt: -1 });
+
+  const packages = items.map((p) => {
+    const obj = p.toObject();
+    return {
+      ...obj,
+      brochureUrl: obj.brochure ? buildSignedViewerUrl(obj.brochure) : obj.brochure,
+    };
+  });
   return res
     .status(200)
     .json(new ApiResponse(200, "Packages fetched", packages));
@@ -412,25 +497,7 @@ const getPackageById = catchAsync(async (req, res) => {
   }).populate("labId", "labName address city state pincode profilePhoto");
   if (!pkg) throw new ApiError(404, "Package not found");
 
-  // Build signed brochure URL if Cloudinary
-  let brochureUrl = pkg.brochure;
-  if (brochureUrl && brochureUrl.includes("res.cloudinary.com")) {
-    try {
-      const parts = brochureUrl.match(
-        /res\.cloudinary\.com\/[^/]+\/(raw|image|video|auto)\/(upload|authenticated|private)\/(?:v\d+\/)?(.+)$/,
-      );
-      if (parts) {
-        const expiresAt = Math.floor(Date.now() / 1000) + 3600;
-        brochureUrl =
-          cloudinary.utils.private_download_url(parts[3], "pdf", {
-            resource_type: parts[1] === "auto" ? "raw" : parts[1],
-            type: parts[2],
-            expires_at: expiresAt,
-            attachment: false,
-          }) || brochureUrl;
-      }
-    } catch (_) {}
-  }
+  const brochureUrl = pkg.brochure ? buildSignedViewerUrl(pkg.brochure) : pkg.brochure;
 
   const obj = pkg.toObject();
   const labProfile = obj.labId;

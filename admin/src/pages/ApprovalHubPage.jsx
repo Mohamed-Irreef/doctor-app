@@ -613,10 +613,13 @@ export default function ApprovalHubPage() {
               <Field label="Tags" value={Array.isArray(selectedPackage.tags) ? selectedPackage.tags.join(", ") : "-"} />
               <Field label="Status" value={selectedPackage.status} />
             </div>
-            {selectedPackage.brochure && (
+            {(selectedPackage.brochureUrl || selectedPackage.brochure) && (
               <div>
                 <h3 className="mb-2 text-sm font-extrabold text-slate-900">Brochure</h3>
-                <a href={selectedPackage.brochure} target="_blank" rel="noreferrer"
+                <a
+                  href={selectedPackage.brochureUrl || selectedPackage.brochure}
+                  target="_blank"
+                  rel="noreferrer"
                   className="inline-flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-sm font-semibold text-blue-700 hover:bg-blue-50">
                   <FileText size={15} /> Download Brochure
                 </a>
