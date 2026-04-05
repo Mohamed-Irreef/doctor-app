@@ -1032,7 +1032,7 @@ const getPharmacySettings = catchAsync(async (req, res) => {
       state: profile.state || "",
       pincode: profile.pincode || "",
       operationalHours: profile.operationalHours || "",
-      logo: profile.companyLogo || profile.profilePhoto || "",
+      logo: profile.companyLogo || profile.profilePhoto || req.user.image || "",
     }),
   );
 });
@@ -1066,10 +1066,12 @@ const updatePharmacySettings = catchAsync(async (req, res) => {
   if (req.body.operationalHours !== undefined) {
     profile.operationalHours = req.body.operationalHours;
   }
-  if (req.body.logo !== undefined) {
-    profile.companyLogo = req.body.logo;
+  const nextLogo =
+    req.body.logo !== undefined ? req.body.logo : req.body.companyLogo;
+  if (nextLogo !== undefined) {
+    profile.companyLogo = nextLogo;
     // Keep legacy field in sync for older consumers/deployments.
-    profile.profilePhoto = req.body.logo;
+    profile.profilePhoto = nextLogo;
   }
 
   await profile.save();

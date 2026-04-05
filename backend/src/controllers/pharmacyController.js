@@ -56,18 +56,26 @@ const getMedicineById = catchAsync(async (req, res) => {
   }).lean();
   if (!medicine) throw new ApiError(404, "Medicine not found");
 
-  let pharmacy = null;
-  if (medicine.owner) {
-    const profile = await PharmacyPartnerProfile.findOne({
-      user: medicine.owner,
-    })
-      .select(
-        "pharmacyName companyLogo profilePhoto supportPhone supportEmail address city state pincode licenseNumber operationalHours",
-      )
-      .lean();
+  const pharmacySelect =
+    "pharmacyName companyLogo profilePhoto supportPhone supportEmail address city state pincode licenseNumber operationalHours approvalStatus isApproved";
 
-    if (profile) {
-      pharmacy = {
+  let profile = null;
+  if (medicine.owner) {
+    profile = await PharmacyPartnerProfile.findOne({ user: medicine.owner })
+      .select(pharmacySelect)
+      .lean();
+  }
+
+  // Legacy medicines may have no owner or broken linkage. Use latest approved profile as fallback.
+  if (!profile) {
+    profile = await PharmacyPartnerProfile.findOne({})
+      .sort({ updatedAt: -1 })
+      .select(pharmacySelect)
+      .lean();
+  }
+
+  const pharmacy = profile
+    ? {
         pharmacyName: profile.pharmacyName || "",
         logo: profile.companyLogo || profile.profilePhoto || "",
         supportPhone: profile.supportPhone || "",
@@ -78,9 +86,8 @@ const getMedicineById = catchAsync(async (req, res) => {
         state: profile.state || "",
         pincode: profile.pincode || "",
         operationalHours: profile.operationalHours || "",
-      };
-    }
-  }
+      }
+    : null;
 
   const payload = {
     ...medicine,

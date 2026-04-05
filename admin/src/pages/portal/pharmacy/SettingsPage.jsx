@@ -106,7 +106,9 @@ export default function PharmacySettingsRoutePage() {
 
     setSaving(false);
     if (response.status === "success") {
-      const saved = response.data || {};
+      const fresh = await getPharmacyPartnerSettings();
+      const saved =
+        fresh.status === "success" ? fresh.data || {} : response.data || {};
       const merged = {
         ...form,
         pharmacyName: saved.pharmacyName ?? form.pharmacyName,
