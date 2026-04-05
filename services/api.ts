@@ -1002,7 +1002,10 @@ export async function getPackageById(id: string) {
   }
 }
 
-export async function addPackageReview(id: string, payload: { rating: number; comment: string }) {
+export async function addPackageReview(
+  id: string,
+  payload: { rating: number; comment: string },
+) {
   try {
     const res = await API.post(`/packages/${id}/reviews`, payload);
     return ok(res.data?.data || null);
@@ -1011,7 +1014,10 @@ export async function addPackageReview(id: string, payload: { rating: number; co
   }
 }
 
-export async function getPackageReviews(id: string, params?: { limit?: number }) {
+export async function getPackageReviews(
+  id: string,
+  params?: { limit?: number },
+) {
   try {
     const res = await API.get(`/packages/${id}/reviews`, { params });
     return ok(Array.isArray(res.data?.data) ? res.data.data : []);

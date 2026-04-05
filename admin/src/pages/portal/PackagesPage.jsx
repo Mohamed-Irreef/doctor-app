@@ -2,11 +2,11 @@ import { ChevronDown, ChevronUp, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import Modal from "../../components/Modal";
 import {
-  getLabPartnerPackages,
-  createLabPartnerPackage,
-  updateLabPartnerPackage,
-  deleteLabPartnerPackage,
-  getLabPartnerTests,
+    createLabPartnerPackage,
+    deleteLabPartnerPackage,
+    getLabPartnerPackages,
+    getLabPartnerTests,
+    updateLabPartnerPackage,
 } from "../../services/api";
 
 const defaultPackageForm = {
@@ -42,7 +42,16 @@ const defaultPackageForm = {
   status: "DRAFT",
 };
 
-const categoryOptions = ["General", "Women", "Senior", "Executive", "Diabetes", "Cardiac", "Full Body", "Other"];
+const categoryOptions = [
+  "General",
+  "Women",
+  "Senior",
+  "Executive",
+  "Diabetes",
+  "Cardiac",
+  "Full Body",
+  "Other",
+];
 const genderOptions = ["All", "Male", "Female"];
 
 const TabButton = ({ label, active, onClick }) => (
@@ -91,7 +100,14 @@ const TextAreaField = ({ label, value, required = false, error, ...props }) => (
   </div>
 );
 
-const SelectField = ({ label, value, options, required = false, error, onChange }) => (
+const SelectField = ({
+  label,
+  value,
+  options,
+  required = false,
+  error,
+  onChange,
+}) => (
   <div>
     <label className="block text-sm font-semibold text-slate-700 mb-2">
       {label} {required && <span className="text-rose-600">*</span>}
@@ -116,14 +132,20 @@ const SelectField = ({ label, value, options, required = false, error, onChange 
 
 const FileField = ({ label, value, onChange, accept }) => (
   <div>
-    <label className="block text-sm font-semibold text-slate-700 mb-2">{label}</label>
+    <label className="block text-sm font-semibold text-slate-700 mb-2">
+      {label}
+    </label>
     <input
       type="file"
       accept={accept}
       onChange={(e) => onChange(e.target.files?.[0])}
       className="w-full px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
     />
-    {value && <p className="text-xs text-slate-500 mt-1">✓ {value.name || "File selected"}</p>}
+    {value && (
+      <p className="text-xs text-slate-500 mt-1">
+        ✓ {value.name || "File selected"}
+      </p>
+    )}
   </div>
 );
 
@@ -148,7 +170,16 @@ export default function PackagesPage() {
   const [howItWorksInput, setHowItWorksInput] = useState("");
   const [recommendedForInput, setRecommendedForInput] = useState("");
 
-  const tabs = ["basic", "media", "pricing", "tests", "eligibility", "details", "instructions", "review"];
+  const tabs = [
+    "basic",
+    "media",
+    "pricing",
+    "tests",
+    "eligibility",
+    "details",
+    "instructions",
+    "review",
+  ];
 
   useEffect(() => {
     loadPackages();
@@ -183,7 +214,8 @@ export default function PackagesPage() {
   const validateForm = () => {
     const newErrors = {};
     if (!form.name.trim()) newErrors.name = "Package name is required";
-    if (!form.price.original) newErrors.originalPrice = "Original price is required";
+    if (!form.price.original)
+      newErrors.originalPrice = "Original price is required";
     if (!form.price.offer) newErrors.offerPrice = "Offer price is required";
     if (!form.tests.length) newErrors.tests = "Add at least one test";
     return newErrors;
@@ -212,16 +244,25 @@ export default function PackagesPage() {
           setEditing(null);
           loadPackages();
         } else {
-          setMessage({ type: "error", text: res.error || "Failed to update package" });
+          setMessage({
+            type: "error",
+            text: res.error || "Failed to update package",
+          });
         }
       } else {
         const res = await createLabPartnerPackage(form, files);
         if (res.status === "success") {
-          setMessage({ type: "success", text: "Package submitted for approval" });
+          setMessage({
+            type: "success",
+            text: "Package submitted for approval",
+          });
           setShowForm(false);
           loadPackages();
         } else {
-          setMessage({ type: "error", text: res.error || "Failed to create package" });
+          setMessage({
+            type: "error",
+            text: res.error || "Failed to create package",
+          });
         }
       }
     } catch (err) {
@@ -325,7 +366,10 @@ export default function PackagesPage() {
         ...prev,
         details: {
           ...prev.details,
-          howItWorks: [...prev.details.howItWorks, { step: howItWorksInput.trim() }],
+          howItWorks: [
+            ...prev.details.howItWorks,
+            { step: howItWorksInput.trim() },
+          ],
         },
       }));
       setHowItWorksInput("");
@@ -348,7 +392,10 @@ export default function PackagesPage() {
         ...prev,
         details: {
           ...prev.details,
-          highlyRecommendedFor: [...prev.details.highlyRecommendedFor, recommendedForInput.trim()],
+          highlyRecommendedFor: [
+            ...prev.details.highlyRecommendedFor,
+            recommendedForInput.trim(),
+          ],
         },
       }));
       setRecommendedForInput("");
@@ -360,7 +407,9 @@ export default function PackagesPage() {
       ...prev,
       details: {
         ...prev.details,
-        highlyRecommendedFor: prev.details.highlyRecommendedFor.filter((_, i) => i !== index),
+        highlyRecommendedFor: prev.details.highlyRecommendedFor.filter(
+          (_, i) => i !== index,
+        ),
       },
     }));
   };
@@ -408,7 +457,9 @@ export default function PackagesPage() {
 
   const handleRemoveTestFromGroup = (groupIndex, testId) => {
     const newTests = [...form.tests];
-    newTests[groupIndex].tests = newTests[groupIndex].tests.filter((id) => id !== testId);
+    newTests[groupIndex].tests = newTests[groupIndex].tests.filter(
+      (id) => id !== testId,
+    );
     setForm((prev) => ({
       ...prev,
       tests: newTests,
@@ -431,8 +482,12 @@ export default function PackagesPage() {
 
       <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl p-6">
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-900">Package Management</h2>
-          <p className="text-sm text-slate-600 mt-1">Create and manage health checkup packages</p>
+          <h2 className="text-2xl font-extrabold text-slate-900">
+            Package Management
+          </h2>
+          <p className="text-sm text-slate-600 mt-1">
+            Create and manage health checkup packages
+          </p>
         </div>
         <button
           onClick={() => {
@@ -452,11 +507,18 @@ export default function PackagesPage() {
             <p className="text-slate-500">Loading packages...</p>
           ) : packages.length ? (
             packages.map((pkg) => (
-              <div key={pkg._id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-4 bg-white hover:shadow-md transition-all">
+              <div
+                key={pkg._id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-4 bg-white hover:shadow-md transition-all"
+              >
                 <div className="flex-1">
                   <p className="font-bold text-slate-900">{pkg.name}</p>
-                  <p className="text-sm text-slate-600">{pkg.category} • {pkg.testCount} tests • ₹{pkg.price?.offer}</p>
-                  <p className={`text-xs mt-1 font-semibold ${pkg.status === "DRAFT" ? "text-slate-600" : pkg.status === "PENDING_APPROVAL" ? "text-amber-600" : "text-emerald-600"}`}>
+                  <p className="text-sm text-slate-600">
+                    {pkg.category} • {pkg.testCount} tests • ₹{pkg.price?.offer}
+                  </p>
+                  <p
+                    className={`text-xs mt-1 font-semibold ${pkg.status === "DRAFT" ? "text-slate-600" : pkg.status === "PENDING_APPROVAL" ? "text-amber-600" : "text-emerald-600"}`}
+                  >
                     {pkg.status}
                   </p>
                 </div>
@@ -477,7 +539,9 @@ export default function PackagesPage() {
               </div>
             ))
           ) : (
-            <p className="text-slate-500 text-center py-8">No packages created yet</p>
+            <p className="text-slate-500 text-center py-8">
+              No packages created yet
+            </p>
           )}
         </div>
       )}
@@ -496,7 +560,12 @@ export default function PackagesPage() {
           {/* Tabs */}
           <div className="border-b border-slate-200 flex gap-1 overflow-x-auto">
             {tabs.map((tab) => (
-              <TabButton key={tab} label={tab.toUpperCase()} active={activeTab === tab} onClick={() => setActiveTab(tab)} />
+              <TabButton
+                key={tab}
+                label={tab.toUpperCase()}
+                active={activeTab === tab}
+                onClick={() => setActiveTab(tab)}
+              />
             ))}
           </div>
 
@@ -522,30 +591,48 @@ export default function PackagesPage() {
                   label="Category"
                   value={form.category}
                   options={categoryOptions}
-                  onChange={(e) => setForm({ ...form, category: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, category: e.target.value })
+                  }
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Tags</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Tags
+                </label>
                 <div className="flex gap-2 mb-2">
                   <input
                     type="text"
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
+                    onKeyPress={(e) =>
+                      e.key === "Enter" && (e.preventDefault(), addTag())
+                    }
                     placeholder="Add tags"
                     className="flex-1 px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  <button onClick={addTag} className="px-4 py-2 bg-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-300">
+                  <button
+                    onClick={addTag}
+                    className="px-4 py-2 bg-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-300"
+                  >
                     Add
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {form.tags.map((tag, i) => (
-                    <span key={i} className="flex items-center gap-2 bg-blue-100 text-blue-700 px-3 py-1 rounded-lg text-sm">
-                      {tag} <button onClick={() => removeTag(i)} className="text-blue-700 hover:text-blue-900"><X size={14} /></button>
+                    <span
+                      key={i}
+                      className="flex items-center gap-2 bg-blue-100 text-blue-700 px-3 py-1 rounded-lg text-sm"
+                    >
+                      {tag}{" "}
+                      <button
+                        onClick={() => removeTag(i)}
+                        className="text-blue-700 hover:text-blue-900"
+                      >
+                        <X size={14} />
+                      </button>
                     </span>
                   ))}
                 </div>
@@ -554,14 +641,18 @@ export default function PackagesPage() {
               <TextAreaField
                 label="Short Description"
                 value={form.shortDescription}
-                onChange={(e) => setForm({ ...form, shortDescription: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, shortDescription: e.target.value })
+                }
                 placeholder="Brief description for listings"
               />
 
               <TextAreaField
                 label="Full Description"
                 value={form.fullDescription}
-                onChange={(e) => setForm({ ...form, fullDescription: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, fullDescription: e.target.value })
+                }
                 placeholder="Detailed description"
               />
             </div>
@@ -570,14 +661,34 @@ export default function PackagesPage() {
           {/* Media Tab */}
           {activeTab === "media" && (
             <div className="space-y-4">
-              <FileField label="Package Image" onChange={setPackageImageFile} accept="image/*" />
-              {!packageImageFile && form.image && <p className="text-xs text-slate-500">✓ Image exists: {form.image}</p>}
+              <FileField
+                label="Package Image"
+                onChange={setPackageImageFile}
+                accept="image/*"
+              />
+              {!packageImageFile && form.image && (
+                <p className="text-xs text-slate-500">
+                  ✓ Image exists: {form.image}
+                </p>
+              )}
 
-              <FileField label="Brochure PDF" onChange={setBrochureFile} accept=".pdf" />
-              {!brochureFile && form.brochure && <p className="text-xs text-slate-500">✓ Brochure exists</p>}
+              <FileField
+                label="Brochure PDF"
+                onChange={setBrochureFile}
+                accept=".pdf"
+              />
+              {!brochureFile && form.brochure && (
+                <p className="text-xs text-slate-500">✓ Brochure exists</p>
+              )}
 
-              <FileField label="Thumbnail Image (Optional)" onChange={setThumbnailFile} accept="image/*" />
-              {!thumbnailFile && form.thumbnailImage && <p className="text-xs text-slate-500">✓ Thumbnail exists</p>}
+              <FileField
+                label="Thumbnail Image (Optional)"
+                onChange={setThumbnailFile}
+                accept="image/*"
+              />
+              {!thumbnailFile && form.thumbnailImage && (
+                <p className="text-xs text-slate-500">✓ Thumbnail exists</p>
+              )}
             </div>
           )}
 
@@ -588,7 +699,12 @@ export default function PackagesPage() {
                 label="Original Price (₹)"
                 type="number"
                 value={form.price.original}
-                onChange={(e) => setForm({ ...form, price: { ...form.price, original: e.target.value } })}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    price: { ...form.price, original: e.target.value },
+                  })
+                }
                 required
                 error={errors.originalPrice}
               />
@@ -597,14 +713,21 @@ export default function PackagesPage() {
                 label="Offer Price (₹)"
                 type="number"
                 value={form.price.offer}
-                onChange={(e) => setForm({ ...form, price: { ...form.price, offer: e.target.value } })}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    price: { ...form.price, offer: e.target.value },
+                  })
+                }
                 required
                 error={errors.offerPrice}
               />
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Discount %</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Discount %
+                  </label>
                   <input
                     type="text"
                     disabled
@@ -617,12 +740,19 @@ export default function PackagesPage() {
                   label="GST %"
                   type="number"
                   value={form.price.gst}
-                  onChange={(e) => setForm({ ...form, price: { ...form.price, gst: e.target.value } })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      price: { ...form.price, gst: e.target.value },
+                    })
+                  }
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Final Price (₹)</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Final Price (₹)
+                </label>
                 <input
                   type="text"
                   disabled
@@ -644,19 +774,38 @@ export default function PackagesPage() {
               </button>
 
               {form.tests.map((group, groupIndex) => (
-                <div key={groupIndex} className="rounded-lg border border-slate-200 p-4 bg-white">
+                <div
+                  key={groupIndex}
+                  className="rounded-lg border border-slate-200 p-4 bg-white"
+                >
                   <div className="flex items-center justify-between mb-3">
                     <input
                       type="text"
                       value={group.category}
-                      onChange={(e) => handleUpdateTestGroup(groupIndex, "category", e.target.value)}
+                      onChange={(e) =>
+                        handleUpdateTestGroup(
+                          groupIndex,
+                          "category",
+                          e.target.value,
+                        )
+                      }
                       placeholder="Category (e.g., Cardiac Risk)"
                       className="flex-1 px-3 py-2 rounded border border-slate-300 text-sm font-semibold"
                     />
-                    <button onClick={() => toggleTestGroup(groupIndex)} className="ml-2">
-                      {expandedTests[groupIndex] ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                    <button
+                      onClick={() => toggleTestGroup(groupIndex)}
+                      className="ml-2"
+                    >
+                      {expandedTests[groupIndex] ? (
+                        <ChevronUp size={18} />
+                      ) : (
+                        <ChevronDown size={18} />
+                      )}
                     </button>
-                    <button onClick={() => handleRemoveTestGroup(groupIndex)} className="ml-2 text-rose-600 hover:text-rose-700">
+                    <button
+                      onClick={() => handleRemoveTestGroup(groupIndex)}
+                      className="ml-2 text-rose-600 hover:text-rose-700"
+                    >
                       <Trash2 size={18} />
                     </button>
                   </div>
@@ -664,14 +813,20 @@ export default function PackagesPage() {
                   {expandedTests[groupIndex] && (
                     <div className="space-y-3 mt-3 pt-3 border-t border-slate-200">
                       {tests.map((test) => (
-                        <label key={test._id} className="flex items-center gap-2 text-sm">
+                        <label
+                          key={test._id}
+                          className="flex items-center gap-2 text-sm"
+                        >
                           <input
                             type="checkbox"
                             checked={group.tests.includes(test._id)}
                             onChange={(e) =>
                               e.target.checked
                                 ? handleAddTestToGroup(groupIndex, test._id)
-                                : handleRemoveTestFromGroup(groupIndex, test._id)
+                                : handleRemoveTestFromGroup(
+                                    groupIndex,
+                                    test._id,
+                                  )
                             }
                             className="w-4 h-4 rounded"
                           />
@@ -685,11 +840,16 @@ export default function PackagesPage() {
 
               {form.tests.length > 0 && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-sm font-semibold text-blue-900">Total Tests: {form.tests.reduce((sum, g) => sum + g.tests.length, 0)}</p>
+                  <p className="text-sm font-semibold text-blue-900">
+                    Total Tests:{" "}
+                    {form.tests.reduce((sum, g) => sum + g.tests.length, 0)}
+                  </p>
                 </div>
               )}
 
-              {errors.tests && <p className="text-xs text-rose-600">{errors.tests}</p>}
+              {errors.tests && (
+                <p className="text-xs text-rose-600">{errors.tests}</p>
+              )}
             </div>
           )}
 
@@ -701,13 +861,23 @@ export default function PackagesPage() {
                   label="Min Age"
                   type="number"
                   value={form.ageRange.min}
-                  onChange={(e) => setForm({ ...form, ageRange: { ...form.ageRange, min: e.target.value } })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      ageRange: { ...form.ageRange, min: e.target.value },
+                    })
+                  }
                 />
                 <Field
                   label="Max Age"
                   type="number"
                   value={form.ageRange.max}
-                  onChange={(e) => setForm({ ...form, ageRange: { ...form.ageRange, max: e.target.value } })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      ageRange: { ...form.ageRange, max: e.target.value },
+                    })
+                  }
                 />
               </div>
 
@@ -719,25 +889,39 @@ export default function PackagesPage() {
               />
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Suitable For</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Suitable For
+                </label>
                 <div className="flex gap-2 mb-2">
                   <input
                     type="text"
                     value={suitableForInput}
                     onChange={(e) => setSuitableForInput(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addSuitableFor())}
+                    onKeyPress={(e) =>
+                      e.key === "Enter" &&
+                      (e.preventDefault(), addSuitableFor())
+                    }
                     placeholder="e.g., People with Heart Disease"
                     className="flex-1 px-4 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  <button onClick={addSuitableFor} className="px-4 py-2 bg-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-300">
+                  <button
+                    onClick={addSuitableFor}
+                    className="px-4 py-2 bg-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-300"
+                  >
                     Add
                   </button>
                 </div>
                 <div className="space-y-1">
                   {form.suitableFor.map((item, i) => (
-                    <div key={i} className="flex items-center justify-between bg-slate-50 p-2 rounded">
+                    <div
+                      key={i}
+                      className="flex items-center justify-between bg-slate-50 p-2 rounded"
+                    >
                       <span className="text-sm">{item}</span>
-                      <button onClick={() => removeSuitableFor(i)} className="text-rose-600 hover:text-rose-700">
+                      <button
+                        onClick={() => removeSuitableFor(i)}
+                        className="text-rose-600 hover:text-rose-700"
+                      >
                         <X size={14} />
                       </button>
                     </div>
@@ -753,37 +937,62 @@ export default function PackagesPage() {
               <TextAreaField
                 label="Who Should Book This?"
                 value={form.details.whoShouldBook}
-                onChange={(e) => setForm({ ...form, details: { ...form.details, whoShouldBook: e.target.value } })}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    details: { ...form.details, whoShouldBook: e.target.value },
+                  })
+                }
                 placeholder="Explain who should book this package"
               />
 
               <TextAreaField
                 label="Preparation Needed"
                 value={form.details.preparation}
-                onChange={(e) => setForm({ ...form, details: { ...form.details, preparation: e.target.value } })}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    details: { ...form.details, preparation: e.target.value },
+                  })
+                }
                 placeholder="Fasting, diet instructions, etc."
               />
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">How It Works (Steps)</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  How It Works (Steps)
+                </label>
                 <div className="flex gap-2 mb-2">
                   <input
                     type="text"
                     value={howItWorksInput}
                     onChange={(e) => setHowItWorksInput(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addHowItWorks())}
+                    onKeyPress={(e) =>
+                      e.key === "Enter" && (e.preventDefault(), addHowItWorks())
+                    }
                     placeholder="Add a step"
                     className="flex-1 px-4 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  <button onClick={addHowItWorks} className="px-4 py-2 bg-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-300">
+                  <button
+                    onClick={addHowItWorks}
+                    className="px-4 py-2 bg-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-300"
+                  >
                     Add
                   </button>
                 </div>
                 <div className="space-y-1">
                   {form.details.howItWorks.map((step, i) => (
-                    <div key={i} className="flex items-center justify-between bg-slate-50 p-2 rounded">
-                      <span className="text-sm">{i + 1}. {step.step}</span>
-                      <button onClick={() => removeHowItWorks(i)} className="text-rose-600 hover:text-rose-700">
+                    <div
+                      key={i}
+                      className="flex items-center justify-between bg-slate-50 p-2 rounded"
+                    >
+                      <span className="text-sm">
+                        {i + 1}. {step.step}
+                      </span>
+                      <button
+                        onClick={() => removeHowItWorks(i)}
+                        className="text-rose-600 hover:text-rose-700"
+                      >
                         <X size={14} />
                       </button>
                     </div>
@@ -792,25 +1001,39 @@ export default function PackagesPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Highly Recommended For</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Highly Recommended For
+                </label>
                 <div className="flex gap-2 mb-2">
                   <input
                     type="text"
                     value={recommendedForInput}
                     onChange={(e) => setRecommendedForInput(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addRecommendedFor())}
+                    onKeyPress={(e) =>
+                      e.key === "Enter" &&
+                      (e.preventDefault(), addRecommendedFor())
+                    }
                     placeholder="e.g., Acne / Hair fall"
                     className="flex-1 px-4 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  <button onClick={addRecommendedFor} className="px-4 py-2 bg-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-300">
+                  <button
+                    onClick={addRecommendedFor}
+                    className="px-4 py-2 bg-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-300"
+                  >
                     Add
                   </button>
                 </div>
                 <div className="space-y-1">
                   {form.details.highlyRecommendedFor.map((item, i) => (
-                    <div key={i} className="flex items-center justify-between bg-slate-50 p-2 rounded">
+                    <div
+                      key={i}
+                      className="flex items-center justify-between bg-slate-50 p-2 rounded"
+                    >
                       <span className="text-sm">{item}</span>
-                      <button onClick={() => removeRecommendedFor(i)} className="text-rose-600 hover:text-rose-700">
+                      <button
+                        onClick={() => removeRecommendedFor(i)}
+                        className="text-rose-600 hover:text-rose-700"
+                      >
                         <X size={14} />
                       </button>
                     </div>
@@ -826,21 +1049,45 @@ export default function PackagesPage() {
               <TextAreaField
                 label="Before Test Instructions"
                 value={form.instructions.before}
-                onChange={(e) => setForm({ ...form, instructions: { ...form.instructions, before: e.target.value } })}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    instructions: {
+                      ...form.instructions,
+                      before: e.target.value,
+                    },
+                  })
+                }
                 placeholder="Fasting hours, what not to do, etc."
               />
 
               <TextAreaField
                 label="After Test Instructions"
                 value={form.instructions.after}
-                onChange={(e) => setForm({ ...form, instructions: { ...form.instructions, after: e.target.value } })}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    instructions: {
+                      ...form.instructions,
+                      after: e.target.value,
+                    },
+                  })
+                }
                 placeholder="Post-test care instructions"
               />
 
               <TextAreaField
                 label="Collection Instructions"
                 value={form.instructions.collection}
-                onChange={(e) => setForm({ ...form, instructions: { ...form.instructions, collection: e.target.value } })}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    instructions: {
+                      ...form.instructions,
+                      collection: e.target.value,
+                    },
+                  })
+                }
                 placeholder="How samples will be collected"
               />
             </div>
@@ -854,34 +1101,64 @@ export default function PackagesPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs text-slate-600 uppercase font-semibold">Package Name</p>
-                    <p className="text-sm font-bold text-slate-900 mt-1">{form.name || "—"}</p>
+                    <p className="text-xs text-slate-600 uppercase font-semibold">
+                      Package Name
+                    </p>
+                    <p className="text-sm font-bold text-slate-900 mt-1">
+                      {form.name || "—"}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-600 uppercase font-semibold">Category</p>
-                    <p className="text-sm font-bold text-slate-900 mt-1">{form.category}</p>
+                    <p className="text-xs text-slate-600 uppercase font-semibold">
+                      Category
+                    </p>
+                    <p className="text-sm font-bold text-slate-900 mt-1">
+                      {form.category}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-600 uppercase font-semibold">Price</p>
-                    <p className="text-sm font-bold text-slate-900 mt-1">₹{form.price.offer} (from ₹{form.price.original})</p>
+                    <p className="text-xs text-slate-600 uppercase font-semibold">
+                      Price
+                    </p>
+                    <p className="text-sm font-bold text-slate-900 mt-1">
+                      ₹{form.price.offer} (from ₹{form.price.original})
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-600 uppercase font-semibold">Discount</p>
-                    <p className="text-sm font-bold text-emerald-600 mt-1">{calculateDiscount()}% off</p>
+                    <p className="text-xs text-slate-600 uppercase font-semibold">
+                      Discount
+                    </p>
+                    <p className="text-sm font-bold text-emerald-600 mt-1">
+                      {calculateDiscount()}% off
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-600 uppercase font-semibold">Tests</p>
-                    <p className="text-sm font-bold text-slate-900 mt-1">{form.tests.reduce((sum, g) => sum + g.tests.length, 0)} tests</p>
+                    <p className="text-xs text-slate-600 uppercase font-semibold">
+                      Tests
+                    </p>
+                    <p className="text-sm font-bold text-slate-900 mt-1">
+                      {form.tests.reduce((sum, g) => sum + g.tests.length, 0)}{" "}
+                      tests
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-600 uppercase font-semibold">Age Range</p>
-                    <p className="text-sm font-bold text-slate-900 mt-1">{form.ageRange.min || "Any"} - {form.ageRange.max || "Any"}</p>
+                    <p className="text-xs text-slate-600 uppercase font-semibold">
+                      Age Range
+                    </p>
+                    <p className="text-sm font-bold text-slate-900 mt-1">
+                      {form.ageRange.min || "Any"} -{" "}
+                      {form.ageRange.max || "Any"}
+                    </p>
                   </div>
                 </div>
 
                 <div className="bg-white rounded p-3">
-                  <p className="text-xs text-slate-600 uppercase font-semibold mb-2">Description</p>
-                  <p className="text-sm text-slate-700">{form.shortDescription || form.fullDescription || "—"}</p>
+                  <p className="text-xs text-slate-600 uppercase font-semibold mb-2">
+                    Description
+                  </p>
+                  <p className="text-sm text-slate-700">
+                    {form.shortDescription || form.fullDescription || "—"}
+                  </p>
                 </div>
               </div>
             </div>
@@ -919,7 +1196,11 @@ export default function PackagesPage() {
                   disabled={loading}
                   className="px-6 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {loading ? "Submitting..." : editing ? "Update" : "Submit for Approval"}
+                  {loading
+                    ? "Submitting..."
+                    : editing
+                      ? "Update"
+                      : "Submit for Approval"}
                 </button>
               ) : (
                 <button

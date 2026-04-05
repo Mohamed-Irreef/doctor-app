@@ -1,9 +1,5 @@
 import { useRouter } from "expo-router";
-import {
-    ChevronRight,
-    Package,
-    Search,
-} from "lucide-react-native";
+import { ChevronRight, Package, Search } from "lucide-react-native";
 import React, { memo, useCallback, useEffect, useState } from "react";
 import {
     Dimensions,
@@ -65,7 +61,8 @@ const PackageCard = memo(
         </Text>
 
         <Text style={styles.packageMeta}>
-          {item.testCount} tests • {item.ageRange?.min || "Any"}-{item.ageRange?.max || "100"} yrs
+          {item.testCount} tests • {item.ageRange?.min || "Any"}-
+          {item.ageRange?.max || "100"} yrs
         </Text>
 
         <View style={styles.priceRow}>
@@ -125,7 +122,9 @@ function PackagesPage() {
       setLoading(true);
       const res = await getApprovedPackages({ limit: 100 });
       if (res.status === "success") {
-        const data = Array.isArray(res.data) ? res.data : res.data?.packages || [];
+        const data = Array.isArray(res.data)
+          ? res.data
+          : res.data?.packages || [];
         setPackages(data);
         filterPackages(data, selectedCategory, searchText);
       }
@@ -301,7 +300,10 @@ const styles = StyleSheet.create({
     ...Typography.body2,
   },
 
-  categoryList: { paddingHorizontal: Spacing.screenH, paddingVertical: Spacing.sm },
+  categoryList: {
+    paddingHorizontal: Spacing.screenH,
+    paddingVertical: Spacing.sm,
+  },
   categoryChip: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm - 2,
@@ -395,7 +397,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  skeletonContainer: { paddingHorizontal: Spacing.screenH, marginTop: Spacing.md },
+  skeletonContainer: {
+    paddingHorizontal: Spacing.screenH,
+    marginTop: Spacing.md,
+  },
   emptyState: {
     flex: 1,
     alignItems: "center",

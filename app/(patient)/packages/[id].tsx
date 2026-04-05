@@ -1,23 +1,23 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  ArrowLeft,
-  FileText,
-  Heart,
-  MapPin,
-  Phone,
-  Share2,
-  Users,
+    ArrowLeft,
+    FileText,
+    Heart,
+    MapPin,
+    Phone,
+    Share2,
+    Users,
 } from "lucide-react-native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  Image,
-  ScrollView,
-  Share,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Image,
+    ScrollView,
+    Share,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../../constants/Colors";
@@ -81,7 +81,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.screenH,
     paddingVertical: Spacing.md,
   },
-  sectionTitle: { ...Typography.h2, color: Colors.text, marginBottom: Spacing.sm },
+  sectionTitle: {
+    ...Typography.h2,
+    color: Colors.text,
+    marginBottom: Spacing.sm,
+  },
   card: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
@@ -89,8 +93,16 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
     ...Shadows.soft,
   },
-  packageName: { ...Typography.h1, color: Colors.text, marginBottom: Spacing.xs },
-  packageMeta: { ...Typography.body2, color: Colors.textSecondary, marginBottom: Spacing.sm },
+  packageName: {
+    ...Typography.h1,
+    color: Colors.text,
+    marginBottom: Spacing.xs,
+  },
+  packageMeta: {
+    ...Typography.body2,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.sm,
+  },
   priceSection: {
     flexDirection: "row",
     alignItems: "baseline",
@@ -147,7 +159,12 @@ const styles = StyleSheet.create({
   },
   callCardContent: { flex: 1 },
   callCardLabel: { ...Typography.caption, color: Colors.textTertiary },
-  callCardTitle: { ...Typography.body2, color: Colors.text, fontWeight: "600", marginTop: 2 },
+  callCardTitle: {
+    ...Typography.body2,
+    color: Colors.text,
+    fontWeight: "600",
+    marginTop: 2,
+  },
   callBtn: {
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.md,
@@ -159,7 +176,12 @@ const styles = StyleSheet.create({
     color: Colors.textInverse,
     fontWeight: "600",
   },
-  description: { ...Typography.body2, color: Colors.text, lineHeight: 22, marginBottom: Spacing.md },
+  description: {
+    ...Typography.body2,
+    color: Colors.text,
+    lineHeight: 22,
+    marginBottom: Spacing.md,
+  },
   testItem: {
     paddingVertical: Spacing.sm,
     borderBottomWidth: 1,
@@ -204,7 +226,12 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   stepContent: { flex: 1 },
-  stepTitle: { ...Typography.subheading, color: Colors.text, fontWeight: "600", marginBottom: 4 },
+  stepTitle: {
+    ...Typography.subheading,
+    color: Colors.text,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
   stepDesc: { ...Typography.body2, color: Colors.textSecondary },
   bookBtn: {
     position: "absolute",
@@ -220,7 +247,11 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     alignItems: "center",
   },
-  bookBtnText: { ...Typography.h2, color: Colors.textInverse, fontWeight: "700" },
+  bookBtnText: {
+    ...Typography.h2,
+    color: Colors.textInverse,
+    fontWeight: "700",
+  },
   expandable: {
     borderRadius: Radius.lg,
     overflow: "hidden",
@@ -253,7 +284,9 @@ export default function PackageDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [pkg, setPkg] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const [expandedSections, setExpandedSections] = useState<
+    Record<string, boolean>
+  >({});
 
   const loadPackage = useCallback(async () => {
     try {
@@ -350,7 +383,8 @@ export default function PackageDetailsScreen() {
           <View style={styles.section}>
             <Text style={styles.packageName}>{pkg.name}</Text>
             <Text style={styles.packageMeta}>
-              Age: {pkg.ageRange?.min || "Any"} - {pkg.ageRange?.max || "100"} years
+              Age: {pkg.ageRange?.min || "Any"} - {pkg.ageRange?.max || "100"}{" "}
+              years
             </Text>
             <Text style={styles.packageMeta}>
               {pkg.testCount || 0} Tests Included
@@ -390,9 +424,7 @@ export default function PackageDetailsScreen() {
               )}
               <View style={styles.callCardContent}>
                 <Text style={styles.callCardLabel}>Talk to Nivi expert</Text>
-                <Text style={styles.callCardTitle}>
-                  to book your test
-                </Text>
+                <Text style={styles.callCardTitle}>to book your test</Text>
               </View>
               <TouchableOpacity style={styles.callBtn}>
                 <Phone color={Colors.textInverse} size={16} />
@@ -405,7 +437,9 @@ export default function PackageDetailsScreen() {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Who should book?</Text>
               <View style={styles.card}>
-                <Text style={styles.description}>{pkg.details.whoShouldBook}</Text>
+                <Text style={styles.description}>
+                  {pkg.details.whoShouldBook}
+                </Text>
               </View>
             </View>
           )}
@@ -415,7 +449,13 @@ export default function PackageDetailsScreen() {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Provided by</Text>
               <View style={styles.card}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: Spacing.md }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: Spacing.md,
+                  }}
+                >
                   {pkg.lab.logo && (
                     <Image
                       source={{ uri: pkg.lab.logo }}
@@ -423,13 +463,31 @@ export default function PackageDetailsScreen() {
                     />
                   )}
                   <View style={{ flex: 1 }}>
-                    <Text style={{ ...Typography.subheading, color: Colors.text, fontWeight: "600" }}>
+                    <Text
+                      style={{
+                        ...Typography.subheading,
+                        color: Colors.text,
+                        fontWeight: "600",
+                      }}
+                    >
                       {pkg.lab.name}
                     </Text>
                     {pkg.lab.address && (
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 }}>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 4,
+                          marginTop: 4,
+                        }}
+                      >
                         <MapPin size={12} color={Colors.textTertiary} />
-                        <Text style={{ ...Typography.caption, color: Colors.textTertiary }}>
+                        <Text
+                          style={{
+                            ...Typography.caption,
+                            color: Colors.textTertiary,
+                          }}
+                        >
                           {pkg.lab.address}
                         </Text>
                       </View>
@@ -448,10 +506,22 @@ export default function PackageDetailsScreen() {
                 <View style={{ flexDirection: "row", gap: Spacing.md }}>
                   <FileText color={Colors.primary} size={18} />
                   <View style={{ flex: 1 }}>
-                    <Text style={{ ...Typography.subheading, color: Colors.text, fontWeight: "600" }}>
+                    <Text
+                      style={{
+                        ...Typography.subheading,
+                        color: Colors.text,
+                        fontWeight: "600",
+                      }}
+                    >
                       Get digital report
                     </Text>
-                    <Text style={{ ...Typography.caption, color: Colors.textSecondary, marginTop: 4 }}>
+                    <Text
+                      style={{
+                        ...Typography.caption,
+                        color: Colors.textSecondary,
+                        marginTop: 4,
+                      }}
+                    >
                       within 3 days
                     </Text>
                   </View>
@@ -459,10 +529,22 @@ export default function PackageDetailsScreen() {
                 <View style={{ flexDirection: "row", gap: Spacing.md }}>
                   <Users color={Colors.primary} size={18} />
                   <View style={{ flex: 1 }}>
-                    <Text style={{ ...Typography.subheading, color: Colors.text, fontWeight: "600" }}>
+                    <Text
+                      style={{
+                        ...Typography.subheading,
+                        color: Colors.text,
+                        fontWeight: "600",
+                      }}
+                    >
                       Expert consultation
                     </Text>
-                    <Text style={{ ...Typography.caption, color: Colors.textSecondary, marginTop: 4 }}>
+                    <Text
+                      style={{
+                        ...Typography.caption,
+                        color: Colors.textSecondary,
+                        marginTop: 4,
+                      }}
+                    >
                       Book online consultation with doctor
                     </Text>
                   </View>
@@ -481,7 +563,8 @@ export default function PackageDetailsScreen() {
                     key={idx}
                     style={[
                       styles.testItem,
-                      idx === pkg.recommendedFor.length - 1 && styles.testItemLast,
+                      idx === pkg.recommendedFor.length - 1 &&
+                        styles.testItemLast,
                     ]}
                   >
                     <Text style={styles.testName}>• {item}</Text>
@@ -494,7 +577,9 @@ export default function PackageDetailsScreen() {
           {/* ── TESTS INCLUDED ── */}
           {pkg.tests && pkg.tests.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Tests Included ({pkg.testCount || 0})</Text>
+              <Text style={styles.sectionTitle}>
+                Tests Included ({pkg.testCount || 0})
+              </Text>
               <View style={styles.expandable}>
                 {pkg.tests.map((group: any, idx: number) => (
                   <View key={idx}>
@@ -503,7 +588,9 @@ export default function PackageDetailsScreen() {
                       onPress={() => toggleSection(`test-${idx}`)}
                     >
                       <View>
-                        <Text style={styles.expandableTitle}>{group.category}</Text>
+                        <Text style={styles.expandableTitle}>
+                          {group.category}
+                        </Text>
                         <Text style={styles.testCount}>
                           {group.tests?.length || 0} tests
                         </Text>
@@ -529,7 +616,9 @@ export default function PackageDetailsScreen() {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Preparation Needed</Text>
               <View style={styles.card}>
-                <Text style={styles.description}>{pkg.details.preparation}</Text>
+                <Text style={styles.description}>
+                  {pkg.details.preparation}
+                </Text>
               </View>
             </View>
           )}
@@ -569,7 +658,9 @@ export default function PackageDetailsScreen() {
                   </TouchableOpacity>
                   {expandedSections["before"] && (
                     <View style={styles.expandableContent}>
-                      <Text style={styles.description}>{pkg.instructions.before}</Text>
+                      <Text style={styles.description}>
+                        {pkg.instructions.before}
+                      </Text>
                     </View>
                   )}
                 </View>
@@ -581,7 +672,9 @@ export default function PackageDetailsScreen() {
                     style={styles.expandableHeader}
                     onPress={() => toggleSection("collection")}
                   >
-                    <Text style={styles.expandableTitle}>Collection Instructions</Text>
+                    <Text style={styles.expandableTitle}>
+                      Collection Instructions
+                    </Text>
                   </TouchableOpacity>
                   {expandedSections["collection"] && (
                     <View style={styles.expandableContent}>
@@ -603,7 +696,9 @@ export default function PackageDetailsScreen() {
                   </TouchableOpacity>
                   {expandedSections["after"] && (
                     <View style={styles.expandableContent}>
-                      <Text style={styles.description}>{pkg.instructions.after}</Text>
+                      <Text style={styles.description}>
+                        {pkg.instructions.after}
+                      </Text>
                     </View>
                   )}
                 </View>

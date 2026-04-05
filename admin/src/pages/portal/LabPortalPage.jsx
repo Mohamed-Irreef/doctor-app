@@ -3,10 +3,10 @@ import {
     ClipboardList,
     LayoutDashboard,
     ListChecks,
+    Package,
     Settings,
     TestTube2,
     Wallet,
-    Package,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -1786,7 +1786,7 @@ function SettingsPage() {
   const saveSettings = async () => {
     setSaving(true);
     setMessage("");
-    
+
     let logoUrl = labLogo;
     if (logoFile) {
       const formData = new FormData();

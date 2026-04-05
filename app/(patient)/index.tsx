@@ -42,12 +42,12 @@ import { Shadows } from "../../constants/Shadows";
 import { Radius, Spacing } from "../../constants/Spacing";
 import { Typography } from "../../constants/Typography";
 import {
+    getApprovedPackages,
     getDoctors,
     getFeaturedArticles,
     getLabTests,
     getMedicines,
     getPatientAppointments,
-    getApprovedPackages,
 } from "../../services/api";
 import { useAuthStore } from "../../store/authStore";
 import { useCartStore } from "../../store/cartStore";
@@ -518,7 +518,10 @@ const PackageCard = memo(
 
     return (
       <AnimatedCard
-        style={[styles.packageCard, { width: (W - Spacing.screenH * 2 - Spacing.sm) / 2 }]}
+        style={[
+          styles.packageCard,
+          { width: (W - Spacing.screenH * 2 - Spacing.sm) / 2 },
+        ]}
         onPress={() => onPress(item._id || item.id)}
         withShadow
       >
@@ -591,7 +594,10 @@ export default function PatientHomeScreen() {
     if (dr.data) setDoctors(dr.data);
     if (ar.data) setArticles(ar.data as Article[]);
     if (lr.data) setLabs(lr.data);
-    if (pkg.data) setPackages(Array.isArray(pkg.data) ? pkg.data : pkg.data?.packages || []);
+    if (pkg.data)
+      setPackages(
+        Array.isArray(pkg.data) ? pkg.data : pkg.data?.packages || [],
+      );
     if (mr.data) setMedicines(mr.data);
     if (pr.data) setAppointments(pr.data);
     setLoading(false);
