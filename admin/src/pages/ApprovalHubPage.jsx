@@ -14,6 +14,46 @@ import {
     rejectAdminPackage,
 } from "../services/api";
 
+async function openInlineDocument(url, options = {}) {
+  if (!url) return;
+
+  const { forceContentType = "" } = options;
+
+  const popup = window.open("", "_blank", "noopener,noreferrer");
+
+  try {
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok)
+      throw new Error(`Failed to fetch document: ${response.status}`);
+
+    const contentType = response.headers.get("content-type") || "";
+    const blob = await response.blob();
+
+    const isPdfByUrl = /\.pdf($|\?)/i.test(url);
+    const isPdfByHeader = /application\/pdf/i.test(contentType);
+    const shouldForcePdf =
+      forceContentType === "application/pdf" || isPdfByUrl || isPdfByHeader;
+
+    const normalizedBlob =
+      blob.type || !shouldForcePdf
+        ? blob
+        : new Blob([blob], { type: "application/pdf" });
+
+    const objectUrl = URL.createObjectURL(normalizedBlob);
+
+    if (popup) {
+      popup.location.href = objectUrl;
+    } else {
+      window.open(objectUrl, "_blank", "noopener,noreferrer");
+    }
+
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+  } catch {
+    if (popup) popup.close();
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+}
+
 const TABS = {
   LABS: "labs",
   PHARMACIES: "pharmacies",
@@ -172,6 +212,12 @@ export default function ApprovalHubPage() {
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [pendingReject, setPendingReject] = useState(null);
+
+  const handleViewBrochure = async () => {
+    const url = selectedPackage?.brochureUrl || selectedPackage?.brochure;
+    if (!url) return;
+    await openInlineDocument(url, { forceContentType: "application/pdf" });
+  };
 
   const pendingLabs = useMemo(
     () => (labs || []).filter((item) => item.approvalStatus === "pending"),
@@ -698,14 +744,13 @@ export default function ApprovalHubPage() {
                 <h3 className="mb-2 text-sm font-extrabold text-slate-900">
                   Brochure
                 </h3>
-                <a
-                  href={selectedPackage.brochureUrl || selectedPackage.brochure}
-                  target="_blank"
-                  rel="noreferrer"
+                <button
+                  type="button"
+                  onClick={handleViewBrochure}
                   className="inline-flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-sm font-semibold text-blue-700 hover:bg-blue-50"
                 >
                   <FileText size={15} /> View Brochure
-                </a>
+                </button>
               </div>
             )}
           </div>
