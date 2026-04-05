@@ -57,26 +57,12 @@ function buildSignedViewerUrl(url) {
   const parsed = parseCloudinaryAsset(url);
   if (!parsed?.publicId) return url;
 
+  // If it's already publicly deliverable, return the original URL so browsers can view inline.
+  if ((parsed.deliveryType || "upload") === "upload") return url;
+
   const expiresAt = Math.floor(Date.now() / 1000) + 60 * 60; // 1 hour
 
-  try {
-    if ((parsed.deliveryType || "") === "private") {
-      const privateUrl = cloudinary.utils.private_download_url(
-        parsed.publicId,
-        parsed.format,
-        {
-          resource_type: parsed.resourceType || "raw",
-          type: "private",
-          expires_at: expiresAt,
-          attachment: false,
-        },
-      );
-      if (privateUrl) return privateUrl;
-    }
-  } catch {
-    // fall through
-  }
-
+  // Signed delivery URL (viewer-friendly). Avoid private_download_url since it tends to force downloads.
   return cloudinary.url(parsed.publicId, {
     secure: true,
     sign_url: true,

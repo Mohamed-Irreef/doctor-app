@@ -704,7 +704,7 @@ export default function ApprovalHubPage() {
                   rel="noreferrer"
                   className="inline-flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-sm font-semibold text-blue-700 hover:bg-blue-50"
                 >
-                  <FileText size={15} /> Download Brochure
+                  <FileText size={15} /> View Brochure
                 </a>
               </div>
             )}
