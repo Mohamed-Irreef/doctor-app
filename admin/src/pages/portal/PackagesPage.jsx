@@ -1,13 +1,14 @@
-import { ChevronDown, ChevronUp, Plus, Trash2, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Check, ChevronDown, Pencil, Plus, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import Modal from "../../components/Modal";
 import {
-    createLabPartnerPackage,
-    deleteLabPartnerPackage,
-    getLabPartnerPackages,
-    getLabPartnerTests,
-    updateLabPartnerPackage,
+  createLabPartnerPackage,
+  deleteLabPartnerPackage,
+  getLabPartnerPackages,
+  updateLabPartnerPackage,
 } from "../../services/api";
+
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 const defaultPackageForm = {
   name: "",
@@ -24,7 +25,8 @@ const defaultPackageForm = {
     offer: "",
     gst: "18",
   },
-  tests: [],
+  // UI-state for the dynamic Test Builder (will be transformed to API payload on submit)
+  tests: { groups: [] },
   ageRange: { min: "", max: "" },
   gender: "All",
   suitableFor: [],
@@ -149,9 +151,61 @@ const FileField = ({ label, value, onChange, accept }) => (
   </div>
 );
 
+const validateFile = (file, kind) => {
+  if (!file) return null;
+  if (file.size > MAX_UPLOAD_BYTES) return "File is too large (max 10MB)";
+
+  const mime = (file.type || "").toLowerCase();
+  const name = (file.name || "").toLowerCase();
+
+  if (kind === "image") {
+    if (!mime.startsWith("image/")) return "Please select a valid image";
+    return null;
+  }
+
+  if (kind === "pdf") {
+    if (mime !== "application/pdf" && !name.endsWith(".pdf"))
+      return "Please select a PDF brochure";
+    return null;
+  }
+
+  return null;
+};
+
+const normalizeTestName = (value) => value.trim().replace(/\s+/g, " ");
+
+const getTotalTestsFromBuilder = (testBuilder) => {
+  const groups = testBuilder?.groups || [];
+  return groups.reduce((sum, group) => sum + (group.tests?.length || 0), 0);
+};
+
+const toTestBuilderFromApi = (apiTests) => {
+  const groups = Array.isArray(apiTests)
+    ? apiTests.map((group) => ({
+        groupName: group?.category || "",
+        isOpen: true,
+        newTest: "",
+        tests: (group?.tests || []).map((name) => ({ name })),
+      }))
+    : [];
+
+  return { groups };
+};
+
+const toApiTestsFromBuilder = (testBuilder) => {
+  const groups = testBuilder?.groups || [];
+  return groups
+    .map((group) => ({
+      category: (group.groupName || "").trim(),
+      tests: (group.tests || [])
+        .map((t) => normalizeTestName(t.name))
+        .filter(Boolean),
+    }))
+    .filter((group) => group.category && group.tests.length > 0);
+};
+
 export default function PackagesPage() {
   const [packages, setPackages] = useState([]);
-  const [tests, setTests] = useState([]);
   const [form, setForm] = useState(defaultPackageForm);
   const [activeTab, setActiveTab] = useState("basic");
   const [showForm, setShowForm] = useState(false);
@@ -159,11 +213,43 @@ export default function PackagesPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [errors, setErrors] = useState({});
-  const [expandedTests, setExpandedTests] = useState({});
 
   const [packageImageFile, setPackageImageFile] = useState(null);
   const [brochureFile, setBrochureFile] = useState(null);
   const [thumbnailFile, setThumbnailFile] = useState(null);
+
+  const packageImagePreviewUrl = useMemo(() => {
+    if (!packageImageFile) return "";
+    return URL.createObjectURL(packageImageFile);
+  }, [packageImageFile]);
+
+  const thumbnailPreviewUrl = useMemo(() => {
+    if (!thumbnailFile) return "";
+    return URL.createObjectURL(thumbnailFile);
+  }, [thumbnailFile]);
+
+  const brochurePreviewUrl = useMemo(() => {
+    if (!brochureFile) return "";
+    return URL.createObjectURL(brochureFile);
+  }, [brochureFile]);
+
+  useEffect(() => {
+    return () => {
+      if (packageImagePreviewUrl) URL.revokeObjectURL(packageImagePreviewUrl);
+    };
+  }, [packageImagePreviewUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (thumbnailPreviewUrl) URL.revokeObjectURL(thumbnailPreviewUrl);
+    };
+  }, [thumbnailPreviewUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (brochurePreviewUrl) URL.revokeObjectURL(brochurePreviewUrl);
+    };
+  }, [brochurePreviewUrl]);
 
   const [tagInput, setTagInput] = useState("");
   const [suitableForInput, setSuitableForInput] = useState("");
@@ -183,7 +269,6 @@ export default function PackagesPage() {
 
   useEffect(() => {
     loadPackages();
-    loadTests();
   }, []);
 
   const loadPackages = async () => {
@@ -193,32 +278,83 @@ export default function PackagesPage() {
       if (res.status === "success") {
         setPackages(res.data || []);
       }
-    } catch (err) {
+    } catch {
       setMessage({ type: "error", text: "Failed to load packages" });
     } finally {
       setLoading(false);
     }
   };
 
-  const loadTests = async () => {
-    try {
-      const res = await getLabPartnerTests();
-      if (res.status === "success") {
-        setTests(res.data || []);
-      }
-    } catch (err) {
-      console.error("Failed to load tests:", err);
-    }
-  };
-
   const validateForm = () => {
     const newErrors = {};
     if (!form.name.trim()) newErrors.name = "Package name is required";
-    if (!form.price.original)
-      newErrors.originalPrice = "Original price is required";
-    if (!form.price.offer) newErrors.offerPrice = "Offer price is required";
-    if (!form.tests.length) newErrors.tests = "Add at least one test";
+
+    const original = Number(form.price.original || 0);
+    const offer = Number(form.price.offer || 0);
+    if (!(original > 0))
+      newErrors.originalPrice = "Original price must be greater than 0";
+    if (!(offer > 0))
+      newErrors.offerPrice = "Offer price must be greater than 0";
+    if (original > 0 && offer > original)
+      newErrors.offerPrice = "Offer price cannot exceed original price";
+
+    const minAgeRaw = form.ageRange?.min;
+    const maxAgeRaw = form.ageRange?.max;
+    const minAge =
+      minAgeRaw === "" || minAgeRaw == null ? null : Number(minAgeRaw);
+    const maxAge =
+      maxAgeRaw === "" || maxAgeRaw == null ? null : Number(maxAgeRaw);
+    if (minAge != null && Number.isNaN(minAge))
+      newErrors.minAge = "Min age must be a number";
+    if (maxAge != null && Number.isNaN(maxAge))
+      newErrors.maxAge = "Max age must be a number";
+    if (minAge != null && maxAge != null && minAge > maxAge)
+      newErrors.maxAge = "Max age must be >= min age";
+
+    if (!packageImageFile && !form.image)
+      newErrors.packageImage = "Package image is required";
+
+    const totalTests = getTotalTestsFromBuilder(form.tests);
+    if (totalTests === 0) newErrors.tests = "Add at least one test";
+
+    const groups = form.tests?.groups || [];
+    const hasUnnamedGroupWithTests = groups.some(
+      (g) => (g.tests?.length || 0) > 0 && !(g.groupName || "").trim(),
+    );
+    if (hasUnnamedGroupWithTests)
+      newErrors.tests = "Each test group must have a group name";
+
     return newErrors;
+  };
+
+  const handleSelectImage = (file, setter, errorKey) => {
+    if (!file) {
+      setter(null);
+      return;
+    }
+    const error = validateFile(file, "image");
+    if (error) {
+      setErrors((prev) => ({ ...prev, [errorKey]: error }));
+      flashMessage("error", error);
+      return;
+    }
+    setErrors((prev) => ({ ...prev, [errorKey]: undefined }));
+    setter(file);
+  };
+
+  const handleSelectBrochure = (file) => {
+    if (!file) {
+      setBrochureFile(null);
+      return;
+    }
+    const error = validateFile(file, "pdf");
+    if (error) {
+      setErrors((prev) => ({ ...prev, brochure: error }));
+      flashMessage("error", error);
+      return;
+    }
+    setErrors((prev) => ({ ...prev, brochure: undefined }));
+    setBrochureFile(file);
   };
 
   const handleSubmit = async () => {
@@ -236,8 +372,14 @@ export default function PackagesPage() {
         thumbnailFile,
       };
 
+      const payload = {
+        ...form,
+        status: "PENDING_APPROVAL",
+        tests: toApiTestsFromBuilder(form.tests),
+      };
+
       if (editing) {
-        const res = await updateLabPartnerPackage(editing, form, files);
+        const res = await updateLabPartnerPackage(editing, payload, files);
         if (res.status === "success") {
           setMessage({ type: "success", text: "Package updated successfully" });
           setShowForm(false);
@@ -250,7 +392,7 @@ export default function PackagesPage() {
           });
         }
       } else {
-        const res = await createLabPartnerPackage(form, files);
+        const res = await createLabPartnerPackage(payload, files);
         if (res.status === "success") {
           setMessage({
             type: "success",
@@ -265,7 +407,7 @@ export default function PackagesPage() {
           });
         }
       }
-    } catch (err) {
+    } catch {
       setMessage({ type: "error", text: "An error occurred" });
     } finally {
       setLoading(false);
@@ -280,7 +422,7 @@ export default function PackagesPage() {
           setMessage({ type: "success", text: "Package deleted" });
           loadPackages();
         }
-      } catch (err) {
+      } catch {
         setMessage({ type: "error", text: "Failed to delete package" });
       }
     }
@@ -314,14 +456,28 @@ export default function PackagesPage() {
 
   const openEditForm = (pkg) => {
     setForm({
+      ...defaultPackageForm,
       ...pkg,
+      tags: Array.isArray(pkg.tags) ? pkg.tags : [],
+      suitableFor: Array.isArray(pkg.suitableFor) ? pkg.suitableFor : [],
+      ageRange: { ...defaultPackageForm.ageRange, ...(pkg.ageRange || {}) },
+      details: { ...defaultPackageForm.details, ...(pkg.details || {}) },
+      instructions: {
+        ...defaultPackageForm.instructions,
+        ...(pkg.instructions || {}),
+      },
       price: {
         original: pkg.price?.original || "",
         offer: pkg.price?.offer || "",
         gst: pkg.price?.gst || "18",
       },
+      tests: toTestBuilderFromApi(pkg.tests),
     });
     setEditing(pkg._id);
+    setPackageImageFile(null);
+    setBrochureFile(null);
+    setThumbnailFile(null);
+    setErrors({});
     setShowForm(true);
     setActiveTab("basic");
   };
@@ -414,56 +570,211 @@ export default function PackagesPage() {
     }));
   };
 
-  const toggleTestGroup = (groupIndex) => {
-    setExpandedTests((prev) => ({
-      ...prev,
-      [groupIndex]: !prev[groupIndex],
-    }));
+  const flashMessage = (type, text) => {
+    setMessage({ type, text });
+    window.clearTimeout(flashMessage._t);
+    flashMessage._t = window.setTimeout(() => {
+      setMessage({ type: "", text: "" });
+    }, 2000);
   };
 
-  const handleAddTestGroup = () => {
+  // ─── Tests Tab: Dynamic Test Group + Test CRUD ────────────────────────────
+  const addGroup = () => {
+    setErrors((prev) => ({ ...prev, tests: undefined }));
     setForm((prev) => ({
       ...prev,
-      tests: [...prev.tests, { category: "", tests: [] }],
+      tests: {
+        ...prev.tests,
+        groups: [
+          ...(prev.tests?.groups || []),
+          {
+            groupName: "",
+            isOpen: true,
+            newTest: "",
+            tests: [],
+          },
+        ],
+      },
     }));
   };
 
-  const handleRemoveTestGroup = (index) => {
+  const deleteGroup = (groupIndex) => {
     setForm((prev) => ({
       ...prev,
-      tests: prev.tests.filter((_, i) => i !== index),
+      tests: {
+        ...prev.tests,
+        groups: (prev.tests?.groups || []).filter((_, i) => i !== groupIndex),
+      },
     }));
+    flashMessage("success", "Test group deleted");
   };
 
-  const handleUpdateTestGroup = (index, key, value) => {
-    const newTests = [...form.tests];
-    newTests[index] = { ...newTests[index], [key]: value };
+  const toggleGroup = (groupIndex) => {
     setForm((prev) => ({
       ...prev,
-      tests: newTests,
+      tests: {
+        ...prev.tests,
+        groups: (prev.tests?.groups || []).map((g, i) =>
+          i === groupIndex ? { ...g, isOpen: !g.isOpen } : g,
+        ),
+      },
     }));
   };
 
-  const handleAddTestToGroup = (groupIndex, testId) => {
-    const newTests = [...form.tests];
-    if (!newTests[groupIndex].tests.includes(testId)) {
-      newTests[groupIndex].tests.push(testId);
+  const updateGroupName = (groupIndex, value) => {
+    setForm((prev) => ({
+      ...prev,
+      tests: {
+        ...prev.tests,
+        groups: (prev.tests?.groups || []).map((g, i) =>
+          i === groupIndex ? { ...g, groupName: value } : g,
+        ),
+      },
+    }));
+  };
+
+  const updateNewTest = (groupIndex, value) => {
+    setForm((prev) => ({
+      ...prev,
+      tests: {
+        ...prev.tests,
+        groups: (prev.tests?.groups || []).map((g, i) =>
+          i === groupIndex ? { ...g, newTest: value } : g,
+        ),
+      },
+    }));
+  };
+
+  const addTest = (groupIndex) => {
+    const groups = form.tests?.groups || [];
+    const group = groups[groupIndex];
+    const candidate = normalizeTestName(group?.newTest || "");
+    if (!candidate) {
+      flashMessage("error", "Test name is required");
+      return;
     }
+
+    const duplicate = (group.tests || []).some(
+      (t) =>
+        normalizeTestName(t.name).toLowerCase() === candidate.toLowerCase(),
+    );
+    if (duplicate) {
+      flashMessage("error", "Duplicate test name in this group");
+      return;
+    }
+
+    setErrors((prev) => ({ ...prev, tests: undefined }));
     setForm((prev) => ({
       ...prev,
-      tests: newTests,
+      tests: {
+        ...prev.tests,
+        groups: (prev.tests?.groups || []).map((g, i) => {
+          if (i !== groupIndex) return g;
+          return {
+            ...g,
+            tests: [...(g.tests || []), { name: candidate }],
+            newTest: "",
+          };
+        }),
+      },
+    }));
+    flashMessage("success", "Test added");
+  };
+
+  // editTest acts as: start editing (✏️) OR save (Save button)
+  const editTest = (groupIndex, testIndex) => {
+    const groups = form.tests?.groups || [];
+    const group = groups[groupIndex];
+    const current = group?.tests?.[testIndex];
+    if (!current) return;
+
+    if (current.isEditing) {
+      const candidate = normalizeTestName(current.draftName ?? current.name);
+      if (!candidate) {
+        flashMessage("error", "Test name is required");
+        return;
+      }
+      const duplicate = (group.tests || []).some((t, i) =>
+        i === testIndex
+          ? false
+          : normalizeTestName(t.name).toLowerCase() === candidate.toLowerCase(),
+      );
+      if (duplicate) {
+        flashMessage("error", "Duplicate test name in this group");
+        return;
+      }
+
+      setForm((prev) => ({
+        ...prev,
+        tests: {
+          ...prev.tests,
+          groups: (prev.tests?.groups || []).map((g, gi) => {
+            if (gi !== groupIndex) return g;
+            return {
+              ...g,
+              tests: (g.tests || []).map((t, ti) =>
+                ti === testIndex ? { name: candidate } : { name: t.name },
+              ),
+            };
+          }),
+        },
+      }));
+      flashMessage("success", "Test updated");
+      return;
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      tests: {
+        ...prev.tests,
+        groups: (prev.tests?.groups || []).map((g, gi) => {
+          if (gi !== groupIndex) return g;
+          return {
+            ...g,
+            tests: (g.tests || []).map((t, ti) =>
+              ti === testIndex
+                ? { ...t, isEditing: true, draftName: t.name }
+                : { name: t.name },
+            ),
+          };
+        }),
+      },
     }));
   };
 
-  const handleRemoveTestFromGroup = (groupIndex, testId) => {
-    const newTests = [...form.tests];
-    newTests[groupIndex].tests = newTests[groupIndex].tests.filter(
-      (id) => id !== testId,
-    );
+  const updateTest = (groupIndex, testIndex, value) => {
     setForm((prev) => ({
       ...prev,
-      tests: newTests,
+      tests: {
+        ...prev.tests,
+        groups: (prev.tests?.groups || []).map((g, gi) => {
+          if (gi !== groupIndex) return g;
+          return {
+            ...g,
+            tests: (g.tests || []).map((t, ti) =>
+              ti === testIndex ? { ...t, draftName: value } : t,
+            ),
+          };
+        }),
+      },
     }));
+  };
+
+  const deleteTest = (groupIndex, testIndex) => {
+    setForm((prev) => ({
+      ...prev,
+      tests: {
+        ...prev.tests,
+        groups: (prev.tests?.groups || []).map((g, gi) => {
+          if (gi !== groupIndex) return g;
+          return {
+            ...g,
+            tests: (g.tests || []).filter((_, ti) => ti !== testIndex),
+          };
+        }),
+      },
+    }));
+    flashMessage("success", "Test deleted");
   };
 
   return (
@@ -663,9 +974,28 @@ export default function PackagesPage() {
             <div className="space-y-4">
               <FileField
                 label="Package Image"
-                onChange={setPackageImageFile}
+                value={packageImageFile}
+                onChange={(file) =>
+                  handleSelectImage(file, setPackageImageFile, "packageImage")
+                }
                 accept="image/*"
               />
+              {errors.packageImage && (
+                <p className="text-xs text-rose-600">{errors.packageImage}</p>
+              )}
+
+              {(packageImagePreviewUrl || form.image) && (
+                <div className="rounded-xl border border-slate-200 bg-white p-3">
+                  <p className="text-xs font-bold uppercase text-slate-600 mb-2">
+                    Preview
+                  </p>
+                  <img
+                    src={packageImagePreviewUrl || form.image}
+                    alt="Package preview"
+                    className="w-full max-h-64 object-cover rounded-lg border border-slate-200"
+                  />
+                </div>
+              )}
               {!packageImageFile && form.image && (
                 <p className="text-xs text-slate-500">
                   ✓ Image exists: {form.image}
@@ -674,18 +1004,54 @@ export default function PackagesPage() {
 
               <FileField
                 label="Brochure PDF"
-                onChange={setBrochureFile}
+                value={brochureFile}
+                onChange={handleSelectBrochure}
                 accept=".pdf"
               />
+              {errors.brochure && (
+                <p className="text-xs text-rose-600">{errors.brochure}</p>
+              )}
+
+              {(brochurePreviewUrl || form.brochure) && (
+                <p className="text-xs text-slate-600">
+                  <a
+                    href={brochurePreviewUrl || form.brochure}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-blue-600 hover:text-blue-700 font-semibold"
+                  >
+                    Open brochure preview
+                  </a>
+                </p>
+              )}
               {!brochureFile && form.brochure && (
                 <p className="text-xs text-slate-500">✓ Brochure exists</p>
               )}
 
               <FileField
                 label="Thumbnail Image (Optional)"
-                onChange={setThumbnailFile}
+                value={thumbnailFile}
+                onChange={(file) =>
+                  handleSelectImage(file, setThumbnailFile, "thumbnail")
+                }
                 accept="image/*"
               />
+              {errors.thumbnail && (
+                <p className="text-xs text-rose-600">{errors.thumbnail}</p>
+              )}
+
+              {(thumbnailPreviewUrl || form.thumbnailImage) && (
+                <div className="rounded-xl border border-slate-200 bg-white p-3">
+                  <p className="text-xs font-bold uppercase text-slate-600 mb-2">
+                    Thumbnail preview
+                  </p>
+                  <img
+                    src={thumbnailPreviewUrl || form.thumbnailImage}
+                    alt="Thumbnail preview"
+                    className="w-full max-h-40 object-cover rounded-lg border border-slate-200"
+                  />
+                </div>
+              )}
               {!thumbnailFile && form.thumbnailImage && (
                 <p className="text-xs text-slate-500">✓ Thumbnail exists</p>
               )}
@@ -767,82 +1133,176 @@ export default function PackagesPage() {
           {activeTab === "tests" && (
             <div className="space-y-4">
               <button
-                onClick={handleAddTestGroup}
-                className="w-full px-4 py-2 border-2 border-dashed border-slate-300 rounded-lg text-slate-700 font-semibold hover:bg-slate-50"
+                onClick={addGroup}
+                className="w-full px-4 py-2 border-2 border-dashed border-slate-300 rounded-xl text-slate-700 font-semibold hover:bg-slate-50"
               >
                 + Add Test Group
               </button>
 
-              {form.tests.map((group, groupIndex) => (
+              {(form.tests?.groups || []).map((group, groupIndex) => (
                 <div
                   key={groupIndex}
-                  className="rounded-lg border border-slate-200 p-4 bg-white"
+                  className="rounded-xl border border-slate-200 bg-white shadow-sm"
                 >
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2 p-4">
                     <input
                       type="text"
-                      value={group.category}
+                      value={group.groupName}
                       onChange={(e) =>
-                        handleUpdateTestGroup(
-                          groupIndex,
-                          "category",
-                          e.target.value,
-                        )
+                        updateGroupName(groupIndex, e.target.value)
                       }
-                      placeholder="Category (e.g., Cardiac Risk)"
-                      className="flex-1 px-3 py-2 rounded border border-slate-300 text-sm font-semibold"
+                      placeholder="Group Name (e.g., Hematology)"
+                      className="flex-1 px-4 py-2 rounded-lg border border-slate-300 text-sm font-semibold"
                     />
+
                     <button
-                      onClick={() => toggleTestGroup(groupIndex)}
-                      className="ml-2"
+                      type="button"
+                      onClick={() => toggleGroup(groupIndex)}
+                      className="p-2 rounded-lg hover:bg-slate-100"
+                      title={group.isOpen ? "Collapse" : "Expand"}
                     >
-                      {expandedTests[groupIndex] ? (
-                        <ChevronUp size={18} />
-                      ) : (
-                        <ChevronDown size={18} />
-                      )}
+                      <ChevronDown
+                        size={18}
+                        className={`transition-transform ${group.isOpen ? "rotate-180" : "rotate-0"}`}
+                      />
                     </button>
+
                     <button
-                      onClick={() => handleRemoveTestGroup(groupIndex)}
-                      className="ml-2 text-rose-600 hover:text-rose-700"
+                      type="button"
+                      onClick={() => deleteGroup(groupIndex)}
+                      className="p-2 rounded-lg text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                      title="Delete group"
                     >
                       <Trash2 size={18} />
                     </button>
                   </div>
 
-                  {expandedTests[groupIndex] && (
-                    <div className="space-y-3 mt-3 pt-3 border-t border-slate-200">
-                      {tests.map((test) => (
-                        <label
-                          key={test._id}
-                          className="flex items-center gap-2 text-sm"
-                        >
+                  <div
+                    className={`border-t border-slate-200 overflow-hidden transition-all duration-200 ${
+                      group.isOpen ? "max-h-[1200px]" : "max-h-0"
+                    }`}
+                  >
+                    <div className="p-4 space-y-4">
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <p className="text-xs font-bold uppercase text-slate-600 mb-2">
+                          + Add Test
+                        </p>
+                        <div className="flex gap-2">
                           <input
-                            type="checkbox"
-                            checked={group.tests.includes(test._id)}
+                            type="text"
+                            value={group.newTest}
                             onChange={(e) =>
-                              e.target.checked
-                                ? handleAddTestToGroup(groupIndex, test._id)
-                                : handleRemoveTestFromGroup(
-                                    groupIndex,
-                                    test._id,
-                                  )
+                              updateNewTest(groupIndex, e.target.value)
                             }
-                            className="w-4 h-4 rounded"
+                            onKeyDown={(e) =>
+                              e.key === "Enter" &&
+                              (e.preventDefault(), addTest(groupIndex))
+                            }
+                            placeholder="Test Name (required)"
+                            className="flex-1 px-4 py-2 rounded-lg border border-slate-300 bg-white text-sm"
                           />
-                          {test.name}
-                        </label>
-                      ))}
+                          <button
+                            type="button"
+                            onClick={() => addTest(groupIndex)}
+                            className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="rounded-lg border border-slate-200">
+                        <div className="px-4 py-2 text-xs font-bold uppercase text-slate-600 border-b border-slate-200 bg-white">
+                          Test List
+                        </div>
+
+                        <div className="divide-y divide-slate-100">
+                          {(group.tests || []).length === 0 ? (
+                            <div className="px-4 py-3 text-sm text-slate-500">
+                              No tests added yet
+                            </div>
+                          ) : (
+                            (group.tests || []).map((t, testIndex) => (
+                              <div
+                                key={`${groupIndex}-${testIndex}`}
+                                className="flex items-center justify-between gap-3 px-4 py-2 hover:bg-slate-50"
+                              >
+                                <div className="flex-1">
+                                  {t.isEditing ? (
+                                    <input
+                                      type="text"
+                                      value={t.draftName ?? ""}
+                                      onChange={(e) =>
+                                        updateTest(
+                                          groupIndex,
+                                          testIndex,
+                                          e.target.value,
+                                        )
+                                      }
+                                      onKeyDown={(e) =>
+                                        e.key === "Enter" &&
+                                        (e.preventDefault(),
+                                        editTest(groupIndex, testIndex))
+                                      }
+                                      className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm"
+                                    />
+                                  ) : (
+                                    <p className="text-sm font-medium text-slate-900">
+                                      {t.name}
+                                    </p>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  {t.isEditing ? (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        editTest(groupIndex, testIndex)
+                                      }
+                                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700"
+                                      title="Save"
+                                    >
+                                      <Check size={16} /> Save
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        editTest(groupIndex, testIndex)
+                                      }
+                                      className="p-2 rounded-lg hover:bg-slate-100 text-slate-700"
+                                      title="Edit"
+                                    >
+                                      <Pencil size={16} />
+                                    </button>
+                                  )}
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      deleteTest(groupIndex, testIndex)
+                                    }
+                                    className="p-2 rounded-lg hover:bg-rose-50 text-rose-600"
+                                    title="Delete"
+                                  >
+                                    <X size={16} />
+                                  </button>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </div>
               ))}
 
-              {form.tests.length > 0 && (
+              {(form.tests?.groups || []).length > 0 && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <p className="text-sm font-semibold text-blue-900">
-                    Total Tests:{" "}
-                    {form.tests.reduce((sum, g) => sum + g.tests.length, 0)}
+                    Total Tests: {getTotalTestsFromBuilder(form.tests)}
                   </p>
                 </div>
               )}
@@ -867,6 +1327,7 @@ export default function PackagesPage() {
                       ageRange: { ...form.ageRange, min: e.target.value },
                     })
                   }
+                  error={errors.minAge}
                 />
                 <Field
                   label="Max Age"
@@ -878,6 +1339,7 @@ export default function PackagesPage() {
                       ageRange: { ...form.ageRange, max: e.target.value },
                     })
                   }
+                  error={errors.maxAge}
                 />
               </div>
 
@@ -1137,8 +1599,7 @@ export default function PackagesPage() {
                       Tests
                     </p>
                     <p className="text-sm font-bold text-slate-900 mt-1">
-                      {form.tests.reduce((sum, g) => sum + g.tests.length, 0)}{" "}
-                      tests
+                      {getTotalTestsFromBuilder(form.tests)} tests
                     </p>
                   </div>
                   <div>

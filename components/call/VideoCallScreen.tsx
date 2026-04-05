@@ -10,16 +10,27 @@ import {
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-    mediaDevices,
-    MediaStream,
-    RTCIceCandidate,
-    RTCPeerConnection,
-    RTCSessionDescription,
-    RTCView,
-} from "react-native-webrtc";
 import { io, Socket } from "socket.io-client";
 import { getAuthToken, getSocketBaseUrl } from "../../services/api";
+
+let mediaDevices: any;
+let MediaStream: any;
+let RTCIceCandidate: any;
+let RTCPeerConnection: any;
+let RTCSessionDescription: any;
+let RTCView: any;
+
+try {
+  const webrtc = require("react-native-webrtc");
+  mediaDevices = webrtc.mediaDevices;
+  MediaStream = webrtc.MediaStream;
+  RTCIceCandidate = webrtc.RTCIceCandidate;
+  RTCPeerConnection = webrtc.RTCPeerConnection;
+  RTCSessionDescription = webrtc.RTCSessionDescription;
+  RTCView = webrtc.RTCView;
+} catch (e) {
+  // WebRTC not available (e.g., in Expo Go)
+}
 
 type Props = {
   roomId: string;
@@ -40,6 +51,27 @@ export default function VideoCallScreen({
 }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+
+  // Fallback for Expo Go or environments without WebRTC
+  if (!RTCPeerConnection) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.centerContent}>
+          <Text style={styles.title}>Video Call</Text>
+          <Text style={styles.message}>
+            WebRTC video calls are not available in Expo Go.
+          </Text>
+          <Text style={styles.submessage}>
+            Use a development build for full video calling support.
+          </Text>
+          <Pressable style={styles.backButton} onPress={() => router.back()}>
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
   const socketRef = useRef<Socket | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<any>(null);
@@ -369,5 +401,40 @@ const styles = StyleSheet.create({
   },
   endBtn: {
     backgroundColor: "#DC2626",
+  },
+  centerContent: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 16,
+    color: "#333",
+  },
+  message: {
+    fontSize: 16,
+    marginBottom: 12,
+    color: "#666",
+    textAlign: "center",
+  },
+  submessage: {
+    fontSize: 14,
+    marginBottom: 24,
+    color: "#999",
+    textAlign: "center",
+  },
+  backButton: {
+    backgroundColor: "#007AFF",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  backButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

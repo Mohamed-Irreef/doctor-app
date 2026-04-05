@@ -931,9 +931,12 @@ export async function createLabPartnerPackage(data, files) {
   try {
     const formData = new FormData();
     formData.append("data", JSON.stringify(data));
-    if (files?.packageImageFile) formData.append("packageImageFile", files.packageImageFile);
-    if (files?.brochureFile) formData.append("brochureFile", files.brochureFile);
-    if (files?.thumbnailFile) formData.append("thumbnailFile", files.thumbnailFile);
+    if (files?.packageImageFile)
+      formData.append("packageImageFile", files.packageImageFile);
+    if (files?.brochureFile)
+      formData.append("brochureFile", files.brochureFile);
+    if (files?.thumbnailFile)
+      formData.append("thumbnailFile", files.thumbnailFile);
     const res = await API.post("/partner/lab/packages", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
@@ -947,8 +950,12 @@ export async function updateLabPartnerPackage(id, data, files) {
   try {
     const formData = new FormData();
     formData.append("data", JSON.stringify(data));
-    if (files?.packageImageFile) formData.append("packageImageFile", files.packageImageFile);
-    if (files?.brochureFile) formData.append("brochureFile", files.brochureFile);
+    if (files?.packageImageFile)
+      formData.append("packageImageFile", files.packageImageFile);
+    if (files?.brochureFile)
+      formData.append("brochureFile", files.brochureFile);
+    if (files?.thumbnailFile)
+      formData.append("thumbnailFile", files.thumbnailFile);
     const res = await API.put(`/partner/lab/packages/${id}`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });

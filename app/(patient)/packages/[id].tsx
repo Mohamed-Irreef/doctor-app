@@ -11,7 +11,9 @@ import {
 } from "lucide-react-native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
+    Alert,
     Image,
+    Linking,
     ScrollView,
     Share,
     StyleSheet,
@@ -326,6 +328,7 @@ export default function PackageDetailsScreen() {
   const originalPrice = pkg.price?.original || 0;
   const offerPrice = pkg.price?.offer || originalPrice;
   const discount = pkg.price?.discount || 0;
+  const brochureHref = pkg.brochureUrl || pkg.brochure;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -403,10 +406,43 @@ export default function PackageDetailsScreen() {
             </View>
           </View>
 
-          {/* ── BROCHURE ── */}
-          {pkg.brochure && (
+          {(pkg.fullDescription || pkg.shortDescription) && (
             <View style={styles.section}>
-              <TouchableOpacity style={styles.brochureBtn}>
+              <Text style={styles.sectionTitle}>About this package</Text>
+              <View style={styles.card}>
+                <Text style={styles.description}>
+                  {pkg.fullDescription || pkg.shortDescription}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* ── BROCHURE ── */}
+          {brochureHref && (
+            <View style={styles.section}>
+              <TouchableOpacity
+                style={styles.brochureBtn}
+                onPress={async () => {
+                  try {
+                    const canOpen = await Linking.canOpenURL(
+                      String(brochureHref),
+                    );
+                    if (!canOpen) {
+                      Alert.alert(
+                        "Unable to open brochure",
+                        "Please try again later.",
+                      );
+                      return;
+                    }
+                    await Linking.openURL(String(brochureHref));
+                  } catch {
+                    Alert.alert(
+                      "Unable to open brochure",
+                      "Please try again later.",
+                    );
+                  }
+                }}
+              >
                 <FileText color={Colors.primary} size={16} />
                 <Text style={styles.brochureBtnText}>View Brochure</Text>
               </TouchableOpacity>
@@ -554,17 +590,16 @@ export default function PackageDetailsScreen() {
           </View>
 
           {/* ── RECOMMENDED FOR ── */}
-          {pkg.recommendedFor && pkg.recommendedFor.length > 0 && (
+          {pkg.suitableFor && pkg.suitableFor.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Recommended for</Text>
+              <Text style={styles.sectionTitle}>Suitable for</Text>
               <View style={styles.card}>
-                {pkg.recommendedFor.map((item: string, idx: number) => (
+                {pkg.suitableFor.map((item: string, idx: number) => (
                   <View
                     key={idx}
                     style={[
                       styles.testItem,
-                      idx === pkg.recommendedFor.length - 1 &&
-                        styles.testItemLast,
+                      idx === pkg.suitableFor.length - 1 && styles.testItemLast,
                     ]}
                   >
                     <Text style={styles.testName}>• {item}</Text>
@@ -573,6 +608,29 @@ export default function PackageDetailsScreen() {
               </View>
             </View>
           )}
+
+          {pkg.details?.highlyRecommendedFor &&
+            pkg.details.highlyRecommendedFor.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Highly recommended for</Text>
+                <View style={styles.card}>
+                  {pkg.details.highlyRecommendedFor.map(
+                    (item: string, idx: number) => (
+                      <View
+                        key={idx}
+                        style={[
+                          styles.testItem,
+                          idx === pkg.details.highlyRecommendedFor.length - 1 &&
+                            styles.testItemLast,
+                        ]}
+                      >
+                        <Text style={styles.testName}>• {item}</Text>
+                      </View>
+                    ),
+                  )}
+                </View>
+              </View>
+            )}
 
           {/* ── TESTS INCLUDED ── */}
           {pkg.tests && pkg.tests.length > 0 && (
@@ -634,8 +692,7 @@ export default function PackageDetailsScreen() {
                       <Text style={styles.stepNumberText}>{idx + 1}</Text>
                     </View>
                     <View style={styles.stepContent}>
-                      <Text style={styles.stepTitle}>{step.title}</Text>
-                      <Text style={styles.stepDesc}>{step.description}</Text>
+                      <Text style={styles.stepTitle}>{step.step}</Text>
                     </View>
                   </View>
                 ))}

@@ -10,6 +10,8 @@ export interface Package {
   fullDescription?: string;
   image?: string;
   brochure?: string;
+  brochureUrl?: string;
+  thumbnailImage?: string;
   price?: {
     original?: number;
     offer?: number;
@@ -27,14 +29,12 @@ export interface Package {
     max: number;
   };
   gender?: string;
-  recommendedFor?: string[];
+  suitableFor?: string[];
   details?: {
     whoShouldBook?: string;
     preparation?: string;
-    howItWorks?: {
-      title: string;
-      description: string;
-    }[];
+    howItWorks?: { step: string }[];
+    highlyRecommendedFor?: string[];
   };
   instructions?: {
     before?: string;
