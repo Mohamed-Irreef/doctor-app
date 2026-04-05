@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Toast from "../../../components/Toast";
 import {
     getPharmacyPartnerSettings,
     updatePharmacyPartnerSettings,
@@ -25,12 +26,26 @@ export default function PharmacySettingsRoutePage() {
   const [logoFile, setLogoFile] = useState(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [toast, setToast] = useState({ message: "", type: "info" });
+
+  useEffect(() => {
+    if (!toast.message) return undefined;
+    const timer = setTimeout(
+      () => setToast({ message: "", type: "info" }),
+      2600,
+    );
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   useEffect(() => {
     const load = async () => {
       const response = await getPharmacyPartnerSettings();
       if (response.status !== "success") {
         setMessage(response.error || "Unable to load settings.");
+        setToast({
+          message: response.error || "Unable to load settings.",
+          type: "error",
+        });
         return;
       }
 
@@ -81,9 +96,30 @@ export default function PharmacySettingsRoutePage() {
       if (uploadRes.status !== "success") {
         setSaving(false);
         setMessage(uploadRes.error || "Unable to upload logo.");
+        setToast({
+          message: uploadRes.error || "Unable to upload logo.",
+          type: "error",
+        });
         return;
       }
-      logoUrl = uploadRes.data?.url || logoUrl;
+      const uploadedUrl =
+        uploadRes.data?.url ||
+        uploadRes.data?.secure_url ||
+        uploadRes.data?.fileUrl ||
+        uploadRes.data?.location ||
+        "";
+
+      if (!uploadedUrl || !/^https?:\/\//i.test(uploadedUrl)) {
+        setSaving(false);
+        setMessage("Logo upload did not return a valid URL.");
+        setToast({
+          message: "Logo upload failed. Please try again.",
+          type: "error",
+        });
+        return;
+      }
+
+      logoUrl = uploadedUrl;
     }
 
     const payload = {
@@ -126,8 +162,13 @@ export default function PharmacySettingsRoutePage() {
       setInitialForm(merged);
       setLogoFile(null);
       setMessage("Settings saved.");
+      setToast({ message: "Settings saved successfully.", type: "success" });
     } else {
       setMessage(response.error || "Unable to save settings.");
+      setToast({
+        message: response.error || "Unable to save settings.",
+        type: "error",
+      });
     }
   };
 
@@ -254,6 +295,12 @@ export default function PharmacySettingsRoutePage() {
       {message ? (
         <p className="text-sm font-medium text-slate-600">{message}</p>
       ) : null}
+
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast({ message: "", type: "info" })}
+      />
     </div>
   );
 }
