@@ -391,11 +391,7 @@ export async function uploadPublicFile(file, folder = "nividoc/partners") {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("folder", folder);
-    const res = await API.post("/upload-public", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    const res = await API.post("/upload-public", formData);
     return ok(res.data?.data);
   } catch (error) {
     return fail(error);
@@ -409,9 +405,6 @@ export async function uploadLabReportFile(file, onProgress) {
     formData.append("folder", "nividoc/lab-reports");
 
     const res = await API.post("/upload-public", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
       onUploadProgress: (event) => {
         if (!event?.total || typeof onProgress !== "function") return;
         onProgress(Math.round((event.loaded / event.total) * 100));

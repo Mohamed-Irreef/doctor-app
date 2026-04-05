@@ -859,6 +859,7 @@ const getLabSettings = catchAsync(async (req, res) => {
       labName: profile.labName,
       address: profile.address,
       supportPhone: profile.supportPhone,
+      logo: profile.profilePhoto || "",
       deliveryPricing: profile.deliveryPricing || {
         costPerKm: 0,
         minCharge: 0,
@@ -877,6 +878,9 @@ const updateLabSettings = catchAsync(async (req, res) => {
   if (req.body.address !== undefined) profile.address = req.body.address;
   if (req.body.supportPhone !== undefined) {
     profile.supportPhone = req.body.supportPhone;
+  }
+  if (req.body.logo !== undefined) {
+    profile.profilePhoto = req.body.logo;
   }
   if (req.body.deliveryPricing) {
     const pricing = req.body.deliveryPricing;

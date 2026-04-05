@@ -298,6 +298,7 @@ const updateLabSettingsSchema = z.object({
   labName: z.string().min(2).optional(),
   address: z.string().min(4).optional(),
   supportPhone: z.string().min(8).optional(),
+  logo: z.string().url().optional(),
   deliveryPricing: z
     .object({
       costPerKm: z.coerce.number().min(0),

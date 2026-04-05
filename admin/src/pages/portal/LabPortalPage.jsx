@@ -21,6 +21,7 @@ import {
     updateLabPartnerSettings,
     updateLabPartnerTest,
     uploadLabReportFile,
+    uploadPublicFile,
 } from "../../services/api";
 import AdminBookingsPage from "../admin/bookings";
 import OrdersCalendarPage from "../lab/OrdersCalendar";
@@ -1789,12 +1790,14 @@ function SettingsPage() {
 
     let logoUrl = labLogo;
     if (logoFile) {
-      const formData = new FormData();
-      formData.append("file", logoFile);
-      const uploadRes = await uploadLabReportFile(formData);
-      if (uploadRes.status === "success") {
-        logoUrl = uploadRes.data?.url || labLogo;
+      const uploadRes = await uploadPublicFile(logoFile, "nividoc/labs/logos");
+      if (uploadRes.status !== "success") {
+        setSaving(false);
+        setMessage(uploadRes.error || "Unable to upload logo.");
+        return;
       }
+
+      logoUrl = uploadRes.data?.url || "";
     }
 
     const response = await updateLabPartnerSettings({
