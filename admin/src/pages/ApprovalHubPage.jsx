@@ -17,39 +17,95 @@ import {
 async function openInlineDocument(url, options = {}) {
   if (!url) return;
 
-  const { forceContentType = "" } = options;
+  const { forceContentType = "", embed = true, timeoutMs = 20_000 } = options;
 
   const popup = window.open("", "_blank", "noopener,noreferrer");
 
+  if (popup) {
+    try {
+      popup.document.open();
+      popup.document.write(`<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Loading…</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 24px; }
+    </style>
+  </head>
+  <body>Loading document…</body>
+</html>`);
+      popup.document.close();
+    } catch {
+      // ignore
+    }
+  }
+
   try {
-    const response = await fetch(url, { cache: "no-store" });
-    if (!response.ok)
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+    const response = await fetch(url, {
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    window.clearTimeout(timeoutId);
+
+    if (!response.ok) {
       throw new Error(`Failed to fetch document: ${response.status}`);
+    }
 
     const contentType = response.headers.get("content-type") || "";
+
+    // If Cloudinary (or a proxy) returns an HTML error page, don't try to render it as a PDF.
+    if (/text\/html/i.test(contentType)) {
+      throw new Error(
+        "Document response was HTML (likely blocked/unauthorized)",
+      );
+    }
+
     const blob = await response.blob();
 
-    const isPdfByUrl = /\.pdf($|\?)/i.test(url);
-    const isPdfByHeader = /application\/pdf/i.test(contentType);
-    const shouldForcePdf =
-      forceContentType === "application/pdf" || isPdfByUrl || isPdfByHeader;
-
     const normalizedBlob =
-      blob.type || !shouldForcePdf
-        ? blob
-        : new Blob([blob], { type: "application/pdf" });
+      forceContentType && blob.type !== forceContentType
+        ? new Blob([blob], { type: forceContentType })
+        : blob;
 
     const objectUrl = URL.createObjectURL(normalizedBlob);
 
-    if (popup) {
-      popup.location.href = objectUrl;
+    if (popup && embed) {
+      popup.document.open();
+      popup.document.write(`<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Document</title>
+    <style>
+      html, body { margin: 0; height: 100%; }
+      iframe { border: 0; width: 100%; height: 100%; }
+    </style>
+  </head>
+  <body>
+    <iframe src="${objectUrl}" title="Document"></iframe>
+  </body>
+</html>`);
+      popup.document.close();
+    } else if (popup) {
+      popup.location.replace(objectUrl);
     } else {
       window.open(objectUrl, "_blank", "noopener,noreferrer");
     }
 
     window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
   } catch {
-    if (popup) popup.close();
+    // Never leave a blank tab open.
+    if (popup) {
+      popup.location.replace(url);
+      return;
+    }
     window.open(url, "_blank", "noopener,noreferrer");
   }
 }
@@ -216,7 +272,10 @@ export default function ApprovalHubPage() {
   const handleViewBrochure = async () => {
     const url = selectedPackage?.brochureUrl || selectedPackage?.brochure;
     if (!url) return;
-    await openInlineDocument(url, { forceContentType: "application/pdf" });
+    await openInlineDocument(url, {
+      forceContentType: "application/pdf",
+      embed: true,
+    });
   };
 
   const pendingLabs = useMemo(
