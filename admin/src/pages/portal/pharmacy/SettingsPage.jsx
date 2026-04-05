@@ -86,7 +86,7 @@ export default function PharmacySettingsRoutePage() {
       logoUrl = uploadRes.data?.url || logoUrl;
     }
 
-    const response = await updatePharmacyPartnerSettings({
+    const payload = {
       pharmacyName: form.pharmacyName,
       supportEmail: form.supportEmail,
       supportPhone: form.supportPhone,
@@ -95,13 +95,33 @@ export default function PharmacySettingsRoutePage() {
       state: form.state,
       pincode: form.pincode,
       operationalHours: form.operationalHours,
-      logo: logoUrl,
-    });
+    };
+
+    // Only send logo when it is an actual URL to satisfy backend validation.
+    if (logoUrl && /^https?:\/\//i.test(logoUrl)) {
+      payload.logo = logoUrl;
+    }
+
+    const response = await updatePharmacyPartnerSettings(payload);
 
     setSaving(false);
     if (response.status === "success") {
-      setForm((prev) => ({ ...prev, logo: logoUrl }));
-      setInitialForm((prev) => ({ ...prev, ...form, logo: logoUrl }));
+      const saved = response.data || {};
+      const merged = {
+        ...form,
+        pharmacyName: saved.pharmacyName ?? form.pharmacyName,
+        registrationId: saved.registrationId ?? form.registrationId,
+        supportEmail: saved.supportEmail ?? form.supportEmail,
+        supportPhone: saved.supportPhone ?? form.supportPhone,
+        address: saved.address ?? form.address,
+        city: saved.city ?? form.city,
+        state: saved.state ?? form.state,
+        pincode: saved.pincode ?? form.pincode,
+        operationalHours: saved.operationalHours ?? form.operationalHours,
+        logo: saved.logo ?? logoUrl ?? form.logo,
+      };
+      setForm(merged);
+      setInitialForm(merged);
       setLogoFile(null);
       setMessage("Settings saved.");
     } else {
