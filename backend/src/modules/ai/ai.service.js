@@ -414,11 +414,16 @@ function isModelNotSupportedError(message) {
   );
 }
 
+function isLeakedApiKeyError(message) {
+  const m = String(message || "").toLowerCase();
+  return (
+    m.includes("api key") &&
+    (m.includes("reported as leaked") || m.includes("was reported as leaked"))
+  );
+}
+
 async function geminiGenerateText({ apiKey, contents }) {
   const payload = JSON.stringify({
-    systemInstruction: {
-      parts: [{ text: SYSTEM_INSTRUCTION }],
-    },
     contents,
     generationConfig: {
       temperature: 0.4,
@@ -466,6 +471,12 @@ async function geminiGenerateText({ apiKey, contents }) {
       if (statusCode < 200 || statusCode >= 300) {
         const message = json?.error?.message || raw || "AI request failed";
         lastErrorMessage = message;
+        if (isLeakedApiKeyError(message)) {
+          throw new ApiError(
+            502,
+            "Gemini API key is disabled (reported as leaked). Please rotate the key and update GEMINI_API_KEY on the server.",
+          );
+        }
         if (isModelNotSupportedError(message)) {
           continue;
         }
@@ -530,7 +541,20 @@ async function chatWithAi({ messages }) {
     contents.push({ role: "user", parts: [{ text: "Please continue." }] });
   }
 
-  const reply = await geminiGenerateText({ apiKey, contents });
+  const reply = await geminiGenerateText({
+    apiKey,
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text: `INSTRUCTIONS (follow strictly):\n${SYSTEM_INSTRUCTION}`,
+          },
+        ],
+      },
+      ...contents,
+    ],
+  });
   return {
     reply,
   };
