@@ -377,11 +377,44 @@ function httpsJsonRequest({ url, method, headers, body, timeoutMs }) {
   });
 }
 
-async function geminiGenerateText({ apiKey, contents }) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(
-    apiKey,
-  )}`;
+function getGeminiApiVersions() {
+  const raw = String(process.env.GEMINI_API_VERSIONS || "").trim();
+  if (!raw) return ["v1", "v1beta"];
+  return raw
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
 
+function getGeminiModelCandidates() {
+  const raw = String(process.env.GEMINI_MODEL || "").trim();
+  if (raw) {
+    const values = raw
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean);
+    if (values.length) return values;
+  }
+
+  return [
+    "gemini-1.5-flash-latest",
+    "gemini-1.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-pro-latest",
+  ];
+}
+
+function isModelNotSupportedError(message) {
+  const m = String(message || "").toLowerCase();
+  return (
+    m.includes("is not found") ||
+    m.includes("not found") ||
+    m.includes("not supported") ||
+    m.includes("unsupported")
+  );
+}
+
+async function geminiGenerateText({ apiKey, contents }) {
   const payload = JSON.stringify({
     systemInstruction: {
       parts: [{ text: SYSTEM_INSTRUCTION }],
@@ -393,47 +426,68 @@ async function geminiGenerateText({ apiKey, contents }) {
     },
   });
 
-  let response;
-  try {
-    response = await httpsJsonRequest({
-      url,
-      method: "POST",
-      timeoutMs: 20000,
-      headers: {
-        "Content-Type": "application/json",
-        "Content-Length": Buffer.byteLength(payload),
-      },
-      body: payload,
-    });
-  } catch (error) {
-    if (
-      String(error?.message || "")
-        .toLowerCase()
-        .includes("timeout")
-    ) {
-      throw new ApiError(504, "AI request timed out");
+  const versions = getGeminiApiVersions();
+  const models = getGeminiModelCandidates();
+
+  let lastErrorMessage = "AI request failed";
+
+  for (const version of versions) {
+    for (const model of models) {
+      const url = `https://generativelanguage.googleapis.com/${version}/models/${model}:generateContent?key=${encodeURIComponent(
+        apiKey,
+      )}`;
+
+      let response;
+      try {
+        response = await httpsJsonRequest({
+          url,
+          method: "POST",
+          timeoutMs: 20000,
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Length": Buffer.byteLength(payload),
+          },
+          body: payload,
+        });
+      } catch (error) {
+        if (
+          String(error?.message || "")
+            .toLowerCase()
+            .includes("timeout")
+        ) {
+          throw new ApiError(504, "AI request timed out");
+        }
+        lastErrorMessage = "AI request failed";
+        continue;
+      }
+
+      const { statusCode, json, raw } = response;
+
+      if (statusCode < 200 || statusCode >= 300) {
+        const message = json?.error?.message || raw || "AI request failed";
+        lastErrorMessage = message;
+        if (isModelNotSupportedError(message)) {
+          continue;
+        }
+        throw new ApiError(502, message);
+      }
+
+      const text =
+        json?.candidates?.[0]?.content?.parts
+          ?.map((p) => p?.text)
+          .filter(Boolean)
+          .join("\n") || "";
+
+      if (!text.trim()) {
+        lastErrorMessage = "AI response was empty";
+        continue;
+      }
+
+      return text.trim();
     }
-    throw new ApiError(502, "AI request failed");
   }
 
-  const { statusCode, json } = response;
-
-  if (statusCode < 200 || statusCode >= 300) {
-    const message = json?.error?.message || "AI request failed";
-    throw new ApiError(502, message);
-  }
-
-  const text =
-    json?.candidates?.[0]?.content?.parts
-      ?.map((p) => p?.text)
-      .filter(Boolean)
-      .join("\n") || "";
-
-  if (!text.trim()) {
-    throw new ApiError(502, "AI response was empty");
-  }
-
-  return text.trim();
+  throw new ApiError(502, lastErrorMessage);
 }
 
 async function chatWithAi({ messages }) {
