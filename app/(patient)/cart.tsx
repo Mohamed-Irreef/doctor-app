@@ -22,6 +22,7 @@ import {
     useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import ButtonPrimary from "../../components/ButtonPrimary";
+import BottomActionBar from "../../components/common/BottomActionBar";
 import { Colors } from "../../constants/Colors";
 import { Spacing } from "../../constants/Spacing";
 import { Typography } from "../../constants/Typography";
@@ -377,7 +378,7 @@ export default function CartScreen() {
           data={items}
           contentContainerStyle={[
             styles.listContent,
-            { paddingBottom: 120 + Math.max(insets.bottom, 10) },
+            { paddingBottom: 140 + insets.bottom },
           ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -454,12 +455,7 @@ export default function CartScreen() {
           }
         />
 
-        <View
-          style={[
-            styles.bottomBar,
-            { paddingBottom: 16 + Math.max(insets.bottom, 10) },
-          ]}
-        >
+        <BottomActionBar>
           <ButtonPrimary
             title={
               loading
@@ -472,7 +468,7 @@ export default function CartScreen() {
             loading={loading}
             style={{ width: "100%" }}
           />
-        </View>
+        </BottomActionBar>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -648,17 +644,5 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     marginTop: 4,
     marginBottom: 0,
-  },
-  bottomBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: Colors.surface,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 16,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
   },
 });

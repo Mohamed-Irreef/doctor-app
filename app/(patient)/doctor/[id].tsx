@@ -23,6 +23,7 @@ import {
     useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import ButtonPrimary from "../../../components/ButtonPrimary";
+import BottomActionBar from "../../../components/common/BottomActionBar";
 import { Colors } from "../../../constants/Colors";
 import { Typography } from "../../../constants/Typography";
 import {
@@ -135,7 +136,7 @@ export default function DoctorProfileScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: 170 + Math.max(insets.bottom, 8) },
+          { paddingBottom: 220 + insets.bottom },
         ]}
       >
         {/* Header Banner */}
@@ -318,12 +319,7 @@ export default function DoctorProfileScreen() {
       </ScrollView>
 
       {/* Sticky Bottom CTA */}
-      <View
-        style={[
-          styles.bottomBar,
-          { paddingBottom: 16 + Math.max(insets.bottom, 8) },
-        ]}
-      >
+      <BottomActionBar>
         <Text style={styles.bottomFeeLabel}>Consultation Fee</Text>
         <Text style={styles.bottomFeeValue}>₹{doctor.fee}</Text>
         <ButtonPrimary
@@ -336,7 +332,7 @@ export default function DoctorProfileScreen() {
           }
           style={styles.bookButton}
         />
-      </View>
+      </BottomActionBar>
     </View>
   );
 }
@@ -520,25 +516,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryLight,
     borderRadius: 16,
     marginBottom: 8,
-  },
-  bottomBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: Colors.surface,
-    flexDirection: "column",
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 20,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    alignItems: "stretch",
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 10,
   },
   bottomFeeLabel: {
     ...Typography.caption,

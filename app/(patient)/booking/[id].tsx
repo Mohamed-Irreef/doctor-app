@@ -27,6 +27,7 @@ import {
 } from "react-native-safe-area-context";
 import ActionModal from "../../../components/ActionModal";
 import ButtonPrimary from "../../../components/ButtonPrimary";
+import BottomActionBar from "../../../components/common/BottomActionBar";
 import { Colors } from "../../../constants/Colors";
 import { Typography } from "../../../constants/Typography";
 import {
@@ -459,7 +460,7 @@ export default function BookingScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: 130 + Math.max(insets.bottom, 12) },
+          { paddingBottom: 220 + insets.bottom },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -924,11 +925,8 @@ export default function BookingScreen() {
         </View>
       </ScrollView>
 
-      <View
-        style={[
-          styles.bottomBar,
-          { paddingBottom: 12 + Math.max(insets.bottom, 10) },
-        ]}
+      <BottomActionBar
+        contentStyle={{ flexDirection: "row", alignItems: "center" }}
       >
         <View>
           <Text style={Typography.body2}>Total</Text>
@@ -943,7 +941,7 @@ export default function BookingScreen() {
           style={{ flex: 1, marginLeft: 24, paddingVertical: 18 }}
           disabled={!selectedSlot || !requiredMedicalValid}
         />
-      </View>
+      </BottomActionBar>
     </SafeAreaView>
   );
 }
@@ -1216,24 +1214,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: 16,
-  },
-  bottomBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: Colors.surface,
-    flexDirection: "row",
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 22,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    alignItems: "center",
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 10,
   },
 });

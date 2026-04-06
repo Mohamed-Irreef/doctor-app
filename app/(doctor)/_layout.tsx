@@ -1,17 +1,17 @@
 import { Tabs } from "expo-router";
 import {
-  CalendarCheck,
-  Clock,
-  DollarSign,
-  LayoutDashboard,
-  User,
+    CalendarCheck,
+    Clock,
+    DollarSign,
+    LayoutDashboard,
+    User,
 } from "lucide-react-native";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "../../constants/Colors";
-import { Spacing, Radius } from "../../constants/Spacing";
 import { Shadows } from "../../constants/Shadows";
+import { Radius, Spacing } from "../../constants/Spacing";
 
 const TAB_ITEMS = [
   { name: "index", title: "Dashboard", icon: LayoutDashboard },
@@ -21,19 +21,13 @@ const TAB_ITEMS = [
   { name: "profile", title: "Profile", icon: User },
 ];
 
-function TabIcon({
-  icon: Icon,
-  focused,
-}: {
-  icon: any;
-  focused: boolean;
-}) {
+function TabIcon({ icon: Icon, focused }: { icon: any; focused: boolean }) {
   return (
     <View style={[styles.iconPill, focused && styles.iconPillActive]}>
       <Icon
         color={focused ? Colors.primary : Colors.textTertiary}
-        size={21}
-        strokeWidth={focused ? 2.5 : 1.8}
+        size={focused ? 24 : 23}
+        strokeWidth={focused ? 2.3 : 2.0}
       />
     </View>
   );
@@ -42,10 +36,14 @@ function TabIcon({
 export default function DoctorLayout() {
   const insets = useSafeAreaInsets();
 
+  const bottomPad = insets.bottom > 0 ? insets.bottom : Spacing.sm;
+  const baseHeight = 56;
+
   const tabBarStyle = {
     ...styles.tabBar,
-    height: 58 + Math.max(insets.bottom, Spacing.sm) + 4,
-    paddingBottom: Math.max(insets.bottom, Spacing.sm) + 4,
+    height: baseHeight + bottomPad,
+    paddingBottom: bottomPad,
+    paddingTop: 4,
   } as const;
 
   return (
@@ -55,7 +53,8 @@ export default function DoctorLayout() {
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textTertiary,
         tabBarStyle,
-        tabBarIconStyle: { marginTop: 2 },
+        tabBarItemStyle: styles.tabBarItem,
+        tabBarLabelStyle: styles.tabLabel,
       }}
     >
       {TAB_ITEMS.map(({ name, title, icon }) => (
@@ -66,16 +65,6 @@ export default function DoctorLayout() {
             title,
             tabBarIcon: ({ focused }) => (
               <TabIcon icon={icon} focused={focused} />
-            ),
-            tabBarLabel: ({ focused }) => (
-              <Text
-                style={[
-                  styles.tabLabel,
-                  { color: focused ? Colors.primary : Colors.textTertiary },
-                ]}
-              >
-                {title}
-              </Text>
             ),
           }}
         />
@@ -93,11 +82,15 @@ export default function DoctorLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    paddingTop: Spacing.sm,
     backgroundColor: Colors.surface,
     borderTopWidth: 1,
     borderTopColor: Colors.borderLight,
     ...Shadows.tabBar,
+  },
+  tabBarItem: {
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 6,
   },
   iconPill: {
     width: 44,
@@ -110,9 +103,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryLight,
   },
   tabLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "600",
     letterSpacing: 0.2,
-    marginTop: 1,
+    marginTop: 2,
   },
 });

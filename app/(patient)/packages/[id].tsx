@@ -30,6 +30,7 @@ import {
     SafeAreaView,
     useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import BottomActionBar from "../../../components/common/BottomActionBar";
 import { Colors } from "../../../constants/Colors";
 import { Shadows } from "../../../constants/Shadows";
 import { Radius, Spacing } from "../../../constants/Spacing";
@@ -248,11 +249,7 @@ const styles = StyleSheet.create({
   },
   stepDesc: { ...Typography.body2, color: Colors.textSecondary },
   bookBtn: {
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    paddingHorizontal: Spacing.screenH,
     paddingVertical: Spacing.md,
-    backgroundColor: Colors.surface,
   },
   bookBtnGradient: {
     paddingVertical: Spacing.md,
@@ -567,7 +564,7 @@ export default function PackageDetailsScreen() {
         <ScrollView
           style={styles.content}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: Spacing.lg }}
+          contentContainerStyle={{ paddingBottom: 220 + insets.bottom }}
         >
           {/* ── PACKAGE INFO ── */}
           <View style={styles.section}>
@@ -1080,12 +1077,7 @@ export default function PackageDetailsScreen() {
         </ScrollView>
 
         {/* ── BOOK NOW BUTTON ── */}
-        <View
-          style={[
-            styles.bookBtn,
-            { paddingBottom: Spacing.md + Math.max(insets.bottom, 8) },
-          ]}
-        >
+        <BottomActionBar contentStyle={styles.bookBtn}>
           <TouchableOpacity
             activeOpacity={0.9}
             onPress={() =>
@@ -1104,7 +1096,7 @@ export default function PackageDetailsScreen() {
               <Text style={styles.bookBtnText}>Book Now - ₹{offerPrice}</Text>
             </LinearGradient>
           </TouchableOpacity>
-        </View>
+        </BottomActionBar>
       </View>
     </SafeAreaView>
   );

@@ -26,6 +26,7 @@ import {
 } from "react-native-safe-area-context";
 import ActionModal from "../../../components/ActionModal";
 import ButtonPrimary from "../../../components/ButtonPrimary";
+import BottomActionBar from "../../../components/common/BottomActionBar";
 import { Colors } from "../../../constants/Colors";
 import {
     getPatientAppointments,
@@ -177,7 +178,7 @@ export default function AppointmentDetailsScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.scroll,
-          { paddingBottom: 126 + Math.max(insets.bottom, 10) },
+          { paddingBottom: 220 + insets.bottom },
         ]}
       >
         {/* Status Banner */}
@@ -344,12 +345,7 @@ export default function AppointmentDetailsScreen() {
       </ScrollView>
 
       {/* Bottom Buttons */}
-      <View
-        style={[
-          styles.bottomBar,
-          { paddingBottom: 12 + Math.max(insets.bottom, 10) },
-        ]}
-      >
+      <BottomActionBar contentStyle={{ flexDirection: "row" }}>
         {isUpcoming ? (
           <>
             <ButtonPrimary
@@ -382,7 +378,7 @@ export default function AppointmentDetailsScreen() {
             style={{ flex: 1, paddingVertical: 18 }}
           />
         ) : null}
-      </View>
+      </BottomActionBar>
     </SafeAreaView>
   );
 }
@@ -531,18 +527,4 @@ const styles = StyleSheet.create({
   },
   reviewPromptTitle: { fontSize: 14, fontWeight: "700", color: Colors.text },
   reviewPromptSub: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
-  bottomBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: Colors.surface,
-    flexDirection: "row",
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 32,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    elevation: 10,
-  },
 });

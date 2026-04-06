@@ -9,10 +9,11 @@ import {
     User,
 } from "lucide-react-native";
 import React from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import SideDrawer from "../../components/SideDrawer";
 import { Colors } from "../../constants/Colors";
+import { Shadows } from "../../constants/Shadows";
 import { Radius, Spacing } from "../../constants/Spacing";
 
 const TAB_ITEMS = [
@@ -26,14 +27,12 @@ const TAB_ITEMS = [
 
 function TabIcon({ icon: Icon, focused }: { icon: any; focused: boolean }) {
   return (
-    <View style={styles.tabItem}>
-      <View style={[styles.iconPill, focused && styles.iconPillActive]}>
-        <Icon
-          color={focused ? Colors.primary : Colors.textTertiary}
-          size={focused ? 21 : 20}
-          strokeWidth={focused ? 2.35 : 1.9}
-        />
-      </View>
+    <View style={[styles.iconPill, focused && styles.iconPillActive]}>
+      <Icon
+        color={focused ? Colors.primary : Colors.textTertiary}
+        size={focused ? 24 : 23}
+        strokeWidth={focused ? 2.3 : 2.0}
+      />
     </View>
   );
 }
@@ -41,10 +40,14 @@ function TabIcon({ icon: Icon, focused }: { icon: any; focused: boolean }) {
 export default function PatientLayout() {
   const insets = useSafeAreaInsets();
 
+  const bottomPad = insets.bottom > 0 ? insets.bottom : Spacing.sm;
+  const baseHeight = 56;
+
   const tabBarStyle = {
     ...styles.tabBar,
-    height: 66 + Math.max(insets.bottom, Spacing.sm),
-    paddingBottom: Math.max(insets.bottom, Spacing.sm),
+    height: baseHeight + bottomPad,
+    paddingBottom: bottomPad,
+    paddingTop: 4,
   } as const;
 
   const hiddenScreenOptions = {
@@ -67,7 +70,6 @@ export default function PatientLayout() {
           tabBarStyle,
           tabBarItemStyle: styles.tabBarItem,
           tabBarLabelStyle: styles.tabLabel,
-          tabBarIconStyle: { marginTop: 2, marginBottom: 4 },
         }}
       >
         {TAB_ITEMS.map(({ name, title, icon }) => (
@@ -78,19 +80,6 @@ export default function PatientLayout() {
               title,
               tabBarIcon: ({ focused }) => (
                 <TabIcon icon={icon} focused={focused} />
-              ),
-              tabBarLabel: ({ focused }) => (
-                <Text
-                  style={[
-                    styles.tabLabel,
-                    {
-                      color: focused ? Colors.primary : Colors.textTertiary,
-                      fontWeight: focused ? "700" : "600",
-                    },
-                  ]}
-                >
-                  {title}
-                </Text>
               ),
             }}
           />
@@ -139,32 +128,16 @@ export default function PatientLayout() {
 const styles = StyleSheet.create({
   tabBar: {
     flexDirection: "row",
-    paddingTop: Spacing.sm - 1,
     paddingHorizontal: 6,
     backgroundColor: Colors.surface,
     borderTopWidth: 0,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#0B1F4A",
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: -6 },
-      },
-      android: {
-        elevation: 12,
-      },
-    }),
+    ...Shadows.tabBar,
   },
   tabBarItem: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 3,
-  },
-  tabItem: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 5,
+    paddingVertical: 6,
   },
   iconPill: {
     width: 50,
@@ -176,12 +149,12 @@ const styles = StyleSheet.create({
   iconPillActive: {
     backgroundColor: Colors.primaryLight,
     borderWidth: 1,
-    borderColor: "rgba(30,58,138,0.12)",
+    borderColor: Colors.borderLight,
   },
   tabLabel: {
     fontSize: 11,
     fontWeight: "600",
     letterSpacing: 0.15,
-    marginTop: 3,
+    marginTop: 2,
   },
 });

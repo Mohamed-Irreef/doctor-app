@@ -502,11 +502,19 @@ async function geminiGenerateText({ apiKey, contents }) {
 }
 
 async function chatWithAi({ messages }) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
+  const keysRaw = String(
+    process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || "",
+  ).trim();
+
+  const apiKeys = keysRaw
+    .split(",")
+    .map((k) => k.trim())
+    .filter(Boolean);
+
+  if (!apiKeys.length) {
     throw new ApiError(
       500,
-      "AI is not configured. Please set GEMINI_API_KEY on the server.",
+      "AI is not configured. Please set GEMINI_API_KEY (or GEMINI_API_KEYS) on the server.",
     );
   }
 
@@ -541,23 +549,42 @@ async function chatWithAi({ messages }) {
     contents.push({ role: "user", parts: [{ text: "Please continue." }] });
   }
 
-  const reply = await geminiGenerateText({
-    apiKey,
-    contents: [
-      {
-        role: "user",
-        parts: [
+  let lastError = null;
+  for (const apiKey of apiKeys) {
+    try {
+      const reply = await geminiGenerateText({
+        apiKey,
+        contents: [
           {
-            text: `INSTRUCTIONS (follow strictly):\n${SYSTEM_INSTRUCTION}`,
+            role: "user",
+            parts: [
+              {
+                text: `INSTRUCTIONS (follow strictly):\n${SYSTEM_INSTRUCTION}`,
+              },
+            ],
           },
+          ...contents,
         ],
-      },
-      ...contents,
-    ],
-  });
-  return {
-    reply,
-  };
+      });
+
+      return {
+        reply,
+      };
+    } catch (error) {
+      lastError = error;
+      // If the key was disabled/leaked, try the next key (if any).
+      if (
+        String(error?.message || "")
+          .toLowerCase()
+          .includes("reported as leaked")
+      ) {
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw lastError || new ApiError(502, "AI request failed");
 }
 
 module.exports = {

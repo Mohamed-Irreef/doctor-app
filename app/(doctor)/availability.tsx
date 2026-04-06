@@ -24,7 +24,11 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import BottomActionBar from "../../components/common/BottomActionBar";
 import { Colors } from "../../constants/Colors";
 import {
     bulkCopyDoctorSlots,
@@ -194,6 +198,7 @@ function groupSlots(slots: Slot[]) {
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 export default function DoctorAvailabilityScreen() {
+  const insets = useSafeAreaInsets();
   const [doctorId, setDoctorId] = useState<string>("");
   const [selectedDay, setSelectedDay] = useState("Mon");
   const [globalOnline, setGlobalOnline] = useState(true);
@@ -440,7 +445,10 @@ export default function DoctorAvailabilityScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: 220 + insets.bottom },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* ── Day Picker ── */}
@@ -625,7 +633,7 @@ export default function DoctorAvailabilityScreen() {
       </ScrollView>
 
       {/* ── Save Bar ── */}
-      <View style={styles.bottomBar}>
+      <BottomActionBar>
         {isSaved && (
           <View style={styles.savedBanner}>
             <Check color="#16A34A" size={16} />
@@ -650,7 +658,7 @@ export default function DoctorAvailabilityScreen() {
             <Text style={styles.saveBtnText}>Save Changes</Text>
           )}
         </TouchableOpacity>
-      </View>
+      </BottomActionBar>
 
       {/* ════════════ ADD SLOT MODAL ════════════ */}
       <Modal visible={showAddModal} transparent animationType="slide">
@@ -1067,19 +1075,6 @@ const styles = StyleSheet.create({
   slotActionActive: { backgroundColor: "#FEF2F2", borderColor: "#FECACA" },
   deleteAction: { backgroundColor: "#FEF2F2", borderColor: "#FECACA" },
 
-  bottomBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: Colors.surface,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: Platform.OS === "ios" ? 34 : 20,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    elevation: 10,
-  },
   savedBanner: {
     flexDirection: "row",
     alignItems: "center",

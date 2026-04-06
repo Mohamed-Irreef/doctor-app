@@ -17,6 +17,7 @@ import {
 } from "react-native-safe-area-context";
 import ActionModal from "../../../components/ActionModal";
 import ButtonPrimary from "../../../components/ButtonPrimary";
+import BottomActionBar from "../../../components/common/BottomActionBar";
 import { Colors } from "../../../constants/Colors";
 import { getLabTestById, getLabVisitQuote } from "../../../services/api";
 
@@ -111,7 +112,11 @@ export default function LabVisitBookingScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
+          contentContainerStyle={[
+            styles.scroll,
+            { paddingBottom: 220 + insets.bottom },
+          ]}
+        >
       >
         <View style={styles.section}>
           <View style={styles.sectionTitleRow}>
@@ -167,19 +172,14 @@ export default function LabVisitBookingScreen() {
         </View>
       </ScrollView>
 
-      <View
-        style={[
-          styles.bottomBar,
-          { paddingBottom: 16 + Math.max(insets.bottom, 8) },
-        ]}
-      >
+      <BottomActionBar contentStyle={{ flexDirection: "row", alignItems: "center" }}>
         <ButtonPrimary
           title="Continue"
           onPress={handleContinue}
           style={{ flex: 1, paddingVertical: 16 }}
           disabled={!quote || loading}
         />
-      </View>
+      </BottomActionBar>
     </SafeAreaView>
   );
 }
@@ -255,18 +255,4 @@ const styles = StyleSheet.create({
   breakdownValue: { fontSize: 13, fontWeight: "700", color: Colors.text },
   divider: { height: 1, backgroundColor: Colors.border, marginTop: 12 },
   breakdownTotal: { fontSize: 15, fontWeight: "800", color: Colors.text },
-  bottomBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: Colors.surface,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 32,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
 });

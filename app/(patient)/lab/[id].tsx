@@ -16,6 +16,7 @@ import {
     SafeAreaView,
     useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import BottomActionBar from "../../../components/common/BottomActionBar";
 import { Colors } from "../../../constants/Colors";
 import { getLabTestById, getLabTestReviews } from "../../../services/api";
 
@@ -144,7 +145,7 @@ export default function LabTestDetailsScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.scroll,
-          { paddingBottom: 130 + Math.max(insets.bottom, 8) },
+          { paddingBottom: 220 + insets.bottom },
         ]}
       >
         <View style={styles.heroCard}>
@@ -444,11 +445,8 @@ export default function LabTestDetailsScreen() {
         )}
       </ScrollView>
 
-      <View
-        style={[
-          styles.bottomBar,
-          { paddingBottom: 14 + Math.max(insets.bottom, 8) },
-        ]}
+      <BottomActionBar
+        contentStyle={{ flexDirection: "row", alignItems: "center", gap: 12 }}
       >
         <TouchableOpacity
           style={[
@@ -482,7 +480,7 @@ export default function LabTestDetailsScreen() {
             Visit Lab
           </Text>
         </TouchableOpacity>
-      </View>
+      </BottomActionBar>
     </SafeAreaView>
   );
 }
@@ -751,22 +749,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     color: Colors.primary,
-  },
-  bottomBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: Colors.surface,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 32,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    elevation: 10,
-    gap: 12,
   },
   actionBtn: {
     flex: 1,

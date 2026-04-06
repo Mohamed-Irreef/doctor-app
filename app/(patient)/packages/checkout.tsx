@@ -16,6 +16,7 @@ import {
     useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import ButtonPrimary from "../../../components/ButtonPrimary";
+import BottomActionBar from "../../../components/common/BottomActionBar";
 import { Colors } from "../../../constants/Colors";
 import { Radius, Spacing } from "../../../constants/Spacing";
 import { Typography } from "../../../constants/Typography";
@@ -140,7 +141,12 @@ export default function PackageCheckoutScreen() {
         </View>
       </LinearGradient>
 
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: 220 + insets.bottom },
+        ]}
+      >
         {loading || !pkg ? (
           <View style={styles.loadingCard}>
             <ActivityIndicator size="small" color={Colors.primary} />
@@ -172,19 +178,14 @@ export default function PackageCheckoutScreen() {
         )}
       </ScrollView>
 
-      <View
-        style={[
-          styles.bottomBar,
-          { paddingBottom: Math.max(insets.bottom, Spacing.md) },
-        ]}
-      >
+      <BottomActionBar>
         <ButtonPrimary
           title={submitting ? "Processing..." : `Confirm & Pay ₹${amount || 0}`}
           onPress={handleConfirm}
           disabled={submitting || loading || !pkg}
           style={{ paddingVertical: 16 }}
         />
-      </View>
+      </BottomActionBar>
     </SafeAreaView>
   );
 }
@@ -214,7 +215,6 @@ const styles = StyleSheet.create({
   },
   scroll: {
     padding: Spacing.screenH,
-    paddingBottom: 24,
   },
   loadingCard: {
     backgroundColor: Colors.surface,
@@ -255,12 +255,4 @@ const styles = StyleSheet.create({
   },
   rowLabel: { ...Typography.body2, color: Colors.textSecondary },
   rowValue: { ...Typography.h3, color: Colors.primary, fontWeight: "800" },
-  bottomBar: {
-    paddingHorizontal: Spacing.screenH,
-    paddingTop: 12,
-    paddingBottom: 16,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    backgroundColor: Colors.surface,
-  },
 });

@@ -18,6 +18,7 @@ import {
 } from "react-native-safe-area-context";
 import ActionModal from "../../../components/ActionModal";
 import ButtonPrimary from "../../../components/ButtonPrimary";
+import BottomActionBar from "../../../components/common/BottomActionBar";
 import { Colors } from "../../../constants/Colors";
 import {
     getLabSlotAvailability,
@@ -199,7 +200,7 @@ export default function LabHomeBookingScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.scroll,
-          { paddingBottom: 130 + Math.max(insets.bottom, 8) },
+          { paddingBottom: 220 + insets.bottom },
         ]}
       >
         <View style={styles.section}>
@@ -357,11 +358,8 @@ export default function LabHomeBookingScreen() {
         </View>
       </ScrollView>
 
-      <View
-        style={[
-          styles.bottomBar,
-          { paddingBottom: 16 + Math.max(insets.bottom, 8) },
-        ]}
+      <BottomActionBar
+        contentStyle={{ flexDirection: "row", alignItems: "center" }}
       >
         <View>
           <Text style={styles.totalLabel}>Test Price</Text>
@@ -373,7 +371,7 @@ export default function LabHomeBookingScreen() {
           style={{ flex: 1, marginLeft: 16, paddingVertical: 16 }}
           disabled={submitting}
         />
-      </View>
+      </BottomActionBar>
     </SafeAreaView>
   );
 }
@@ -496,20 +494,6 @@ const styles = StyleSheet.create({
   },
   row: { flexDirection: "row", gap: 10 },
   rowInput: { flex: 1 },
-  bottomBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: Colors.surface,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 32,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
   totalLabel: { fontSize: 12, color: Colors.textSecondary },
   totalPrice: { fontSize: 22, fontWeight: "800", color: Colors.primary },
 });

@@ -1,35 +1,35 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
-    Activity,
-    ArrowRight,
-    Bell,
-    ChevronRight,
-    Clock,
-    FileText,
-    FlaskConical,
-    Hand,
-    Heart,
-    Menu,
-    Pill,
-    Plus,
-    Search,
-    ShieldCheck,
-    ShoppingCart,
-    Star,
-    Stethoscope,
+  Activity,
+  ArrowRight,
+  Bell,
+  ChevronRight,
+  Clock,
+  FileText,
+  FlaskConical,
+  Hand,
+  Heart,
+  Menu,
+  Pill,
+  Plus,
+  Search,
+  ShieldCheck,
+  ShoppingCart,
+  Star,
+  Stethoscope,
 } from "lucide-react-native";
 import React, { memo, useCallback, useEffect, useState } from "react";
 import {
-    Dimensions,
-    FlatList,
-    Image,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Dimensions,
+  FlatList,
+  Image,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AnimatedCard from "../../components/AnimatedCard";
@@ -42,12 +42,12 @@ import { Shadows } from "../../constants/Shadows";
 import { Radius, Spacing } from "../../constants/Spacing";
 import { Typography } from "../../constants/Typography";
 import {
-    getApprovedPackages,
-    getDoctors,
-    getFeaturedArticles,
-    getLabTests,
-    getMedicines,
-    getPatientAppointments,
+  getApprovedPackages,
+  getDoctors,
+  getFeaturedArticles,
+  getLabTests,
+  getMedicines,
+  getPatientAppointments,
 } from "../../services/api";
 import { useAuthStore } from "../../store/authStore";
 import { useCartStore } from "../../store/cartStore";
@@ -57,7 +57,10 @@ import type { Article, Doctor } from "../../types";
 
 const { width: W } = Dimensions.get("window");
 const CARD_GAP = Spacing.md;
-const ITEM_W = (W - 56) / 3;
+const HOME_GRID_GAP = Spacing.md;
+const HOME_GRID_ITEM_W = Math.floor(
+  (W - Spacing.screenH * 2 - HOME_GRID_GAP * 2) / 3,
+);
 const FEATURED_CARD_WIDTH = (W - Spacing.screenH * 2 - Spacing.sm) / 2;
 const HOME_MED_CARD_GAP = Spacing.sm;
 const HOME_MED_CARD_WIDTH = (W - Spacing.screenH * 2 - HOME_MED_CARD_GAP) / 2;
@@ -814,7 +817,7 @@ export default function PatientHomeScreen() {
           </TouchableOpacity>
 
           {/* ── AI NiviDoc BANNER (Premium Gradient) ── */}
-          <FadeInSection delay={50} style={styles.pad}>
+          <FadeInSection delay={50} style={[styles.pad, styles.sectionSm]}>
             <AnimatedCard
               onPress={() => router.push("/(patient)/ai-chat")}
               scaleValue={0.97}
@@ -863,7 +866,7 @@ export default function PatientHomeScreen() {
           </FadeInSection>
 
           {/* ── QUICK ACTIONS GRID ── */}
-          <FadeInSection delay={200} style={styles.pad}>
+          <FadeInSection delay={200} style={[styles.pad, styles.sectionSm]}>
             <View style={styles.qaGrid}>
               {QUICK_ACTIONS.map((a) => (
                 <AnimatedCard
@@ -884,7 +887,7 @@ export default function PatientHomeScreen() {
           </FadeInSection>
 
           {/* ── GENERAL BANNER ── */}
-          <FadeInSection delay={250} style={styles.pad}>
+          <FadeInSection delay={250} style={[styles.pad, styles.sectionSm]}>
             <AnimatedCard style={styles.generalBannerCard} activeOpacity={0.9}>
               <Image
                 source={require("../../assets/images/general-banner.png")}
@@ -1066,6 +1069,7 @@ export default function PatientHomeScreen() {
                 data={doctors}
                 horizontal
                 showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingRight: Spacing.screenH }}
                 keyExtractor={(d) => getDoctorId(d)}
                 renderItem={({ item }) => (
                   <DoctorHCard
@@ -1098,6 +1102,7 @@ export default function PatientHomeScreen() {
                 data={dermatologistDoctors}
                 horizontal
                 showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingRight: Spacing.screenH }}
                 keyExtractor={(d) => getDoctorId(d)}
                 ListEmptyComponent={
                   <Text style={styles.emptySpecialityText}>
@@ -1135,6 +1140,7 @@ export default function PatientHomeScreen() {
                 data={cardiologistDoctors}
                 horizontal
                 showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingRight: Spacing.screenH }}
                 keyExtractor={(d) => getDoctorId(d)}
                 ListEmptyComponent={
                   <Text style={styles.emptySpecialityText}>
@@ -1172,6 +1178,7 @@ export default function PatientHomeScreen() {
                 data={neurologistDoctors}
                 horizontal
                 showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingRight: Spacing.screenH }}
                 keyExtractor={(d) => getDoctorId(d)}
                 ListEmptyComponent={
                   <Text style={styles.emptySpecialityText}>
@@ -1420,7 +1427,7 @@ export default function PatientHomeScreen() {
                 data={articles}
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingRight: 6 }}
+                contentContainerStyle={{ paddingRight: Spacing.screenH }}
                 keyExtractor={(item) => item.id || (item as any).slug}
                 renderItem={({ item }) => (
                   <ArticleHCard
@@ -1539,7 +1546,7 @@ export default function PatientHomeScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: Colors.primary },
   container: { flex: 1, backgroundColor: Colors.background },
-  scroll: { paddingBottom: 0 },
+  scroll: { paddingBottom: Spacing.section },
 
   // Header — Practo Dark Blue
   header: {
@@ -1624,6 +1631,7 @@ const styles = StyleSheet.create({
 
   // Utility
   pad: { paddingHorizontal: Spacing.screenH },
+  sectionSm: { marginTop: Spacing.lg },
   section: { marginTop: Spacing.section + Spacing.xs },
   sectionTitle: {
     flexDirection: "row",
@@ -1689,17 +1697,20 @@ const styles = StyleSheet.create({
   bannerCtaText: { color: Colors.textInverse, fontWeight: "700", fontSize: 13 },
 
   // Quick Actions
-  qaGrid: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.sm },
+  qaGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: HOME_GRID_GAP,
+  },
   qaItem: {
-    width: ITEM_W,
+    width: HOME_GRID_ITEM_W,
     backgroundColor: Colors.surface,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.border,
-    paddingHorizontal: 10,
-    paddingTop: 10,
-    paddingBottom: 8,
-    marginBottom: Spacing.md,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 10,
     ...Shadows.card,
   },
   qaLabel: {
@@ -1943,9 +1954,13 @@ const styles = StyleSheet.create({
   },
 
   // Specialities
-  specGrid: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.sm },
+  specGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: HOME_GRID_GAP,
+  },
   specItem: {
-    width: ITEM_W,
+    width: HOME_GRID_ITEM_W,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#1E2F96",

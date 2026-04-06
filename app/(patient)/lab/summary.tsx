@@ -23,6 +23,7 @@ import {
 } from "react-native-safe-area-context";
 import ActionModal from "../../../components/ActionModal";
 import ButtonPrimary from "../../../components/ButtonPrimary";
+import BottomActionBar from "../../../components/common/BottomActionBar";
 import { Colors } from "../../../constants/Colors";
 import { bookLab, getLabTestById } from "../../../services/api";
 import { processEntityPayment } from "../../../services/payment";
@@ -192,7 +193,7 @@ export default function LabBookingSummaryScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { paddingBottom: 120 + insets.bottom },
+          { paddingBottom: 220 + insets.bottom },
         ]}
       >
         {!test ? (
@@ -295,11 +296,8 @@ export default function LabBookingSummaryScreen() {
         )}
       </ScrollView>
 
-      <View
-        style={[
-          styles.bottomBar,
-          { paddingBottom: Math.max(insets.bottom, 16) },
-        ]}
+      <BottomActionBar
+        contentStyle={{ flexDirection: "row", alignItems: "center" }}
       >
         <View>
           <Text style={styles.totalLabel}>Total Cost</Text>
@@ -316,7 +314,7 @@ export default function LabBookingSummaryScreen() {
           loading={loading}
           style={{ flex: 1, marginLeft: 20, paddingVertical: 18 }}
         />
-      </View>
+      </BottomActionBar>
     </SafeAreaView>
   );
 }
@@ -412,21 +410,6 @@ const styles = StyleSheet.create({
   breakdownLabel: { fontSize: 12, color: Colors.textSecondary },
   breakdownValue: { fontSize: 12, fontWeight: "700", color: Colors.text },
 
-  bottomBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: Colors.surface,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 16,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    elevation: 10,
-  },
   totalLabel: { fontSize: 12, color: Colors.textSecondary },
   totalPrice: { fontSize: 22, fontWeight: "800", color: Colors.primary },
 });

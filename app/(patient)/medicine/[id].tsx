@@ -29,6 +29,7 @@ import {
 } from "react-native-safe-area-context";
 import ActionModal from "../../../components/ActionModal";
 import ButtonPrimary from "../../../components/ButtonPrimary";
+import BottomActionBar from "../../../components/common/BottomActionBar";
 import { Colors } from "../../../constants/Colors";
 import { getMedicineById, getMedicines } from "../../../services/api";
 import { useCartStore } from "../../../store/cartStore";
@@ -227,7 +228,7 @@ export default function MedicineDetailsScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.scroll,
-          { paddingBottom: 130 + Math.max(insets.bottom, 8) },
+          { paddingBottom: 220 + insets.bottom },
         ]}
       >
         {/* Product Image */}
@@ -680,11 +681,8 @@ export default function MedicineDetailsScreen() {
         </View>
       </ScrollView>
 
-      <View
-        style={[
-          styles.bottomBar,
-          { paddingBottom: 16 + Math.max(insets.bottom, 8) },
-        ]}
+      <BottomActionBar
+        contentStyle={{ flexDirection: "row", alignItems: "center" }}
       >
         <View>
           <Text style={{ fontSize: 12, color: Colors.textSecondary }}>
@@ -702,7 +700,7 @@ export default function MedicineDetailsScreen() {
           disabled={med.inStock === false}
           style={{ flex: 1, marginLeft: 20, paddingVertical: 18 }}
         />
-      </View>
+      </BottomActionBar>
     </SafeAreaView>
   );
 }
@@ -1112,20 +1110,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     color: Colors.primary,
-  },
-  bottomBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: Colors.surface,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 32,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    elevation: 10,
   },
 });
