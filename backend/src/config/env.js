@@ -30,6 +30,7 @@ module.exports = {
   nodeEnv: process.env.NODE_ENV || "development",
   port: Number(process.env.PORT || 5000),
   mongodbUri: process.env.MONGODB_URI,
+  geminiApiKey: process.env.GEMINI_API_KEY,
   jwt: {
     accessSecret: process.env.JWT_ACCESS_SECRET,
     refreshSecret: process.env.JWT_REFRESH_SECRET,

@@ -51,6 +51,11 @@ const fail = (message: string) => ({
   status: "error" as const,
 });
 
+export type AiChatMessage = {
+  role: "user" | "ai";
+  text: string;
+};
+
 function getErrorMessage(error: any) {
   const message = error?.response?.data?.message;
   const details = error?.response?.data?.details;
@@ -170,6 +175,15 @@ export async function getMyProfile() {
   try {
     const res = await API.get("/auth/me");
     return ok(res.data.data);
+  } catch (error) {
+    return fail(getErrorMessage(error));
+  }
+}
+
+export async function aiChat(messages: AiChatMessage[]) {
+  try {
+    const res = await API.post("/ai/chat", { messages });
+    return ok(res.data.data as { reply: string });
   } catch (error) {
     return fail(getErrorMessage(error));
   }

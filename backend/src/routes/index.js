@@ -18,6 +18,7 @@ const chatRoutes = require("../modules/chat/chat.routes");
 const labBookingRoutes = require("./labBookingRoutes");
 const orderManagementRoutes = require("./orderManagementRoutes");
 const packageRoutes = require("./packageRoutes");
+const aiRoutes = require("../modules/ai/ai.routes");
 
 const router = express.Router();
 
@@ -37,6 +38,7 @@ router.use("/plans", planRoutes);
 router.use("/", miscRoutes);
 router.use("/v1/articles", articleRoutes);
 router.use("/chat", chatRoutes);
+router.use("/ai", aiRoutes);
 router.use("/v1/lab-bookings", labBookingRoutes);
 router.use("/v1/orders", orderManagementRoutes);
 router.use("/", packageRoutes);

@@ -1,6 +1,12 @@
 import { useRouter } from "expo-router";
 import { ArrowLeft, Send, Sparkles } from "lucide-react-native";
-import React, { useMemo, useRef, useState } from "react";
+import React, {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 import {
     KeyboardAvoidingView,
     Platform,
@@ -14,6 +20,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../constants/Colors";
+import { aiChat } from "../../services/api";
 
 type ChatItem = {
   id: string;
@@ -24,16 +31,7 @@ type ChatItem = {
 const ROLE_USER = "user" as const;
 const ROLE_AI = "ai" as const;
 
-function createAiReply(message: string) {
-  const lower = message.toLowerCase();
-  if (lower.includes("fever") || lower.includes("cold")) {
-    return "I understand your symptoms. Please stay hydrated, monitor temperature, and consult a doctor if symptoms persist beyond 2 days.";
-  }
-  if (lower.includes("headache") || lower.includes("migraine")) {
-    return "For headache symptoms, track duration, hydration, and sleep. If severe or recurring, book a neurologist consultation.";
-  }
-  return "Thanks for sharing. I can help you with symptom guidance and suggest which specialist to consult based on your symptoms.";
-}
+const TYPING_ID = "typing";
 
 export default function AiChatScreen() {
   const router = useRouter();
@@ -41,32 +39,88 @@ export default function AiChatScreen() {
     {
       id: "welcome",
       role: "ai",
-      text: "Hi, I am Nivi AI. Tell me your symptoms and I will guide you.",
+      text: "Hi, I’m Nivi Bot. Tell me your symptoms and I’ll guide you safely.",
     },
   ]);
   const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
   const scrollRef = useRef<ScrollView | null>(null);
 
-  const canSend = useMemo(() => input.trim().length > 0, [input]);
+  const canSend = useMemo(
+    () => !loading && input.trim().length > 0,
+    [input, loading],
+  );
 
-  const onSend = () => {
+  const scrollToBottom = useCallback(() => {
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 40);
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages.length, scrollToBottom]);
+
+  const onSend = async () => {
     const text = input.trim();
     if (!text) return;
+
+    if (loading) return;
 
     const userMessage: ChatItem = {
       id: `u-${Date.now()}`,
       role: ROLE_USER,
       text,
     };
-    const aiMessage: ChatItem = {
-      id: `a-${Date.now()}-${Math.random()}`,
-      role: ROLE_AI,
-      text: createAiReply(text),
-    };
 
-    setMessages((prev) => [...prev, userMessage, aiMessage]);
+    const nextMessages = [
+      ...messages.filter((m) => m.id !== TYPING_ID),
+      userMessage,
+    ];
+    setMessages([
+      ...nextMessages,
+      {
+        id: TYPING_ID,
+        role: ROLE_AI,
+        text: "Typing…",
+      },
+    ]);
     setInput("");
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 40);
+    setLoading(true);
+
+    try {
+      const res = await aiChat(
+        nextMessages
+          .filter((m) => m.role === ROLE_USER || m.role === ROLE_AI)
+          .map((m) => ({ role: m.role, text: m.text })),
+      );
+
+      if (res.status === "error" || !res.data?.reply) {
+        throw new Error(res.error || "AI request failed");
+      }
+
+      const aiMessage: ChatItem = {
+        id: `a-${Date.now()}-${Math.random()}`,
+        role: ROLE_AI,
+        text: res.data.reply,
+      };
+
+      setMessages((prev) => [
+        ...prev.filter((m) => m.id !== TYPING_ID),
+        aiMessage,
+      ]);
+    } catch (error: any) {
+      setMessages((prev) => [
+        ...prev.filter((m) => m.id !== TYPING_ID),
+        {
+          id: `aerr-${Date.now()}`,
+          role: ROLE_AI,
+          text:
+            error?.message ||
+            "Sorry — I couldn’t respond right now. Please try again.",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
