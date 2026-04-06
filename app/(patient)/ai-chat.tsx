@@ -20,7 +20,141 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../constants/Colors";
-import { aiChat } from "../../services/api";
+
+type MockCategory =
+  | "greeting"
+  | "emergency"
+  | "fever"
+  | "cold"
+  | "stomach"
+  | "headache"
+  | "skin"
+  | "dental"
+  | "general";
+
+function classifySymptom(text: string): MockCategory {
+  const t = String(text || "").toLowerCase();
+
+  if (
+    /\b(hi|hello|hey|hii|good morning|good afternoon|good evening)\b/.test(t)
+  ) {
+    return "greeting";
+  }
+
+  // Red flags / emergency symptoms.
+  if (
+    t.includes("chest pain") ||
+    t.includes("pressure in chest") ||
+    t.includes("difficulty breathing") ||
+    t.includes("shortness of breath") ||
+    t.includes("can't breathe") ||
+    t.includes("cannot breathe") ||
+    t.includes("faint") ||
+    t.includes("passed out") ||
+    t.includes("seizure") ||
+    t.includes("stroke") ||
+    t.includes("weakness one side") ||
+    t.includes("slurred speech") ||
+    t.includes("suicid")
+  ) {
+    return "emergency";
+  }
+
+  if (
+    t.includes("fever") ||
+    t.includes("temperature") ||
+    t.includes("chills")
+  ) {
+    return "fever";
+  }
+
+  if (
+    t.includes("cough") ||
+    t.includes("cold") ||
+    t.includes("runny") ||
+    t.includes("sore throat") ||
+    t.includes("throat") ||
+    t.includes("flu")
+  ) {
+    return "cold";
+  }
+
+  if (
+    t.includes("stomach") ||
+    t.includes("abdominal") ||
+    t.includes("vomit") ||
+    t.includes("nausea") ||
+    t.includes("diarr") ||
+    t.includes("loose motion") ||
+    t.includes("acidity")
+  ) {
+    return "stomach";
+  }
+
+  if (
+    t.includes("headache") ||
+    t.includes("migraine") ||
+    t.includes("dizzy") ||
+    t.includes("vertigo")
+  ) {
+    return "headache";
+  }
+
+  if (
+    t.includes("rash") ||
+    t.includes("itch") ||
+    t.includes("acne") ||
+    t.includes("eczema") ||
+    t.includes("skin")
+  ) {
+    return "skin";
+  }
+
+  if (
+    t.includes("tooth") ||
+    t.includes("gum") ||
+    t.includes("dental") ||
+    t.includes("mouth")
+  ) {
+    return "dental";
+  }
+
+  return "general";
+}
+
+function getMockReply(userText: string) {
+  const category = classifySymptom(userText);
+
+  switch (category) {
+    case "greeting":
+      return "Hi — I’m Nivi Bot. Tell me your main symptom (and since when), plus your age and whether you have any medical conditions.";
+
+    case "emergency":
+      return "These symptoms can be serious. Please seek urgent medical help now (local emergency number / nearest ER). If you’re alone, call someone to stay with you.\n\nIf you can, tell me: your age, your exact symptom, and when it started.";
+
+    case "fever":
+      return "Thanks — with fever, I need a few details to guide you safely:\n1) Temperature (°C/°F) and how many days?\n2) Any cough/sore throat, body aches, or headache?\n3) Any red flags: breathing difficulty, chest pain, confusion, stiff neck, dehydration?\n\nGeneral care: rest, fluids, light meals. If fever is high/persistent or you have red flags, consult a doctor promptly.";
+
+    case "cold":
+      return "For cough/cold symptoms, please share:\n1) How many days?\n2) Fever present?\n3) Any wheeze, shortness of breath, chest pain, or blood in sputum?\n\nGeneral care: warm fluids, steam inhalation, rest. If symptoms worsen, last >7 days, or you have breathing trouble, book a doctor consultation.";
+
+    case "stomach":
+      return "For stomach issues, please tell me:\n1) Where is the pain (upper/center/right/left)?\n2) Vomiting/diarrhea? Any blood?\n3) Fever or severe dehydration?\n\nGeneral care: oral rehydration, small bland meals. If severe pain, blood, persistent vomiting, or dehydration, see a doctor urgently.";
+
+    case "headache":
+      return "For headache, a few checks:\n1) When did it start and how severe (0–10)?\n2) Any fever, neck stiffness, weakness, vision changes, or head injury?\n3) Nausea/vomiting, light sensitivity?\n\nIf it’s sudden/severe or with neurological symptoms, please seek urgent care.";
+
+    case "skin":
+      return "For skin symptoms, please share:\n1) What you see (rash/itching/pimples) and where?\n2) Any new soap/medicine/food exposure?\n3) Fever, swelling of lips/face, or breathing difficulty?\n\nIf there’s facial swelling or breathing issues, seek urgent care. Otherwise, a dermatologist consult is best.";
+
+    case "dental":
+      return "For dental pain, please tell me:\n1) Tooth pain vs gum swelling?\n2) Any fever, facial swelling, or difficulty opening mouth/swallowing?\n\nIf facial swelling or fever is present, see a dentist/doctor urgently. Otherwise, book a dental consult soon.";
+
+    case "general":
+    default:
+      return "I can help. Please describe:\n- Your main symptom\n- Since when\n- Your age\n- Any medical conditions/medications\n- Any red flags (breathing trouble, chest pain, fainting, severe weakness)";
+  }
+}
 
 type ChatItem = {
   id: string;
@@ -87,20 +221,14 @@ export default function AiChatScreen() {
     setLoading(true);
 
     try {
-      const res = await aiChat(
-        nextMessages
-          .filter((m) => m.role === ROLE_USER || m.role === ROLE_AI)
-          .map((m) => ({ role: m.role, text: m.text })),
-      );
-
-      if (res.status === "error" || !res.data?.reply) {
-        throw new Error(res.error || "AI request failed");
-      }
+      // Temporary local (switch/case) responder; replace with Gemini later.
+      await new Promise((resolve) => setTimeout(resolve, 550));
+      const reply = getMockReply(text);
 
       const aiMessage: ChatItem = {
         id: `a-${Date.now()}-${Math.random()}`,
         role: ROLE_AI,
-        text: res.data.reply,
+        text: reply,
       };
 
       setMessages((prev) => [

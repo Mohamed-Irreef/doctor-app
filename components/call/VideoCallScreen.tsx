@@ -1,3 +1,4 @@
+import { Audio } from "expo-av";
 import { useRouter } from "expo-router";
 import {
     Camera,
@@ -8,7 +9,15 @@ import {
     Repeat,
 } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+    Alert,
+    PermissionsAndroid,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { io, Socket } from "socket.io-client";
 import { getAuthToken, getSocketBaseUrl } from "../../services/api";
@@ -52,25 +61,7 @@ export default function VideoCallScreen({
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  // Fallback for Expo Go or environments without WebRTC
-  if (!RTCPeerConnection) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.centerContent}>
-          <Text style={styles.title}>Video Call</Text>
-          <Text style={styles.message}>
-            WebRTC video calls are not available in Expo Go.
-          </Text>
-          <Text style={styles.submessage}>
-            Use a development build for full video calling support.
-          </Text>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>Go Back</Text>
-          </Pressable>
-        </View>
-      </View>
-    );
-  }
+  const webrtcAvailable = Boolean(RTCPeerConnection && mediaDevices && RTCView);
 
   const socketRef = useRef<Socket | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
@@ -81,6 +72,27 @@ export default function VideoCallScreen({
   const [micEnabled, setMicEnabled] = useState(true);
   const [camEnabled, setCamEnabled] = useState(true);
   const offerSentRef = useRef(false);
+
+  const ensurePermissions = useCallback(async () => {
+    if (Platform.OS !== "android") return true;
+
+    try {
+      const results = await PermissionsAndroid.requestMultiple([
+        PermissionsAndroid.PERMISSIONS.CAMERA,
+        PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+      ]);
+
+      const cam = results[PermissionsAndroid.PERMISSIONS.CAMERA];
+      const mic = results[PermissionsAndroid.PERMISSIONS.RECORD_AUDIO];
+
+      return (
+        cam === PermissionsAndroid.RESULTS.GRANTED &&
+        mic === PermissionsAndroid.RESULTS.GRANTED
+      );
+    } catch {
+      return false;
+    }
+  }, []);
 
   const sendOffer = useCallback(async () => {
     const pc = pcRef.current;
@@ -114,12 +126,40 @@ export default function VideoCallScreen({
   useEffect(() => {
     let mounted = true;
 
+    if (!webrtcAvailable) {
+      return () => {
+        mounted = false;
+      };
+    }
+
     const init = async () => {
       const token = await getAuthToken();
       if (!token || !roomId) {
         Alert.alert("Call error", "Unable to connect call.");
         router.back();
         return;
+      }
+
+      const granted = await ensurePermissions();
+      if (!granted) {
+        Alert.alert(
+          "Permissions required",
+          "Camera and microphone permissions are required for video calls.",
+        );
+        router.back();
+        return;
+      }
+
+      try {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: false,
+          staysActiveInBackground: false,
+        });
+      } catch {
+        // Ignore audio-mode failures; continue call setup.
       }
 
       const socket = io(getSocketBaseUrl(), {
@@ -237,7 +277,34 @@ export default function VideoCallScreen({
       }
       cleanup();
     };
-  }, [isInitiator, roomId, router, sendOffer]);
+  }, [
+    ensurePermissions,
+    isInitiator,
+    roomId,
+    router,
+    sendOffer,
+    webrtcAvailable,
+  ]);
+
+  // Fallback for Expo Go or environments without WebRTC
+  if (!webrtcAvailable) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.centerContent}>
+          <Text style={styles.title}>Video Call</Text>
+          <Text style={styles.message}>
+            Video calls are not available in this build.
+          </Text>
+          <Text style={styles.submessage}>
+            Install the APK / development build with WebRTC enabled.
+          </Text>
+          <Pressable style={styles.backButton} onPress={() => router.back()}>
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
 
   const onToggleMic = () => {
     if (!localStreamRef.current) return;
