@@ -29,6 +29,7 @@ export default function LabVisitBookingScreen() {
   const [quote, setQuote] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorModal, setErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("Unable to continue");
 
   useEffect(() => {
     const load = async () => {
@@ -47,15 +48,9 @@ export default function LabVisitBookingScreen() {
       if (response.status === "success") {
         setQuote(response.data);
       } else {
-        // Fallback: allow lab visit flow even when patient location is missing.
-        setQuote({
-          distanceKm: 0,
-          deliveryCost: 0,
-          lab: {
-            name: test?.lab?.name || "Lab",
-            address: test?.lab?.address || "",
-          },
-        });
+        setQuote(null);
+        setErrorMessage(response.error || "Unable to calculate visit pricing");
+        setErrorModal(true);
       }
       setLoading(false);
     };
@@ -87,9 +82,15 @@ export default function LabVisitBookingScreen() {
         visible={errorModal}
         type="error"
         title="Pricing Error"
-        message="Unable to continue"
+        message={errorMessage}
         confirmLabel="OK"
-        onConfirm={() => setErrorModal(false)}
+        onConfirm={() => {
+          setErrorModal(false);
+          const msg = String(errorMessage || "").toLowerCase();
+          if (msg.includes("patient location") || msg.includes("profile")) {
+            router.push("/(patient)/profile");
+          }
+        }}
       />
 
       <LinearGradient
@@ -112,11 +113,10 @@ export default function LabVisitBookingScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-          contentContainerStyle={[
-            styles.scroll,
-            { paddingBottom: 220 + insets.bottom },
-          ]}
-        >
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: 220 + insets.bottom },
+        ]}
       >
         <View style={styles.section}>
           <View style={styles.sectionTitleRow}>
@@ -172,7 +172,9 @@ export default function LabVisitBookingScreen() {
         </View>
       </ScrollView>
 
-      <BottomActionBar contentStyle={{ flexDirection: "row", alignItems: "center" }}>
+      <BottomActionBar
+        contentStyle={{ flexDirection: "row", alignItems: "center" }}
+      >
         <ButtonPrimary
           title="Continue"
           onPress={handleContinue}

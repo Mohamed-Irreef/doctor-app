@@ -249,17 +249,18 @@ const styles = StyleSheet.create({
   },
   stepDesc: { ...Typography.body2, color: Colors.textSecondary },
   bookBtn: {
-    paddingVertical: Spacing.md,
+    paddingVertical: 0,
   },
   bookBtnGradient: {
-    paddingVertical: Spacing.md,
+    paddingVertical: 14,
+    paddingHorizontal: Spacing.lg,
+    justifyContent: "center",
     borderRadius: Radius.lg,
     alignItems: "center",
+    width: "100%",
   },
   bookBtnText: {
-    ...Typography.h2,
-    color: Colors.textInverse,
-    fontWeight: "700",
+    ...Typography.button,
   },
   expandable: {
     borderRadius: Radius.lg,

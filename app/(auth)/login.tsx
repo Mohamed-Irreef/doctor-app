@@ -44,7 +44,7 @@ type GoogleLoginButtonProps = {
   onError: (message: string) => void;
 };
 
-function GoogleLoginButton({
+function ConfiguredGoogleLoginButton({
   loading,
   webClientId,
   androidClientId,
@@ -84,6 +84,31 @@ function GoogleLoginButton({
       <Text style={styles.googleText}>Continue with Google</Text>
     </TouchableOpacity>
   );
+}
+
+function PatientGoogleLoginButton(props: GoogleLoginButtonProps) {
+  const isConfiguredForPlatform =
+    Platform.OS === "android"
+      ? Boolean(props.androidClientId)
+      : Platform.OS === "ios"
+        ? Boolean(props.iosClientId)
+        : Boolean(props.webClientId);
+
+  if (!isConfiguredForPlatform) {
+    return (
+      <TouchableOpacity
+        style={[styles.googleBtn, styles.googleBtnDisabled]}
+        disabled
+        activeOpacity={1}
+      >
+        <Text style={[styles.googleText, styles.googleTextDisabled]}>
+          Continue with Google
+        </Text>
+      </TouchableOpacity>
+    );
+  }
+
+  return <ConfiguredGoogleLoginButton {...props} />;
 }
 
 export default function LoginScreen() {
@@ -321,8 +346,8 @@ export default function LoginScreen() {
             style={styles.loginBtn}
           />
 
-          {selectedRole === PATIENT_ROLE && isGoogleConfiguredForPlatform && (
-            <GoogleLoginButton
+          {selectedRole === PATIENT_ROLE && (
+            <PatientGoogleLoginButton
               loading={loading}
               webClientId={googleWebClientId}
               androidClientId={googleAndroidClientId}
@@ -335,7 +360,8 @@ export default function LoginScreen() {
           {selectedRole === PATIENT_ROLE && !isGoogleConfiguredForPlatform && (
             <Text style={[Typography.body2, styles.googleHint]}>
               Google sign-in is disabled. Set
-              EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID in root .env.
+              EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID in your EAS build env (or
+              root .env for local dev).
             </Text>
           )}
 
@@ -457,10 +483,16 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     marginBottom: 20,
   },
+  googleBtnDisabled: {
+    opacity: 0.6,
+  },
   googleText: {
     color: "#2D2D2D",
     fontSize: 15,
     fontWeight: "600",
+  },
+  googleTextDisabled: {
+    color: Colors.textSecondary,
   },
   googleHint: {
     color: Colors.textSecondary,

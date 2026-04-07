@@ -7,7 +7,7 @@ import {
     User,
 } from "lucide-react-native";
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "../../constants/Colors";
 import { Shadows } from "../../constants/Shadows";
@@ -36,13 +36,27 @@ function TabIcon({ icon: Icon, focused }: { icon: any; focused: boolean }) {
 export default function DoctorLayout() {
   const insets = useSafeAreaInsets();
 
-  const bottomPad = insets.bottom > 0 ? insets.bottom : Spacing.sm;
   const baseHeight = 56;
+
+  const androidBottomGap =
+    insets.bottom > 0
+      ? insets.bottom
+      : Platform.OS === "android"
+        ? Spacing.xxl
+        : 0;
 
   const tabBarStyle = {
     ...styles.tabBar,
-    height: baseHeight + bottomPad,
-    paddingBottom: bottomPad,
+    ...(Platform.OS === "android"
+      ? {
+          height: baseHeight,
+          paddingBottom: 0,
+          marginBottom: androidBottomGap,
+        }
+      : {
+          height: baseHeight + insets.bottom,
+          paddingBottom: insets.bottom,
+        }),
     paddingTop: 4,
   } as const;
 

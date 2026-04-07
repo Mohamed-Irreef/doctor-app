@@ -5,13 +5,17 @@ import { Colors } from "../../constants/Colors";
 import { Shadows } from "../../constants/Shadows";
 import { Spacing } from "../../constants/Spacing";
 
-export default function BottomActionBar({
-  children,
-  bottomOffset = 0,
-  contentStyle,
-  style,
-}) {
+export default function BottomActionBar(props) {
+  const { children, bottomOffset = 0, contentStyle, style } = props || {};
+
   const insets = useSafeAreaInsets();
+
+  const androidBottomGap =
+    insets.bottom > 0
+      ? insets.bottom
+      : Platform.OS === "android"
+        ? Spacing.xxl
+        : 0;
 
   return (
     <View
@@ -22,7 +26,7 @@ export default function BottomActionBar({
         style={[
           styles.container,
           {
-            paddingBottom: insets.bottom + Spacing.md,
+            paddingBottom: androidBottomGap + Spacing.md,
           },
           contentStyle,
         ]}

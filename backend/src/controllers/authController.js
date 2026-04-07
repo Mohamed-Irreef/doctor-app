@@ -178,15 +178,13 @@ const me = catchAsync(async (req, res) => {
   const profileComplete =
     user.role === "patient" ? isPatientProfileComplete(user, profile) : true;
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(200, "Profile fetched", {
-        user,
-        profile,
-        profileComplete,
-      }),
-    );
+  return res.status(200).json(
+    new ApiResponse(200, "Profile fetched", {
+      user,
+      profile,
+      profileComplete,
+    }),
+  );
 });
 
 const updatePatientProfile = catchAsync(async (req, res) => {
@@ -227,8 +225,16 @@ const updatePatientProfile = catchAsync(async (req, res) => {
 
   const profile = await PatientProfile.findOneAndUpdate(
     { user: req.user._id },
-    profileUpdates,
-    { new: true, runValidators: true },
+    {
+      $set: profileUpdates,
+      $setOnInsert: { user: req.user._id },
+    },
+    {
+      new: true,
+      runValidators: true,
+      upsert: true,
+      setDefaultsOnInsert: true,
+    },
   ).lean();
 
   const user = await User.findById(req.user._id).select("-passwordHash").lean();

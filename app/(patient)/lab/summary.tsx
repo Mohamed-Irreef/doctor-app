@@ -84,20 +84,35 @@ export default function LabBookingSummaryScreen() {
           }
         : undefined;
 
-    const booking = await bookLab(String(test.id || test._id), bookingDate, {
-      collectionType: params.collectionType,
-      scheduledDate: params.date
-        ? new Date(params.date).toISOString()
-        : undefined,
-      collectionTimeSlot: params.time,
-      holdId: params.holdId,
-      homeCollectionAddress: homeAddress,
-    });
+    const runBooking = async () =>
+      bookLab(String(test.id || test._id), bookingDate, {
+        collectionType: params.collectionType,
+        scheduledDate: params.date
+          ? new Date(params.date).toISOString()
+          : undefined,
+        collectionTimeSlot: params.time,
+        holdId: params.holdId,
+        homeCollectionAddress: homeAddress,
+      });
+
+    let booking = await runBooking();
+    const bookingError = String(booking.error || "");
+    if (
+      booking.status !== "success" &&
+      (bookingError.toLowerCase().includes("network error") ||
+        bookingError.toLowerCase().includes("request failed"))
+    ) {
+      // One quick retry for transient connectivity glitches.
+      await new Promise((r) => setTimeout(r, 800));
+      booking = await runBooking();
+    }
 
     if (booking.status !== "success" || !booking.data) {
       setLoading(false);
+      const msg = String(booking.error || "").toLowerCase();
       if (
-        (booking.error || "").toLowerCase().includes("complete your profile")
+        msg.includes("complete your profile") ||
+        msg.includes("patient location")
       ) {
         router.push("/(patient)/profile");
         return;

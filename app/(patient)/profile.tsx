@@ -53,10 +53,25 @@ export default function PatientProfileScreen() {
   const [longitude, setLongitude] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(false);
-  const [errorModal, setErrorModal] = useState(false);
-  const [errorText, setErrorText] = useState(
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalType, setModalType] = useState<"success" | "error" | "info">(
+    "error",
+  );
+  const [modalTitle, setModalTitle] = useState("Profile Error");
+  const [modalText, setModalText] = useState(
     "Please complete required fields.",
   );
+
+  const showModal = (
+    type: "success" | "error" | "info",
+    title: string,
+    message: string,
+  ) => {
+    setModalType(type);
+    setModalTitle(title);
+    setModalText(message);
+    setModalVisible(true);
+  };
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -84,8 +99,11 @@ export default function PatientProfileScreen() {
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      setErrorText("Please allow gallery permission to upload profile photo.");
-      setErrorModal(true);
+      showModal(
+        "error",
+        "Profile Error",
+        "Please allow gallery permission to upload profile photo.",
+      );
       return;
     }
 
@@ -103,16 +121,33 @@ export default function PatientProfileScreen() {
   const captureLocation = async () => {
     const permission = await Location.requestForegroundPermissionsAsync();
     if (!permission.granted) {
-      setErrorText("Location permission denied.");
-      setErrorModal(true);
+      showModal("error", "Profile Error", "Location permission denied.");
       return;
     }
 
     const current = await Location.getCurrentPositionAsync({
       accuracy: Location.Accuracy.High,
     });
-    setLatitude(current.coords.latitude);
-    setLongitude(current.coords.longitude);
+
+    const nextLatitude = current.coords.latitude;
+    const nextLongitude = current.coords.longitude;
+    setLatitude(nextLatitude);
+    setLongitude(nextLongitude);
+
+    const update = await api.updatePatientProfile({
+      location: { latitude: nextLatitude, longitude: nextLongitude },
+    });
+
+    if (update.status !== "success" || !update.data) {
+      showModal(
+        "error",
+        "Profile Error",
+        update.error || "Unable to save location",
+      );
+      return;
+    }
+
+    login("patient", (update.data as any).user);
   };
 
   const openDobPicker = () => {
@@ -136,8 +171,11 @@ export default function PatientProfileScreen() {
       !address.trim() ||
       !emergencyContact.trim()
     ) {
-      setErrorText("Please complete all required profile fields.");
-      setErrorModal(true);
+      showModal(
+        "error",
+        "Profile Error",
+        "Please complete all required profile fields.",
+      );
       return;
     }
 
@@ -152,8 +190,11 @@ export default function PatientProfileScreen() {
       );
       if (upload.status !== "success" || !upload.data) {
         setLoading(false);
-        setErrorText(upload.error || "Image upload failed");
-        setErrorModal(true);
+        showModal(
+          "error",
+          "Profile Error",
+          upload.error || "Image upload failed",
+        );
         return;
       }
       finalImage = (upload.data as any).url;
@@ -179,8 +220,11 @@ export default function PatientProfileScreen() {
     setLoading(false);
 
     if (update.status !== "success" || !update.data) {
-      setErrorText(update.error || "Unable to update profile");
-      setErrorModal(true);
+      showModal(
+        "error",
+        "Profile Error",
+        update.error || "Unable to update profile",
+      );
       return;
     }
 
@@ -195,12 +239,12 @@ export default function PatientProfileScreen() {
         backgroundColor={Colors.primaryPressed}
       />
       <ActionModal
-        visible={errorModal}
-        type="error"
-        title="Profile Error"
-        message={errorText}
+        visible={modalVisible}
+        type={modalType}
+        title={modalTitle}
+        message={modalText}
         confirmLabel="OK"
-        onConfirm={() => setErrorModal(false)}
+        onConfirm={() => setModalVisible(false)}
       />
 
       <LinearGradient

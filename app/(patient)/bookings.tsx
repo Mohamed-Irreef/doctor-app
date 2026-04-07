@@ -89,9 +89,7 @@ export default function PatientBookingsScreen() {
   };
 
   useEffect(() => {
-    queueMicrotask(() => {
-      load();
-    });
+    load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -137,6 +135,7 @@ export default function PatientBookingsScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.filterScroll}
         contentContainerStyle={styles.filterRow}
       >
         {FILTERS.map((filter) => (
@@ -300,10 +299,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "rgba(255,255,255,0.82)",
   },
+  filterScroll: {
+    maxHeight: 54,
+  },
   filterRow: {
     paddingHorizontal: 20,
+    paddingTop: 10,
     paddingBottom: 10,
     gap: 8,
+    alignItems: "center",
   },
   filterChip: {
     borderRadius: 999,
@@ -312,6 +316,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     backgroundColor: Colors.surface,
+    alignSelf: "center",
   },
   filterChipActive: {
     borderColor: Colors.primary,

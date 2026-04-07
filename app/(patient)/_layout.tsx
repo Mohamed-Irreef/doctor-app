@@ -9,7 +9,7 @@ import {
     User,
 } from "lucide-react-native";
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import SideDrawer from "../../components/SideDrawer";
 import { Colors } from "../../constants/Colors";
@@ -40,13 +40,31 @@ function TabIcon({ icon: Icon, focused }: { icon: any; focused: boolean }) {
 export default function PatientLayout() {
   const insets = useSafeAreaInsets();
 
-  const bottomPad = insets.bottom > 0 ? insets.bottom : Spacing.sm;
   const baseHeight = 56;
+
+  // On some Android devices (edge-to-edge + 3-button nav), the tab bar can be
+  // rendered behind the system navigation buttons. Using a bottom *gap* (margin)
+  // lifts the tab bar above the system UI, while iOS keeps the background under
+  // the home indicator via padding.
+  const androidBottomGap =
+    insets.bottom > 0
+      ? insets.bottom
+      : Platform.OS === "android"
+        ? Spacing.xxl
+        : 0;
 
   const tabBarStyle = {
     ...styles.tabBar,
-    height: baseHeight + bottomPad,
-    paddingBottom: bottomPad,
+    ...(Platform.OS === "android"
+      ? {
+          height: baseHeight,
+          paddingBottom: 0,
+          marginBottom: androidBottomGap,
+        }
+      : {
+          height: baseHeight + insets.bottom,
+          paddingBottom: insets.bottom,
+        }),
     paddingTop: 4,
   } as const;
 

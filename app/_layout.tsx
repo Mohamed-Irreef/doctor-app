@@ -4,9 +4,10 @@ import React, { useEffect, useRef } from "react";
 import {
     Animated,
     Easing,
+    Platform,
     Pressable,
     StyleSheet,
-    View
+    View,
 } from "react-native";
 import {
     SafeAreaProvider,
@@ -34,7 +35,18 @@ function RootLayoutInner() {
     patientRoute === "index" &&
     !pathname.includes("ai-chat");
 
-  const patientTabBarHeight = 66 + Math.max(insets.bottom, Spacing.sm);
+  const baseTabBarHeight = 56;
+  const androidBottomGap =
+    insets.bottom > 0
+      ? insets.bottom
+      : Platform.OS === "android"
+        ? Spacing.xxl
+        : 0;
+
+  const patientTabBarHeight =
+    Platform.OS === "android"
+      ? baseTabBarHeight + androidBottomGap
+      : baseTabBarHeight + insets.bottom;
   const fabBottomOffset = patientTabBarHeight;
 
   useEffect(() => {

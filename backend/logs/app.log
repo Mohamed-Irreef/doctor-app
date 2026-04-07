@@ -7028,3 +7028,27 @@
 {"timestamp":"2026-04-06T03:31:14.263Z","level":"info","event":"server_started","port":5000,"env":"development"}
 {"timestamp":"2026-04-06T03:36:35.104Z","level":"info","event":"server_started","port":5000,"env":"development"}
 {"timestamp":"2026-04-06T04:08:42.782Z","level":"info","event":"server_started","port":5000,"env":"development"}
+{"timestamp":"2026-04-06T05:36:32.118Z","level":"info","event":"server_started","port":5000,"env":"development"}
+{"timestamp":"2026-04-06T17:30:15.044Z","level":"info","event":"server_started","port":5000,"env":"development"}
+{"timestamp":"2026-04-06T18:35:54.429Z","level":"info","event":"server_started","port":5000,"env":"development"}
+{"timestamp":"2026-04-06T18:49:25.637Z","level":"info","event":"http_request","method":"GET","path":"/health","statusCode":200,"durationMs":16,"ip":"127.0.0.1","userAgent":"Mozilla/5.0 (Windows NT; Windows NT 10.0; en-IN) WindowsPowerShell/5.1.26100.7920"}
+{"timestamp":"2026-04-06T19:14:25.093Z","level":"info","event":"server_started","port":5000,"env":"development"}
+{"timestamp":"2026-04-06T19:14:41.725Z","level":"info","event":"http_request","method":"POST","path":"/api/auth/login","statusCode":200,"durationMs":505,"ip":"127.0.0.1","userAgent":"okhttp/4.12.0"}
+{"timestamp":"2026-04-06T19:14:42.223Z","level":"info","event":"http_request","method":"GET","path":"/api/auth/me","statusCode":200,"durationMs":105,"ip":"127.0.0.1","userAgent":"okhttp/4.12.0","userId":"69cf38770a8a7296b7bb24d5"}
+{"timestamp":"2026-04-06T19:14:43.293Z","level":"info","event":"http_request","method":"GET","path":"/api/auth/me","statusCode":304,"durationMs":103,"ip":"127.0.0.1","userAgent":"okhttp/4.12.0","userId":"69cf38770a8a7296b7bb24d5"}
+{"timestamp":"2026-04-06T19:14:45.458Z","level":"info","event":"http_request","method":"GET","path":"/api/v1/articles/featured?limit=8","statusCode":200,"durationMs":38,"ip":"127.0.0.1","userAgent":"okhttp/4.12.0"}
+{"timestamp":"2026-04-06T19:14:45.477Z","level":"info","event":"http_request","method":"GET","path":"/api/medicines","statusCode":200,"durationMs":43,"ip":"127.0.0.1","userAgent":"okhttp/4.12.0"}
+{"timestamp":"2026-04-06T19:14:45.505Z","level":"info","event":"http_request","method":"GET","path":"/api/doctors","statusCode":200,"durationMs":75,"ip":"127.0.0.1","userAgent":"okhttp/4.12.0"}
+{"timestamp":"2026-04-06T19:14:45.610Z","level":"info","event":"http_request","method":"GET","path":"/api/labs","statusCode":200,"durationMs":162,"ip":"127.0.0.1","userAgent":"okhttp/4.12.0"}
+{"timestamp":"2026-04-06T19:14:45.624Z","level":"info","event":"http_request","method":"GET","path":"/api/packages?limit=10","statusCode":200,"durationMs":137,"ip":"127.0.0.1","userAgent":"okhttp/4.12.0"}
+{"timestamp":"2026-04-06T19:14:45.697Z","level":"info","event":"http_request","method":"GET","path":"/api/appointments/patient","statusCode":200,"durationMs":143,"ip":"127.0.0.1","userAgent":"okhttp/4.12.0","userId":"69cf38770a8a7296b7bb24d5"}
+{"timestamp":"2026-04-06T19:15:05.363Z","level":"info","event":"http_request","method":"GET","path":"/api/doctors","statusCode":304,"durationMs":73,"ip":"127.0.0.1","userAgent":"okhttp/4.12.0"}
+{"timestamp":"2026-04-06T19:15:05.734Z","level":"info","event":"http_request","method":"GET","path":"/api/doctors/likes/my?ids=69cf3a680a8a7296b7bb24e8,69cf5381aee4ff2d824b4e84,69cf59fea7d58dbd90e86e92,69cf5ec0a9e658578dc03359,69cf630ea9e658578dc033cf,69cf7272e58d782a46aad962,69cf7548e58d782a46aada6f,69cfde869d9b594b33d011e2,69cfe1659d9b594b33d01230","statusCode":200,"durationMs":68,"ip":"127.0.0.1","userAgent":"okhttp/4.12.0","userId":"69cf38770a8a7296b7bb24d5"}
+{"timestamp":"2026-04-06T19:15:13.645Z","level":"info","event":"http_request","method":"GET","path":"/api/labs","statusCode":200,"durationMs":108,"ip":"127.0.0.1","userAgent":"okhttp/4.12.0"}
+{"timestamp":"2026-04-06T19:15:34.567Z","level":"info","event":"http_request","method":"GET","path":"/api/v1/articles/featured?limit=8","statusCode":304,"durationMs":2,"ip":"127.0.0.1","userAgent":"okhttp/4.12.0"}
+{"timestamp":"2026-04-06T19:15:34.592Z","level":"info","event":"http_request","method":"GET","path":"/api/medicines","statusCode":304,"durationMs":33,"ip":"127.0.0.1","userAgent":"okhttp/4.12.0"}
+{"timestamp":"2026-04-06T19:15:34.620Z","level":"info","event":"http_request","method":"GET","path":"/api/doctors","statusCode":304,"durationMs":64,"ip":"127.0.0.1","userAgent":"okhttp/4.12.0"}
+{"timestamp":"2026-04-06T19:15:34.658Z","level":"info","event":"http_request","method":"GET","path":"/api/packages?limit=10","statusCode":304,"durationMs":113,"ip":"127.0.0.1","userAgent":"okhttp/4.12.0"}
+{"timestamp":"2026-04-06T19:15:34.722Z","level":"info","event":"http_request","method":"GET","path":"/api/labs","statusCode":200,"durationMs":101,"ip":"127.0.0.1","userAgent":"okhttp/4.12.0"}
+{"timestamp":"2026-04-06T19:15:34.727Z","level":"info","event":"http_request","method":"GET","path":"/api/appointments/patient","statusCode":304,"durationMs":121,"ip":"127.0.0.1","userAgent":"okhttp/4.12.0","userId":"69cf38770a8a7296b7bb24d5"}
+{"timestamp":"2026-04-06T19:15:34.910Z","level":"info","event":"http_request","method":"GET","path":"/api/auth/me","statusCode":304,"durationMs":100,"ip":"127.0.0.1","userAgent":"okhttp/4.12.0","userId":"69cf38770a8a7296b7bb24d5"}
